@@ -129,12 +129,12 @@ for skill in "${SKILLS_TO_INSTALL[@]}"; do
     exit 1
   fi
   if [[ "$AGENT_TARGET" == "codex" || "$AGENT_TARGET" == "both" ]]; then
-    rm -rf "$CODEX_DIR/$skill"
+    rm -rf -- "${CODEX_DIR:?}/${skill:?}"
     cp -R "$SKILLS_DIR/$skill" "$CODEX_DIR/$skill"
     echo "Installed (Codex):  $skill -> $CODEX_DIR/$skill"
   fi
   if [[ "$AGENT_TARGET" == "claude" || "$AGENT_TARGET" == "both" ]]; then
-    rm -rf "$CLAUDE_DIR/$skill"
+    rm -rf -- "${CLAUDE_DIR:?}/${skill:?}"
     cp -R "$SKILLS_DIR/$skill" "$CLAUDE_DIR/$skill"
     echo "Installed (Claude): $skill -> $CLAUDE_DIR/$skill"
   fi
