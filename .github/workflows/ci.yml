@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shell-ci:
+    name: Shell Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Bash syntax check
+        run: |
+          mapfile -t shell_files < <(find . -type f -name "*.sh" | sort)
+          for file in "${shell_files[@]}"; do
+            bash -n "$file"
+          done
+
+      - name: Shellcheck
+        run: |
+          mapfile -t shell_files < <(find . -type f -name "*.sh" | sort)
+          shellcheck "${shell_files[@]}"
+
+      - name: Install smoke test
+        run: |
+          set -euo pipefail
+
+          ./scripts/install-skill.sh --list | grep -Fx "youtube-carplay-chapter-album"
+          ./bootstrap.sh --help > /dev/null
+
+          tmp_dir="$(mktemp -d)"
+          codex_dir="$tmp_dir/codex-skills"
+          claude_dir="$tmp_dir/claude-skills"
+
+          ./scripts/install-skill.sh --all --agent both --codex-dir "$codex_dir" --claude-dir "$claude_dir"
+
+          test -f "$codex_dir/youtube-carplay-chapter-album/SKILL.md"
+          test -f "$claude_dir/youtube-carplay-chapter-album/SKILL.md"

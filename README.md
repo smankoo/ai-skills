@@ -1,4 +1,5 @@
 # ai-skills
+[![CI](https://github.com/smankoo/ai-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/smankoo/ai-skills/actions/workflows/ci.yml)
 
 Reusable AI agent skills in one repo.
 
