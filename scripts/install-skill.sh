@@ -6,27 +6,33 @@ usage() {
 Install AI skills from this repo into a target skills directory.
 
 Usage:
-  install-skill.sh --all [--target DIR]
-  install-skill.sh <skill-name> [<skill-name> ...] [--target DIR]
+  install-skill.sh --all [--agent codex|claude|both]
+  install-skill.sh <skill-name> [<skill-name> ...] [--agent codex|claude|both]
   install-skill.sh --list
 
 Options:
   --all           Install all skills in ./skills
-  --target DIR    Destination skills directory (default: ~/.codex/skills)
+  --agent VALUE   Install target: codex, claude, or both (default: codex)
+  --target DIR    Destination skills directory (legacy alias for codex target)
+  --codex-dir DIR Override Codex skills dir (default: ~/.codex/skills)
+  --claude-dir DIR Override Claude skills dir (default: ~/.claude/skills)
   --list          Print available skills and exit
   -h, --help      Show help
 
 Examples:
   ./scripts/install-skill.sh --all
   ./scripts/install-skill.sh youtube-carplay-chapter-album
-  ./scripts/install-skill.sh --all --target ~/.codex/skills
+  ./scripts/install-skill.sh --all --agent both
+  ./scripts/install-skill.sh youtube-carplay-chapter-album --agent claude
 USAGE
 }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SKILLS_DIR="$REPO_ROOT/skills"
-TARGET_DIR="$HOME/.codex/skills"
+CODEX_DIR="$HOME/.codex/skills"
+CLAUDE_DIR="$HOME/.claude/skills"
+AGENT_TARGET="codex"
 INSTALL_ALL=0
 LIST_ONLY=0
 SKILLS_TO_INSTALL=()
@@ -39,7 +45,22 @@ while [[ $# -gt 0 ]]; do
       ;;
     --target)
       [[ $# -ge 2 ]] || { echo "Missing value for --target" >&2; exit 1; }
-      TARGET_DIR="$2"
+      CODEX_DIR="$2"
+      shift 2
+      ;;
+    --codex-dir)
+      [[ $# -ge 2 ]] || { echo "Missing value for --codex-dir" >&2; exit 1; }
+      CODEX_DIR="$2"
+      shift 2
+      ;;
+    --claude-dir)
+      [[ $# -ge 2 ]] || { echo "Missing value for --claude-dir" >&2; exit 1; }
+      CLAUDE_DIR="$2"
+      shift 2
+      ;;
+    --agent)
+      [[ $# -ge 2 ]] || { echo "Missing value for --agent" >&2; exit 1; }
+      AGENT_TARGET="$2"
       shift 2
       ;;
     --list)
@@ -87,16 +108,36 @@ if [[ "${#SKILLS_TO_INSTALL[@]}" -eq 0 ]]; then
   exit 1
 fi
 
-mkdir -p "$TARGET_DIR"
+case "$AGENT_TARGET" in
+  codex|claude|both) ;;
+  *)
+    echo "Invalid --agent value: $AGENT_TARGET (use codex|claude|both)" >&2
+    exit 1
+    ;;
+esac
+
+if [[ "$AGENT_TARGET" == "codex" || "$AGENT_TARGET" == "both" ]]; then
+  mkdir -p "$CODEX_DIR"
+fi
+if [[ "$AGENT_TARGET" == "claude" || "$AGENT_TARGET" == "both" ]]; then
+  mkdir -p "$CLAUDE_DIR"
+fi
 
 for skill in "${SKILLS_TO_INSTALL[@]}"; do
   if [[ ! -d "$SKILLS_DIR/$skill" ]]; then
     echo "Skill not found: $skill" >&2
     exit 1
   fi
-  rm -rf "$TARGET_DIR/$skill"
-  cp -R "$SKILLS_DIR/$skill" "$TARGET_DIR/$skill"
-  echo "Installed: $skill -> $TARGET_DIR/$skill"
+  if [[ "$AGENT_TARGET" == "codex" || "$AGENT_TARGET" == "both" ]]; then
+    rm -rf "$CODEX_DIR/$skill"
+    cp -R "$SKILLS_DIR/$skill" "$CODEX_DIR/$skill"
+    echo "Installed (Codex):  $skill -> $CODEX_DIR/$skill"
+  fi
+  if [[ "$AGENT_TARGET" == "claude" || "$AGENT_TARGET" == "both" ]]; then
+    rm -rf "$CLAUDE_DIR/$skill"
+    cp -R "$SKILLS_DIR/$skill" "$CLAUDE_DIR/$skill"
+    echo "Installed (Claude): $skill -> $CLAUDE_DIR/$skill"
+  fi
 done
 
 echo "Done."

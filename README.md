@@ -10,6 +10,12 @@ Install everything:
 curl -fsSL https://raw.githubusercontent.com/smankoo/ai-skills/main/bootstrap.sh | bash
 ```
 
+Install everything for both Codex and Claude:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/smankoo/ai-skills/main/bootstrap.sh | bash -s -- --agent both
+```
+
 Install one skill:
 
 ```bash
@@ -40,13 +46,19 @@ cd ai-skills
 3. Install one skill into Codex:
 
 ```bash
-./scripts/install-skill.sh youtube-carplay-chapter-album --target ~/.codex/skills
+./scripts/install-skill.sh youtube-carplay-chapter-album --agent codex
 ```
 
-4. Install all skills into Codex:
+4. Install one skill into Claude Code:
 
 ```bash
-./scripts/install-skill.sh --all --target ~/.codex/skills
+./scripts/install-skill.sh youtube-carplay-chapter-album --agent claude
+```
+
+5. Install all skills into both:
+
+```bash
+./scripts/install-skill.sh --all --agent both
 ```
 
 ## Bootstrap script options

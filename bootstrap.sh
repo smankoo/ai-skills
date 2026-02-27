@@ -6,11 +6,12 @@ usage() {
 Bootstrap ai-skills on a new machine.
 
 Usage:
-  bootstrap.sh [--all] [--skill NAME[,NAME...]] [--target DIR] [--repo-dir DIR] [--skip-deps]
+  bootstrap.sh [--all] [--skill NAME[,NAME...]] [--agent codex|claude|both] [--target DIR] [--repo-dir DIR] [--skip-deps]
 
 Options:
   --all                 Install all skills (default behavior)
   --skill LIST          Install specific skills (comma-separated)
+  --agent VALUE         Install target: codex, claude, or both (default: codex)
   --target DIR          Destination skills directory (default: ~/.codex/skills)
   --repo-dir DIR        Local checkout dir (default: ~/.ai-skills)
   --skip-deps           Skip dependency installation
@@ -19,15 +20,18 @@ Options:
 Examples:
   bootstrap.sh --all
   bootstrap.sh --skill youtube-carplay-chapter-album
+  bootstrap.sh --all --agent both
   bootstrap.sh --skill youtube-carplay-chapter-album --target ~/.codex/skills
 USAGE
 }
 
 TARGET_DIR="$HOME/.codex/skills"
 REPO_DIR="$HOME/.ai-skills"
+AGENT_TARGET="codex"
 SKIP_DEPS=0
 INSTALL_ALL=1
 SKILL_LIST=""
+TARGET_SET=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -41,9 +45,15 @@ while [[ $# -gt 0 ]]; do
       SKILL_LIST="$2"
       shift 2
       ;;
+    --agent)
+      [[ $# -ge 2 ]] || { echo "Missing value for --agent" >&2; exit 1; }
+      AGENT_TARGET="$2"
+      shift 2
+      ;;
     --target)
       [[ $# -ge 2 ]] || { echo "Missing value for --target" >&2; exit 1; }
       TARGET_DIR="$2"
+      TARGET_SET=1
       shift 2
       ;;
     --repo-dir)
@@ -102,13 +112,29 @@ else
   git clone https://github.com/smankoo/ai-skills.git "$REPO_DIR"
 fi
 
-mkdir -p "$TARGET_DIR"
+install_cmd=("$REPO_DIR/scripts/install-skill.sh" "--agent" "$AGENT_TARGET")
+
+if [[ "$TARGET_SET" -eq 1 ]]; then
+  case "$AGENT_TARGET" in
+    codex)
+      install_cmd+=("--codex-dir" "$TARGET_DIR")
+      ;;
+    claude)
+      install_cmd+=("--claude-dir" "$TARGET_DIR")
+      ;;
+    both)
+      echo "--target is ambiguous when --agent both is used." >&2
+      echo "Use install-skill.sh with --codex-dir and --claude-dir instead." >&2
+      exit 1
+      ;;
+  esac
+fi
 
 if [[ "$INSTALL_ALL" -eq 1 ]]; then
-  "$REPO_DIR/scripts/install-skill.sh" --all --target "$TARGET_DIR"
+  "${install_cmd[@]}" --all
 else
   IFS=',' read -r -a skills <<< "$SKILL_LIST"
-  "$REPO_DIR/scripts/install-skill.sh" "${skills[@]}" --target "$TARGET_DIR"
+  "${install_cmd[@]}" "${skills[@]}"
 fi
 
 echo "Bootstrap complete."
