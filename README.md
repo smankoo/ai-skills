@@ -2,6 +2,20 @@
 
 Reusable AI agent skills in one repo.
 
+## One-command setup (new machine)
+
+Install everything:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/smankoo/ai-skills/main/bootstrap.sh | bash
+```
+
+Install one skill:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/smankoo/ai-skills/main/bootstrap.sh | bash -s -- --skill youtube-carplay-chapter-album
+```
+
 ## What this repo contains
 
 - `skills/youtube-carplay-chapter-album`
@@ -33,6 +47,12 @@ cd ai-skills
 
 ```bash
 ./scripts/install-skill.sh --all --target ~/.codex/skills
+```
+
+## Bootstrap script options
+
+```bash
+./bootstrap.sh --help
 ```
 
 ## Dependencies for `youtube-carplay-chapter-album`
