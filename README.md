@@ -20,10 +20,17 @@ curl -fsSL https://raw.githubusercontent.com/smankoo/ai-skills/main/bootstrap.sh
 Install one skill:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/smankoo/ai-skills/main/bootstrap.sh | bash -s -- --skill youtube-carplay-chapter-album
+curl -fsSL https://raw.githubusercontent.com/smankoo/ai-skills/main/bootstrap.sh | bash -s -- --skill ynab
 ```
 
 ## What this repo contains
+
+- `skills/ynab`
+  - Full YNAB (You Need A Budget) integration via the YNAB API
+  - Python CLI client with 25+ commands for accounts, transactions, categories, payees, and more
+  - Analysis tools: spending breakdown, recurring expense detection, income vs expenses, category trends, subscription detection, budget health check
+  - Automatic milliunit conversion, rate limiting, and fuzzy name resolution
+  - Complete API reference documentation
 
 - `skills/youtube-carplay-chapter-album`
   - Converts a chaptered YouTube URL into CarPlay-ready MP3 album tracks
@@ -47,13 +54,13 @@ cd ai-skills
 3. Install one skill into Codex:
 
 ```bash
-./scripts/install-skill.sh youtube-carplay-chapter-album --agent codex
+./scripts/install-skill.sh ynab --agent codex
 ```
 
 4. Install one skill into Claude Code:
 
 ```bash
-./scripts/install-skill.sh youtube-carplay-chapter-album --agent claude
+./scripts/install-skill.sh ynab --agent claude
 ```
 
 5. Install all skills into both:
@@ -68,7 +75,13 @@ cd ai-skills
 ./bootstrap.sh --help
 ```
 
-## Dependencies for `youtube-carplay-chapter-album`
+## Dependencies
+
+### `ynab`
+
+No external dependencies — uses only Python standard library (`urllib`, `json`).
+
+### `youtube-carplay-chapter-album`
 
 Install on macOS:
 
@@ -80,8 +93,9 @@ brew install yt-dlp ffmpeg jq
 
 After installing, ask your agent naturally, e.g.:
 
+- `what's my net worth?`
+- `show my spending by category for the last 3 months`
+- `detect my subscriptions`
 - `make this carplay ready <youtube-url>`
 
-The skill should detect chapters automatically and either:
-- split into an album when chapters exist, or
-- produce a single CarPlay-ready MP3 when there are no chapters.
+The YNAB skill will prompt for your API token and budget ID on first use. The YouTube skill detects chapters automatically and either splits into an album or produces a single CarPlay-ready MP3.
