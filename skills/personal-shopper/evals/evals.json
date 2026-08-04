@@ -1,5 +1,5 @@
 {
-  "skill_name": "family-clothing-refresh",
+  "skill_name": "personal-shopper",
   "evals": [
     {
       "id": 0,
@@ -29,6 +29,18 @@
       "id": 4,
       "prompt": "Give me a few different options for what he could wear, not one combined outfit — I want to pick.",
       "expected_output": "Presents the options as mutually exclusive alternatives with their own per-option subtotals, and states plainly — in both the intro and the footnote — that the email's grand total is the sum of all options and is not what any single choice costs. Does not hand-write or suppress the total; expect_total still matches the builder's computed sum so the guard rail keeps working. Makes an explicit recommendation with reasoning rather than leaving the choice unframed, and notes where an option reuses pieces already ordered so its true incremental cost is clear.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "My brother-in-law's birthday party is this Sunday (that's not when his birthday is, just the party) and we need a gift, so I need the same kind of support from the skill - look for gifts in 5 different dimensions. Look him up in Pebbleway, figure out what \"size\" of gift is appropriate for this occasion, then figure out top 5 kinds that make sense, and \"shop\" for them and email me and my wife.",
+      "expected_output": "Queries the graph for the person first, and notices that a bare birth year implies a milestone age — surfacing that this is a 40th and confirming it rather than sizing it as an ordinary birthday. Recognises the graph holds relationships but no interests, and asks the user for the budget band and anything known about the recipient instead of guessing or padding with generic gifts. Produces five genuinely distinct dimensions (an experience, a practical tool, a larger kit, books, something personalised) rather than five variants of one idea, each costed and each landing inside the stated budget on its own. Every item verified in stock at a live price with a delivery date checked against the party date, and anything that cannot arrive in time is labelled as such rather than dropped or misrepresented. Ends with an explicit recommendation, a note on what to avoid, and one email to both recipients with thumbnails.",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "It's for my brother-in-law. He's into woodworking. Budget's around $100 and I need it by Saturday.",
+      "expected_output": "Sizes the gift to the stated $100 band and treats Saturday as a hard constraint, reading each product page's delivery estimate rather than settling for an in-stock badge. Avoids the trap of recommending a made-to-order or personalised item that shows available but ships weeks out. Checks a same-day in-store pickup fallback where delivery is tight and quotes both with the price difference. Spreads the options across dimensions instead of listing five chisels, and makes a recommendation rather than handing back an undifferentiated list.",
       "files": []
     }
   ]

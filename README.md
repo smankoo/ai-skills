@@ -32,12 +32,13 @@ curl -fsSL https://raw.githubusercontent.com/smankoo/ai-skills/main/bootstrap.sh
   - Automatic milliunit conversion, rate limiting, and fuzzy name resolution
   - Complete API reference documentation
 
-- `skills/family-clothing-refresh`
-  - Plans a seasonal clothing refresh for a whole family and turns it into a buyable cart
+- `skills/personal-shopper`
+  - Acts as a personal shopper: wardrobes, occasion outfits with a hard date, and gift shopping
   - Derives children's sizes from measurements and verifies each item is in stock in that exact size
-  - Browses real retailer sites (Simons JSON-LD, Gap/Old Navy per-size stock) for live prices
-  - Builds consistently formatted HTML "cross-store shopping cart" emails with computed totals
-  - Acts as a personal designer: palette, cross-matching pieces, example outfits, priority subset
+  - Browses real retailer sites (Simons JSON-LD, Gap/Old Navy per-size stock, Amazon) for live prices
+  - For gifts, finds several genuinely distinct directions, costs each, and recommends one
+  - Checks delivery dates against the deadline, not just stock — and flags what can't arrive in time
+  - Builds consistently formatted HTML shopping-cart emails with item thumbnails and computed totals
 
 - `skills/youtube-carplay-chapter-album`
   - Converts a chaptered YouTube URL into CarPlay-ready MP3 album tracks
@@ -88,7 +89,7 @@ cd ai-skills
 
 No external dependencies — uses only Python standard library (`urllib`, `json`).
 
-### `family-clothing-refresh`
+### `personal-shopper`
 
 Python 3.11+ standard library only (`tomllib`, `smtplib`, `imaplib`). Optional, for the full
 end-to-end flow: a browser MCP server for live price/stock verification, and SMTP credentials at
@@ -111,9 +112,11 @@ After installing, ask your agent naturally, e.g.:
 - `detect my subscriptions`
 - `the kids need clothes for the fall`
 - `my son starts daycare in three weeks, sort out what he needs`
+- `my nephew's graduation is on the 21st, he needs something nice`
+- `my brother-in-law's 40th is Sunday and we need a gift — find a few different directions`
 - `make this carplay ready <youtube-url>`
 
-The YNAB skill will prompt for your API token and budget ID on first use. The clothing skill asks
-for ages and current measurements, then does the browsing and verification itself. The YouTube
-skill detects chapters automatically and either splits into an album or produces a single
-CarPlay-ready MP3.
+The YNAB skill will prompt for your API token and budget ID on first use. The personal-shopper
+skill asks for ages and current measurements (or, for a gift, the budget band and anything you know
+about the recipient), then does the browsing and verification itself. The YouTube skill detects
+chapters automatically and either splits into an album or produces a single CarPlay-ready MP3.
