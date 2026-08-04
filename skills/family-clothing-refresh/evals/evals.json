@@ -18,6 +18,18 @@
       "prompt": "Tegh has his graduation on Aug 21st, he needs something nice for it. Separate from the fall stuff we already did.",
       "expected_output": "A small standalone occasion cart, not an edit to the existing fall list: a genuinely dressed-up outfit (button-down, sweater or blazer, non-jogger trousers, proper shoes) in the child's verified current size, in stock, with shipping time checked against the 21 Aug date and in-store pickup flagged if delivery is too tight. Its own markdown file and its own email.",
       "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "I also want item images in the email, makes it easy to browse.",
+      "expected_output": "Adds an image thumbnail to each item row, linked to the product page so the picture is tappable too. Images are collected from the rendered category grid per product id, not regex-scraped from raw product HTML, so no two unrelated items share one picture. Each URL is fetched before sending to confirm it returns a real image rather than a 404 page, and the images are confirmed distinct from each other. Thumbnails render in a fixed box so that retailers' differing aspect ratios do not leave one row towering over the others, and the subtotal row spans the new thumbnail column only in sections that actually have images. Totals are unchanged by the addition.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Give me a few different options for what he could wear, not one combined outfit — I want to pick.",
+      "expected_output": "Presents the options as mutually exclusive alternatives with their own per-option subtotals, and states plainly — in both the intro and the footnote — that the email's grand total is the sum of all options and is not what any single choice costs. Does not hand-write or suppress the total; expect_total still matches the builder's computed sum so the guard rail keeps working. Makes an explicit recommendation with reasoning rather than leaving the choice unframed, and notes where an option reuses pieces already ordered so its true incremental cost is clear.",
+      "files": []
     }
   ]
 }

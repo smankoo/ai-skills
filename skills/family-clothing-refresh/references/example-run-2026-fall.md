@@ -70,3 +70,27 @@ editing the shipped one.
 **Lesson:** ask about *dated events* in the season, not just daily activities. Graduations,
 weddings, picture day, Diwali, family photos, and religious occasions all need a specific
 outfit, and they have hard deadlines that ordinary wardrobe items don't.
+
+### How the graduation cart came out
+
+$52.89 / $55.48 / $58.00 across three **alternatives**, not a combined list. Findings worth
+keeping:
+
+- **Neither Gap nor Old Navy sells a toddler blazer**, in any size. Gap's dress trousers start at
+  kids' size 6 — too big for a 5T child. Simons has no kids' department at all. For a formal
+  toddler outfit in Canada, Amazon is effectively the only source.
+- **Lead time beats price when the date can't move.** The cheaper blazer ($47.49, next-day) topped
+  out at 4-5T on a child already mid-band in 5T. Paid $5 more for the size that actually fits,
+  accepting a 18 Aug delivery against a 21 Aug deadline.
+- **Presenting alternatives breaks the total.** The builder sums every section, so a
+  three-option email's grand total is meaningless arithmetic. Set `expect_total` to that real sum
+  so the guard rail still works, then say plainly in the intro *and* the footnote that the total
+  is the sum of all three and the per-option subtotals are the numbers that matter. Don't try to
+  suppress the total.
+- **Reuse is a selling point.** Two of Option B's three pieces were already on the fall list,
+  making the recommended option $19.99 of new spend. Worth stating explicitly — and worth
+  double-checking that a row copied from the fall cart keeps its *original* store, pid, and
+  price. One row was briefly mislabelled as a Gap item at a Gap price while carrying the Old Navy
+  image and pid.
+- Occasion carts should carry the adjacent non-clothing dependencies: shoes still needing an
+  in-person fitting, and a haircut task that wanted pulling forward ahead of the photos.

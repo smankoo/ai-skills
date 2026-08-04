@@ -202,6 +202,13 @@ python3 scripts/send_email.py \
 `build_emails.py` prints each computed total and cross-checks it against an optional
 `expect_total` in the JSON, so a mismatch fails loudly instead of shipping.
 
+**If the email presents alternatives rather than one list** (e.g. three outfit options for one
+occasion, pick one), the builder still sums *everything* — so the grand total is arithmetic, not a
+price. Don't fight this: set `expect_total` to that real sum so the guard rail keeps working, lean
+on the per-section subtotals as the numbers that matter, and say so explicitly in both the opening
+note and the footnote. Also give an actual recommendation; three options with no opinion pushes the
+decision back onto the user, which is the opposite of the job.
+
 `send_email.py` reads iCloud credentials at runtime from `~/.config/owlpost/accounts.toml`.
 **Never hardcode or print the password.** It APPENDs to the Sent folder manually because
 iCloud SMTP doesn't. If owlpost's MCP is connected, `mcp__owlpost__send_email` works too.
@@ -212,6 +219,11 @@ Email conventions, all enforced by the shared shell in `assets/email-template.ht
 - Hyperlink every item name to its product page; show the price beside it.
 - `×N` quantity badges where quantity > 1.
 - Per-section subtotals and a single prominent total.
+- **A thumbnail on every item** (`image` in the cart JSON). The user asked for these explicitly —
+  they make the email browsable without opening 20 tabs. Collect image URLs while you're already
+  on the rendered category grid; going back for them afterwards means re-navigating every page.
+  See the image section of `references/cart-schema.md`, including the two pre-send checks
+  (every URL returns `image/*`; the images are distinct from one another).
 - Size banner at the top for children, with the derivation in one line.
 - Callout blocks: info (green) for design notes, warn (amber) for measure-feet-first and
   availability caveats.
