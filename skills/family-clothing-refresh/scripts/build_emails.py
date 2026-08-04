@@ -21,6 +21,12 @@ import sys
 GREEN = "#1f3a34"
 MUTED = "#7a7268"
 RULE = "#ece7e0"
+# Thumbnails render into a fixed box, 3:4 like most retailers' product shots. Retailers do not
+# agree on aspect ratio — an Amazon full-body shot can be 1:3 — and a bare width with height:auto
+# lets one such image tower over every other row. `contain` letterboxes instead of cropping, so a
+# whole garment stays visible.
+THUMB_W = 72
+THUMB_H = 96
 DEFAULT_EYEBROW = "Shopping Cart"
 DEFAULT_FOOTER = "Tap any item name to open it on the retailer's site."
 
@@ -107,17 +113,37 @@ def section(sec: dict, cur: str) -> tuple[str, float]:
             else ""
         )
         shown = money(float(price), cur) + (" ea" if qty > 1 else "")
+
+        # Optional thumbnail, linked to the product so the image is tappable too.
+        thumb = ""
+        if item.get("image"):
+            img = (
+                f'<img src="{H.escape(item["image"], quote=True)}" width="{THUMB_W}" '
+                f'height="{THUMB_H}" alt="{name}" '
+                f'style="display:block;width:{THUMB_W}px;height:{THUMB_H}px;'
+                f'object-fit:contain;border-radius:8px;'
+                f'border:1px solid {RULE};background:#faf8f5;">'
+            )
+            if item.get("url"):
+                img = f'<a href="{H.escape(item["url"], quote=True)}">{img}</a>'
+            thumb = (
+                f'<td width="{THUMB_W + 14}" style="padding:11px 14px 11px 0;border-top:1px solid {RULE};'
+                f'vertical-align:top;">{img}</td>'
+            )
+
         rows.append(
-            f'<tr><td style="padding:11px 0;border-top:1px solid {RULE};font-size:14px;'
-            f'line-height:1.5;">{badge}{label}{meta}</td>'
+            f'<tr>{thumb}<td style="padding:11px 0;border-top:1px solid {RULE};font-size:14px;'
+            f'line-height:1.5;vertical-align:top;">{badge}{label}{meta}</td>'
             f'<td align="right" style="padding:11px 0 11px 12px;border-top:1px solid {RULE};'
             f'white-space:nowrap;vertical-align:top;color:#3d3833;font-size:14px;font-weight:700;">'
             f"{shown}</td></tr>"
         )
 
     if rows:
+        # Span the thumbnail column too, when any row in this section has one.
+        span = ' colspan="2"' if any(i.get("image") for i in sec.get("items", [])) else ""
         rows.append(
-            f'<tr><td style="padding:9px 0 0;border-top:2px solid {GREEN};color:{MUTED};'
+            f'<tr><td{span} style="padding:9px 0 0;border-top:2px solid {GREEN};color:{MUTED};'
             f'font-size:12px;letter-spacing:1.2px;text-transform:uppercase;font-weight:600;">Subtotal</td>'
             f'<td align="right" style="padding:9px 0 0 12px;border-top:2px solid {GREEN};'
             f'color:{GREEN};font-size:15px;font-weight:700;white-space:nowrap;">'

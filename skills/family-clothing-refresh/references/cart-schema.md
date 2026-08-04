@@ -63,6 +63,46 @@ is ever hand-written. Everything else is presentation.
 | `items[].price` | yes | **Number.** A per-unit price; `qty × price` goes into the subtotal |
 | `items[].meta` | no | Small grey line under the name — store, colour, fit. May contain HTML |
 | `items[].url` | no | Omit for a bundle row whose links live in `meta` |
+| `items[].image` | no | Thumbnail URL. Rendered in a fixed 72×96 box, linked to `url`, so the cart is browsable at a glance |
+
+## Getting image URLs
+
+Product images are on the **rendered** category grid, not in the raw HTML — `fetch` returns an
+empty shell for Gap/Old Navy category pages. Navigate to the grid, then map pid → image from the
+DOM:
+
+```js
+(() => {
+  const map = {};
+  document.querySelectorAll('a[href*="pid="]').forEach(a => {
+    const pid = (a.href.match(/pid=(\d+)/) || [])[1];
+    if (!pid) return;
+    const card = a.closest('[class*="product-card"], [class*="ProductCard"], li');
+    const im = card && card.querySelector('img');
+    const src = im && (im.currentSrc || im.src);
+    if (src && !map[pid]) map[pid] = src;
+  });
+  return map;
+})()
+```
+
+`content.gapinc.com` URLs take a `?width=` parameter — use `?width=200` for email thumbnails
+rather than the 737px grid version. Do **not** scrape the first `content.gapinc.com` URL out of
+a product page's raw HTML: it's often a shared asset, so unrelated items end up sharing one
+image. On Amazon, `#landingImage`'s `src` is the reliable per-item image.
+
+Two checks worth running before you send, both of which have caught real problems:
+
+1. **Fetch every URL and confirm it returns `image/*` with a plausible byte count.** A 404 or an
+   HTML error page produces a broken thumbnail, which looks worse than no thumbnail at all.
+2. **Confirm the images are distinct from each other.** Identical byte counts across rows is the
+   signature of the shared-asset mistake above.
+
+Retailers do not agree on aspect ratio — a Gap grid shot is 3:4 while an Amazon full-body shot can
+be 1:3. The builder therefore renders into a fixed 72×96 box with `object-fit:contain`, which
+letterboxes rather than crops, so the whole garment stays visible and every row keeps the same
+height. Don't switch this to `height:auto`: one tall image then stretches its row and the item
+column stops lining up.
 
 ## Conventions
 

@@ -25,6 +25,7 @@
           "name": "Fleece Jogger Sweatpants",
           "url": "https://example.com/product/jogger",
           "meta": "Old Navy &middot; buy two different colours",
+          "image": "https://example.com/img/jogger.jpg",
           "price": 14.99
         },
         {
@@ -32,6 +33,7 @@
           "name": "Straight Pull-On Jeans",
           "url": "https://example.com/product/jeans",
           "meta": "Old Navy &middot; real denim look, elastic waist",
+          "image": "https://example.com/img/jeans.jpg",
           "price": 12.49
         },
         {

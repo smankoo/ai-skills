@@ -52,6 +52,11 @@ jobs:
           test -f "$out/email-01-example.html"
           # A stray {{PLACEHOLDER}} must never survive into a built email.
           ! grep -q '{{' "$out/email-01-example.html"
+          # The fixture has images in one section and none in the other, so this covers both
+          # branches: thumbnails render, and the subtotal spans the thumbnail column only where
+          # that column exists.
+          test "$(grep -o '<img' "$out/email-01-example.html" | wc -l | tr -d ' ')" = 2
+          test "$(grep -o 'colspan="2"' "$out/email-01-example.html" | wc -l | tr -d ' ')" = 1
 
       - name: Install smoke test
         run: |
