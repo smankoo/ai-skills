@@ -46,7 +46,7 @@ jobs:
       - name: Build emails from example cart
         run: |
           set -euo pipefail
-          skill="skills/family-clothing-refresh"
+          skill="skills/personal-shopper"
           out="$(mktemp -d)"
           python3 "$skill/scripts/build_emails.py" "$skill/examples"/*.json --out-dir "$out"
           test -f "$out/email-01-example.html"
@@ -63,7 +63,7 @@ jobs:
           set -euo pipefail
 
           ./scripts/install-skill.sh --list | grep -Fx "youtube-carplay-chapter-album"
-          ./scripts/install-skill.sh --list | grep -Fx "family-clothing-refresh"
+          ./scripts/install-skill.sh --list | grep -Fx "personal-shopper"
           ./bootstrap.sh --help > /dev/null
 
           tmp_dir="$(mktemp -d)"
@@ -74,5 +74,5 @@ jobs:
 
           test -f "$codex_dir/youtube-carplay-chapter-album/SKILL.md"
           test -f "$claude_dir/youtube-carplay-chapter-album/SKILL.md"
-          test -f "$codex_dir/family-clothing-refresh/SKILL.md"
-          test -f "$claude_dir/family-clothing-refresh/SKILL.md"
+          test -f "$codex_dir/personal-shopper/SKILL.md"
+          test -f "$claude_dir/personal-shopper/SKILL.md"
