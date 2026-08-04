@@ -1,0 +1,23 @@
+{
+  "skill_name": "family-clothing-refresh",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "We need to buy clothes. Tegh is going to school (JK) this Sep, Kirat is going to daycare. Priyanka and I also need clothes for the fall. Create a checklist of what we all need, then look up suitable pieces on the appropriate retailers' sites and select pieces for all of us. One markdown file each, then email each one to sumeet@mankoo.ca and priya.ark@gmail.com. Kids' sizes must be correct; ours don't matter since we can click through. Think like a personal designer, not a logistics person.",
+      "expected_output": "A checklist plus one markdown cart per person, each with real linked products at verified live prices. Children's sizes derived from measurements with the size-chart arithmetic shown, and every child item confirmed in stock in that exact size. Quantities split sensibly between xN duplicates and distinct pieces rather than 'buy 7 of these'. A stated palette, cross-matching pieces, and named example outfits. Totals computed, not hand-written. Shoes deliberately not ordered, with a measure-first cm-to-size table instead. Four consistently formatted HTML emails sent to both recipients with hyperlinked items and per-section subtotals.",
+      "files": []
+    },
+    {
+      "id": 1,
+      "prompt": "Kirat starts daycare in three weeks. He measured 79.5 cm and 10.2 kg last month. Can you sort out what he needs and actually find the pieces?",
+      "expected_output": "Derives 18-24M from the measurement against the retailer's chart, explaining that 12-18M tops out at 79 cm so he is already at its ceiling. Weights the list toward bottoms because of daycare changing frequency, requires pull-on and industrial-washable pieces, excludes neck drawstrings as a strangulation hazard, and includes two spare cubby sets. Confirms each item in stock in 18-24M specifically. Does not order shoes.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Tegh has his graduation on Aug 21st, he needs something nice for it. Separate from the fall stuff we already did.",
+      "expected_output": "A small standalone occasion cart, not an edit to the existing fall list: a genuinely dressed-up outfit (button-down, sweater or blazer, non-jogger trousers, proper shoes) in the child's verified current size, in stock, with shipping time checked against the 21 Aug date and in-store pickup flagged if delivery is too tight. Its own markdown file and its own email.",
+      "files": []
+    }
+  ]
+}

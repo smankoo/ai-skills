@@ -36,11 +36,29 @@ jobs:
           mapfile -t shell_files < <(find . -type f -name "*.sh" | sort)
           shellcheck "${shell_files[@]}"
 
+      - name: Python syntax check
+        run: |
+          mapfile -t py_files < <(find . -type f -name "*.py" | sort)
+          for file in "${py_files[@]}"; do
+            python3 -m py_compile "$file"
+          done
+
+      - name: Build emails from example cart
+        run: |
+          set -euo pipefail
+          skill="skills/family-clothing-refresh"
+          out="$(mktemp -d)"
+          python3 "$skill/scripts/build_emails.py" "$skill/examples"/*.json --out-dir "$out"
+          test -f "$out/email-01-example.html"
+          # A stray {{PLACEHOLDER}} must never survive into a built email.
+          ! grep -q '{{' "$out/email-01-example.html"
+
       - name: Install smoke test
         run: |
           set -euo pipefail
 
           ./scripts/install-skill.sh --list | grep -Fx "youtube-carplay-chapter-album"
+          ./scripts/install-skill.sh --list | grep -Fx "family-clothing-refresh"
           ./bootstrap.sh --help > /dev/null
 
           tmp_dir="$(mktemp -d)"
@@ -51,3 +69,5 @@ jobs:
 
           test -f "$codex_dir/youtube-carplay-chapter-album/SKILL.md"
           test -f "$claude_dir/youtube-carplay-chapter-album/SKILL.md"
+          test -f "$codex_dir/family-clothing-refresh/SKILL.md"
+          test -f "$claude_dir/family-clothing-refresh/SKILL.md"

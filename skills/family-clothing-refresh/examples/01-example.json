@@ -1,0 +1,80 @@
+{
+  "name": "Example Child",
+  "slug": "01-example",
+  "subtitle": "Junior Kindergarten &middot; size 5T",
+  "eyebrow": "Fall 2026 · Shopping Cart",
+  "expect_total": 122.45,
+  "sizebox": [
+    ["Size", "<strong>5 YRS / 5T</strong> &mdash; measured ~43 in; the 5 YRS band is 42&ndash;45 in, so 4T would be tight by Christmas"],
+    ["Stores", "Old Navy for play clothes &middot; Gap for the nicer pieces"],
+    ["Checked", "Every item confirmed <strong>in stock in 5T</strong> on 4 Aug"]
+  ],
+  "sections": [
+    {
+      "type": "note",
+      "kind": "info",
+      "text": "<strong>The rule that shaped this list:</strong> he has to dress himself. No button flies, no belts, no back zippers &mdash; pull-on elastic waists only."
+    },
+    {
+      "type": "section",
+      "title": "Bottoms &mdash; 4",
+      "blurb": "The fleece joggers are the deliberate duplicate &mdash; they are what he reaches for daily, so buy two colours rather than washing one pair constantly.",
+      "items": [
+        {
+          "qty": 2,
+          "name": "Fleece Jogger Sweatpants",
+          "url": "https://example.com/product/jogger",
+          "meta": "Old Navy &middot; buy two different colours",
+          "price": 14.99
+        },
+        {
+          "qty": 1,
+          "name": "Straight Pull-On Jeans",
+          "url": "https://example.com/product/jeans",
+          "meta": "Old Navy &middot; real denim look, elastic waist",
+          "price": 12.49
+        },
+        {
+          "qty": 1,
+          "name": "Pull-On Barrel Pants",
+          "url": "https://example.com/product/barrel",
+          "meta": "Gap &middot; the sharper pair",
+          "price": 35.00
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "title": "Tops &mdash; 7",
+      "blurb": "The 6-pack beats six separate picks here: plain long-sleeve solids are pure layering fuel under sweatshirts, and bought singly they would cost about $45.",
+      "items": [
+        {
+          "qty": 1,
+          "name": "Long-Sleeve T-Shirt 6-Pack",
+          "url": "https://example.com/product/6pack",
+          "meta": "Old Navy &middot; mixed solids &mdash; the workhorses",
+          "price": 29.99
+        },
+        {
+          "qty": 1,
+          "name": "Boxy T-Shirt",
+          "url": "https://example.com/product/tee",
+          "meta": "Gap &middot; short sleeve, for warm September",
+          "price": 14.99
+        }
+      ]
+    },
+    {
+      "type": "prose",
+      "title": "Three outfits this makes",
+      "body": "<strong>1. Rainy Tuesday</strong> &mdash; long-sleeve tee + fleece joggers + water-resistant shell<br><strong>2. Picture day</strong> &mdash; oxford shirt + barrel pants<br><strong>3. Cold playground</strong> &mdash; tee + sweatshirt + shell over joggers"
+    },
+    {
+      "type": "note",
+      "kind": "warn",
+      "text": "<strong>&#9888; Measure his feet before ordering any shoes.</strong> Stand him barefoot against a wall, mark the longest toe, measure heel-to-mark: 16.9 cm = 10.5C &middot; 17.3 cm = 11C &middot; 17.6 cm = 11.5C &middot; 17.9 cm = 12C."
+    }
+  ],
+  "footnote": "A worked example fixture used by CI. Prices and links are not real.",
+  "footer": "Prices captured 4 Aug 2026 and will drift &mdash; sale prices especially."
+}
