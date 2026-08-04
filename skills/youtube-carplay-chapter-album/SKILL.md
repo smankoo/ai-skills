@@ -16,7 +16,7 @@ scripts/build_carplay_album.sh "<youtube-url>" [output_root]
 ```
 
 Defaults:
-- `output_root` defaults to `/Users/sumeet/Downloads`
+- `output_root` defaults to `$HOME/Downloads`
 - Album folder name format: `<album title> (Album)`
 - Artwork style: full frame centered on a square canvas with subtle blurred padding (prevents face-only crops)
 

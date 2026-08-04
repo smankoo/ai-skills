@@ -43,6 +43,21 @@ jobs:
             python3 -m py_compile "$file"
           done
 
+      - name: No personal data in skills
+        run: |
+          set -euo pipefail
+          # Skills carry method, not personal data, so they stay shareable. This catches the easy
+          # regressions: a real name, a home path, an email address, or a credential left behind
+          # after a run. Add to PATTERNS rather than weakening it.
+          # A quoted secret counts only if the value is a real one — a "<placeholder>" does not.
+          PATTERNS='/Users/[a-z]|/home/[a-z]|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}|(password|token|secret|api_key)[[:space:]]*=[[:space:]]*"[^<"]|sk-[A-Za-z0-9]{16,}|sbp_[A-Za-z0-9]{16,}|xox[baprs]-'
+          # example.com / example.org addresses are documentation placeholders, by RFC 2606.
+          if grep -rIEn "$PATTERNS" skills/ | grep -vE '@(example\.(com|org|net)|b\.com|d\.com)'; then
+            echo "::error::personal data or a credential found in skills/ — see matches above"
+            exit 1
+          fi
+          echo "OK: no personal data in skills/"
+
       - name: Build emails from example cart
         run: |
           set -euo pipefail

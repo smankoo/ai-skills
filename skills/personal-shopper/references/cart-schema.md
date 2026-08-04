@@ -3,10 +3,13 @@
 One file per person. Prices are **numbers**, never strings — the builder sums them so no total
 is ever hand-written. Everything else is presentation.
 
+The values below are an illustrative fixture, not anyone's real data. Carts hold a first name and a
+context line and nothing more — no addresses, no record numbers, no health information.
+
 ```jsonc
 {
-  "name": "Tegh",
-  "slug": "01-tegh",                       // output filename: email-01-tegh.html
+  "name": "Ada",
+  "slug": "01-ada",                        // output filename: email-01-ada.html
   "subtitle": "Junior Kindergarten · size 5T",
   "eyebrow": "Fall 2026 · Shopping Cart",  // optional, defaults to this
   "currency": "$",                          // optional, default "$"
@@ -14,15 +17,15 @@ is ever hand-written. Everything else is presentation.
 
   // Top banner. Use for the size derivation on children.
   "sizebox": [
-    ["Size", "<strong>5 YRS / 5T</strong> — he's ~43 in; Gap's 5 YRS band is 42–45 in"],
-    ["Stores", "Old Navy for play clothes · Gap for the nicer pieces"],
+    ["Size", "<strong>5 YRS / 5T</strong> — ~43 in; the retailer's 5 YRS band is 42–45 in"],
+    ["Stores", "Value chain for play clothes · mid-market for the nicer pieces"],
     ["Checked", "Every item confirmed <strong>in stock in 5T</strong> on 4 Aug"]
   ],
 
   "sections": [
     // A callout block. kind: "info" (green) | "warn" (amber).
     { "type": "note", "kind": "info",
-      "text": "<strong>The rule that shaped this list:</strong> he has to dress himself." },
+      "text": "<strong>The rule that shaped this list:</strong> she has to dress herself." },
 
     // A section of purchasable items. Subtotal is computed.
     { "type": "section",
@@ -44,7 +47,7 @@ is ever hand-written. Everything else is presentation.
       "body": "<strong>1. Office, 14 °C</strong> — navy oxford + charcoal wool trouser" }
   ],
 
-  "footnote": "23 items across Gap and Old Navy. Old Navy is running roughly 50% off.",
+  "footnote": "23 items across two retailers. One of them is running roughly 50% off.",
   "footer": "Prices captured 4 Aug 2026 and will drift — sale prices especially."
 }
 ```

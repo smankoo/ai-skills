@@ -7,7 +7,7 @@ Usage:
   build_carplay_album.sh "<youtube-url>" [output_root]
 
 Example:
-  build_carplay_album.sh "https://www.youtube.com/watch?v=sBQtMysE_Mo" "/Users/sumeet/Downloads"
+  build_carplay_album.sh "https://www.youtube.com/watch?v=VIDEO_ID" "$HOME/Downloads"
 EOF
 }
 

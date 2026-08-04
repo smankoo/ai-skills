@@ -2,8 +2,45 @@
 
 Working extraction snippets and every failure mode hit so far. Verified 2026-08-04.
 
+These are the Canadian retailers used in the runs so far — they're **recipes, not
+recommendations**. Nothing here says the user shops at these stores. Use whatever retailers suit the
+user's country, budget, and stated habits, and add a recipe when you work out a new one. The "Rules
+that apply everywhere" section below is the part that transfers to any site.
+
 All of these run through the browser MCP:
 `mcp__browser__browser_execute_js`, `browser_navigate`, `browser_new_tab`, `browser_list_tabs`.
+
+> **This file is meant to grow.** Every run that touches a new site, or finds an old recipe stale,
+> should leave an edit here — see SKILL.md §12. Working out how a retailer behaves is the expensive
+> part of a run and the cheapest thing to write down. Record mechanics only: selectors, URL shapes,
+> failure modes. Never a person's name, size, budget, or order.
+
+## Adding a retailer — the shape to follow
+
+Copy this. A recipe earns its place by being specific enough to paste and run.
+
+````markdown
+## <Retailer> — <the trick that makes it work>
+
+<Country/segment, one line: which market and price level it serves.>
+<How to get name, price, availability, image — the actual method.>
+
+```js
+// A snippet that ran and worked.
+```
+
+**Selectors** (verified YYYY-MM-DD)
+| What | Selector |
+|---|---|
+| Title | `#productTitle` |
+
+**Failure modes**
+- <What broke, and the workaround. This is the highest-value part.>
+- <Dead ends: what cannot work, so nobody retries it.>
+````
+
+Date-stamp selectors — sites change, and a reader needs to know whether to trust or re-verify. When a
+note turns out to be true of every site, promote it to the section below and delete the copies.
 
 ## Rules that apply everywhere
 
