@@ -199,3 +199,15 @@ Sanity check: **US 4C ≈ 12.0 cm is an ~18-month-old's shoe.** If a stored shoe
 Old Navy runs ~50% off frequently — it's why two children's wardrobes come in under $850. Say
 when pricing looks promotional and won't hold. Conversely, big-ticket adult outerwear (Barbour
 and similar) goes on sale in November, so it can wait.
+
+## Colour diversity — a curation rule (learned 2026-08-08)
+
+A harvest that ignores colour converges on one colour (whatever the retailer photographs most —
+usually navy/black), and the resulting cart reads as a uniform. Two-part fix:
+
+1. **Harvest**: record the default variant's actual colour per product, plus available colourways,
+   in a `colors` field. JSON-LD usually lacks colour — read it off the PDP or infer from the
+   product name/slug.
+2. **Curate**: before finalizing, tally colours across the whole cart. No colour should exceed
+   ~30% of items; the stated palette should all be represented. Where a piece comes in multiple
+   colourways, name the specific colour to buy in the item's `meta` line.
