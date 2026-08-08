@@ -48,6 +48,36 @@ curl -fsSL https://raw.githubusercontent.com/smankoo/ai-skills/main/bootstrap.sh
   - Converts a chaptered YouTube URL into CarPlay-ready MP3 album tracks
   - Adds per-track metadata and embedded artwork
 
+- `skills/ynab-reconcile`
+  - Reconciles YNAB accounts against downloaded bank data (OFX/CSV/screenshots)
+  - Matches bank and YNAB transactions by amount (dates only disambiguate), across
+    statement-window and pending-transaction edge cases
+  - Reports bank-not-in-YNAB adds, YNAB-not-on-bank items to classify, and amount
+    mismatches to edit -- and shows proposed changes before writing anything
+  - Leaves the final residual to an in-app YNAB Reconcile rather than faking an
+    adjustment via the API
+  - Carries **no account list or credentials**: token and budget ID come from the
+    environment at run time
+
+- `skills/send-to-kindle`
+  - Sends an epub/pdf/document to a Kindle end-to-end via Amazon's Send to Kindle
+    email feature
+  - Handles the non-obvious part: Amazon's verification email is required on every
+    send and often lands in a different mailbox than the one that sent the document
+  - Confirms the document by fetching the verification link directly (no browser or
+    login needed)
+  - Carries **no email addresses**: send-from, send-to, and verification-inbox
+    addresses are asked for and used only for the run
+
+- `skills/book-car-service`
+  - Books a service appointment through a dealership's online scheduler
+  - Knows to drive a Keyloop "SWA" (or similar) booking widget's own URL directly when
+    the dealer's marketing page only embeds it in a cross-origin iframe
+  - Works out which maintenance package is due from the odometer and the dealer's own
+    package list, rather than guessing
+  - Carries **no vehicle, dealer, or personal details**: all of it comes from the user
+    or their own connected records
+
 ## Install a skill
 
 1. Clone the repo:
@@ -112,6 +142,26 @@ Install on macOS:
 ```bash
 brew install yt-dlp ffmpeg jq
 ```
+
+### `ynab-reconcile`
+
+Python 3 standard library only (`urllib`, `json`, `csv`, `re`, `argparse`). Needs a
+YNAB Personal Access Token and budget ID, set as `YNAB_TOKEN` and `YNAB_BUDGET` in the
+environment. Reconciling also needs a downloaded bank export (OFX or CSV) to compare
+against.
+
+### `send-to-kindle`
+
+No bundled scripts -- needs a mail-sending tool that can send with attachments and read
+another mailbox (an MCP mail server, or your own `smtplib`/IMAP setup), plus the
+user's Kindle email address (from Amazon's Personal Document Settings) approved to
+receive documents.
+
+### `book-car-service`
+
+Needs a browser-automation tool that can navigate and interact with a live web page.
+No API keys; everything else (vehicle, dealer, calendar) is supplied by the user or
+their own connected records at run time.
 
 ## Use in plain language
 

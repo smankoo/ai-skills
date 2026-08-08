@@ -1,0 +1,23 @@
+{
+  "skill_name": "send-to-kindle",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "Send this book to my Kindle: ~/Downloads/some-novel.epub. I send mail from my Gmail account, my Kindle address is reader@example.com, and Amazon's verification emails land in my iCloud inbox.",
+      "expected_output": "Sends the epub as an attachment from the Gmail account to the Kindle address with a clean subject line derived from the filename, then polls the iCloud account's Inbox and Trash for Amazon's verification email, extracts the direct amazon.com confirmation URL (not a regional click-tracking link), fetches it to confirm verification, and reports success without asking the user to click anything.",
+      "files": []
+    },
+    {
+      "id": 1,
+      "prompt": "I don't see any verification email from Amazon after 20 minutes. Did the send fail?",
+      "expected_output": "Checks the Trash/Deleted folder of the verification-inbox account, not just the Inbox, before concluding anything failed -- explains that an actual failure would show up as an Amazon error reply in the send-from inbox, and absence of a visible verification email usually means it's in the wrong folder or the wrong account was checked.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Can you get Amazon to stop requiring this verification step every time? It's tedious.",
+      "expected_output": "Explains that verification is tied to each document request rather than to sender approval, that adding a sender to the approved list does not skip it, and that there's no way to turn it off -- so the workflow should budget for the wait rather than trying to bypass it.",
+      "files": []
+    }
+  ]
+}

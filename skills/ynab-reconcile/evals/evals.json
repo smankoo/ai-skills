@@ -1,0 +1,23 @@
+{
+  "skill_name": "ynab-reconcile",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "My YNAB numbers look off. I've downloaded my chequing OFX and credit card CSV into ~/Downloads/bank-export, can you reconcile them? Token abcDEF123-fakeTokenForEvals_0000000, budget 11111111-2222-3333-4444-555555555555.",
+      "expected_output": "Fetches YNAB account balances, matches each bank file against YNAB transactions by amount (not date), and reports bank-not-in-YNAB items to add, YNAB-not-on-bank items to classify, and any amount mismatches -- before writing anything, it shows the proposed changes and asks for confirmation on ambiguous ones.",
+      "files": []
+    },
+    {
+      "id": 1,
+      "prompt": "The credit card OFX only goes back to the 12th of this month but my YNAB has cleared transactions from a week earlier. Are those older ones phantoms I should delete?",
+      "expected_output": "Explains that YNAB items dated before the statement window are part of the bank's opening balance, not phantoms, and should not be deleted -- recommends anchoring the statement window to the OFX's own date range rather than treating pre-window items as discrepancies.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "There's a $45 difference between my YNAB balance and the bank's completed balance, and I can see a $45 charge in YNAB that isn't on the statement yet. Is that a bug?",
+      "expected_output": "Identifies that the $45 gap is explained by the single pending (not-yet-posted) transaction, concludes the account is correct, and advises against reconciling or deleting anything until it posts.",
+      "files": []
+    }
+  ]
+}

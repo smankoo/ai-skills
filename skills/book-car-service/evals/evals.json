@@ -1,0 +1,23 @@
+{
+  "skill_name": "book-car-service",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "My car's app says service is due in 5 days. Can you book an appointment at my usual dealer's online scheduler? It's a Hyundai dealership.",
+      "expected_output": "Asks for or looks up what's not yet known (which dealer, vehicle details, current odometer, existing-customer status), then, if the dealer's booking page embeds a third-party scheduling widget in a cross-origin iframe, navigates directly to the widget's own URL rather than trying to interact with it through the wrapper page.",
+      "files": []
+    },
+    {
+      "id": 1,
+      "prompt": "The scheduler shows package options like 'Service 1', 'Service 2', 'Service 3' -- which one do I need? My last service was at 12,000 km and I'm at 18,300 km now.",
+      "expected_output": "Infers or asks for the manufacturer's maintenance-interval pattern rather than guessing, uses the last-serviced odometer reading shown in the wizard plus the current reading to place the visit in the schedule, and explains the reasoning rather than silently picking one.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Book it, then add it to my calendar and log it somewhere I can find it later.",
+      "expected_output": "Completes the booking, confirms the selected package actually landed in the cart before submitting, then logs the appointment (date, package, price, advisor, transport mode, odometer) to the calendar named by the user -- confirming the exact calendar name first if there's any ambiguity -- and to any personal-records system the user has, without inventing account-specific details that weren't provided.",
+      "files": []
+    }
+  ]
+}
