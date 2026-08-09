@@ -31,3 +31,12 @@
 - Mid-run addenda to TASK.md are an effective steering channel for a detached Claude Code run (it re-reads the brief between phases).
 - send_email.py requires --html flag (not positional).
 - Occasion outfits: flag candidates "occasion":true in harvest JSON; curate as a named outfit section (blazer+shirt+pant) rather than scattered items — user explicitly wants this.
+
+## Kids' runs additions (2026-08-08, Tegh 5T + Kirat 18-24M)
+
+- **Simons has no kids' clothing** — only Fabrique 1840 artisan accessories (tuques/ponchos, generic sizes). Skip Simons for kids entirely.
+- **Uniqlo kids/baby sizing is cm-based**: 110cm ≈ 5T/kids 5; 90cm ≈ 18-24M/2T. Same API as adults (x-fr-clientid=uq.ca.web-spa, search + l2s stock endpoints). Watch for `comingSoon`/`sales:false` items that show IN_STOCK but aren't purchasable ("Available Mid-Aug") — check the sales flag, not just stock.
+- **Joe Fresh**: PDP SSR embeds sizes[] with disabled:false for in-stock. Baby label "18-24", toddler numeric "2" = 2T, kids "5". No API key needed.
+- **Old Navy CA**: search via api.gapcanada.ca constructorio endpoint (q=/keyword= param, x-api-key in page source). In-stock marker: `pdp-dimension-instock` in PDP buybox. Colourway names from swatch shortDescription.
+- **Claude Code runs can crash mid-harvest** (API server errors/timeouts). Mitigation now baked into TASK.md template: "write partial_<store>.json after EACH store" — restart prompt then says "reuse partials, don't redo". Kirat run crashed 0 times with partials instructed; Tegh run crashed twice before this rule.
+- Sibling occasion outfits: mirror the anchor look across sizes (white shirt + stone chino existed at both Old Navy 18-24M and Joe Fresh/Old Navy 5T).
