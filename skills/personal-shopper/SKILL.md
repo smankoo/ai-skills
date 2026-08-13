@@ -37,6 +37,22 @@ Any number or store below is an illustrative default, not a fact about whoever i
 treat every one as overridable and check it against the actual user. Keep it this way when editing:
 this skill is shareable precisely because it's empty of any one household.
 
+**Look up the user's standing shopping preferences before you shop — every run, step zero.** The
+user accumulates durable rules about what they will and won't buy (fabric/material constraints,
+brands to avoid, sustainability or fit requirements, email-format expectations like item
+thumbnails). These live in persistent memory, not in this file, and they are non-negotiable filters
+— violating one is a failed run even if everything else is perfect. Before profiling anyone, query
+persistent memory and gather every rule that could touch this task:
+
+```
+mem0_search("clothing fabric material preferences")   # also: gifts, shopping, brands, retailers
+mem0_search("shopping email format requirements")
+```
+
+Also read the injected `memory` / user-profile block already in context. Restate the rules you
+found at the top of the checklist (§3) so they're visible, and treat each as a hard gate in §5 and
+§8. Don't hardcode the rules here — look them up fresh each run, because they change.
+
 These two rules work together: **encode the mechanics, leave out the specifics.** "This retailer
 marks a sold-out size with `--unavailable` on the size label" belongs in the skill forever. "Size 5T"
 does not belong in it at all.
@@ -186,6 +202,12 @@ Split deliberately:
 
 ## 5. Design it, don't just fill slots
 
+- **Apply the standing preference gates first (from step zero).** Any hard rule the user holds —
+  fabric/material composition, brands to avoid, fit requirements — is a filter, not a nice-to-have.
+  A piece that violates one is out, however good it looks. For a fabric rule especially: this
+  removes whole product lines (many performance/athleisure ranges are predominantly synthetic), so
+  bias the palette and store routing toward lines that can actually clear the bar before you fall
+  in love with a specific piece.
 - Pick a **palette** and state it: neutral base, two warm counterpoints, one light knit so it
   doesn't go funereal.
 - Make it **cross-match**: every top should work with every bottom. Say that it's deliberate.
@@ -266,6 +288,16 @@ there but wrong, fix it; a stale recipe is worse than none, because it gets trus
 
 The essentials:
 
+- **Verify fabric/material composition against the live page, not the category grid.** When the
+  user holds a material rule (e.g. a minimum natural-fibre percentage), the composition is a
+  buyable-or-not fact just like size and stock — and it's almost never on the grid. Open the
+  product page and read the fibre content ("Materials"/"Composition"/"Fabric & care" section, or
+  the `material`/`description` field in the `ld+json` block). Compute the natural-fibre share
+  (cotton, wool, linen, silk, cashmere, etc. vs. polyester, nylon, acrylic, elastane, viscose/
+  rayon — note viscose is semi-synthetic, count it as synthetic unless told otherwise) and drop
+  anything under the user's threshold. Record the composition in the cart JSON and surface it in
+  the email next to each item, so the user can see the rule was honoured. If a page doesn't state
+  composition, treat it as unverified and exclude it rather than guessing.
 - **Simons**: parse the `application/ld+json` block on each product page for `name`, `brand`,
   `offers.price`, `offers.availability`. Category URLs bounce to the homepage under bot
   protection — use a **same-origin `fetch()` from an already-loaded tab** instead.
