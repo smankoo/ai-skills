@@ -56,6 +56,16 @@ note turns out to be true of every site, promote it to the section below and del
    ("the browser tool has been down for ~10 minutes"). Drive it yourself, or give agents
    disjoint short jobs. If they stall, parse their JSONL under the session dir to salvage
    verified products instead of re-running.
+6. **Try `web_extract` before heavier tooling.** As of 2026-08, `web_extract` runs a real
+   headless browser (self-hosted Crawl4AI) — it executes JavaScript and returns fully-rendered
+   page markdown, not the empty curl shell. It costs nothing (local) and needs no browser session.
+   Use it as the CHEAP FIRST PASS: it's enough when the fields you need are in the rendered HTML,
+   especially a `<script type="application/ld+json">` block (parse `offers.price`, `availability`,
+   `name`, `image`) or visible price/title text. It is NOT enough when the data loads from a
+   *separate* XHR or hides behind a click (accordion/tab) — plain `web_extract` won't click or
+   intercept. In that case escalate to the public-JSON-API / Shopify-JSON / CDP path. Rough ladder
+   per retailer: **web_extract (JSON-LD + visible fields) → public/undocumented JSON API →
+   Shopify JSON → CDP/browser interaction**. Record in the recipe which rung actually worked.
 
 ## Uniqlo (CA) — public JSON API, the best natural-fibre source found so far
 
