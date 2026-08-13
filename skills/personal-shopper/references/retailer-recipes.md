@@ -57,6 +57,85 @@ note turns out to be true of every site, promote it to the section below and del
    disjoint short jobs. If they stall, parse their JSONL under the session dir to salvage
    verified products instead of re-running.
 
+## Uniqlo (CA) — public JSON API, the best natural-fibre source found so far
+
+Canada, mid-market. **This is the highest-leverage retailer for a natural-fibre rule** — deep
+cotton/wool/linen/cashmere lines (Supima, oxford, flannel, merino, lambswool, corduroy, selvedge)
+and, crucially, a clean public JSON API that returns **live fibre composition, price, stock, image,
+and country of origin** without scraping the DOM. No bot wall on the API. Verified 2026-08-13.
+
+The only trick: every call needs the header **`x-fr-clientid: uq.ca.web-spa`** (plus
+`x-fr-client-version` and `accept: application/json`). Discover the exact clientid live from
+DevTools/network if it rotates — it's sent on every XHR the site makes. Run `fetch()` from an
+already-loaded `uniqlo.com` tab (one tab per origin rule applies).
+
+Base: `https://www.uniqlo.com/ca/api/commerce/v5/en`
+
+- **Keyword search** (find candidates): `GET /products?q=<terms>&limit=20&offset=0&httpFailure=true`
+  → `result.items[]` with `productId` (E-number like `E456630-000`), `name`, `genderCategory`,
+  `prices.base.value`, `images`.
+- **Product detail** (the money endpoint — composition + stock): `GET /products/<E-id>?httpFailure=true`
+  → returns `result.name`, `l2s`/variants, and a **`composition`** array (e.g. `[{fabric:"COTTON",
+  percentage:100}]`) plus `origin`. Sum the natural fibres (cotton/wool/linen/silk/cashmere/lyocell*)
+  and gate at the user's threshold. *(lyocell/Tencel is plant-derived; count it natural unless told
+  otherwise — a barrel jean at 79% cotton / 21% lyocell passes a 70% rule.)*
+- **Stock**: variant objects carry a stock/availability flag; a fully OOS product returns no buyable
+  l2s. Verify before recommending — several picks (corduroy jacket/barrel pants) were OOS while
+  cotton substitutes were in stock.
+
+```js
+const H = {'accept':'application/json','Content-Type':'application/json',
+           'x-fr-client-version':'3.2612.10','x-fr-clientid':'uq.ca.web-spa'};
+// composition + price for one product
+const r = await fetch(`https://www.uniqlo.com/ca/api/commerce/v5/en/products/E456630-000?httpFailure=true`,{headers:H});
+const j = await r.json();
+// j.result.composition -> [{fabric:'COTTON', percentage:100}], j.result.prices...
+```
+
+**Product page URL** (for the email link): `https://www.uniqlo.com/ca/en/products/<E-id>` —
+resolves to the live PDP (redirects to append colour/size codes). Verified good 2026-08-13.
+
+**Image URL** pattern: `https://image.uniqlo.com/UQ/ST3/ca/imagesgoods/<6-digit>/item/cagoods_<NN>_<6-digit>_3x4.jpg`
+(the 6-digit is the E-number without the `E`/`-000`). Some goods use the `WesternCommon` path
+instead of `ca`: `.../ST3/WesternCommon/imagesgoods/<id>/item/goods_<NN>_<id>_3x4.jpg`. Grab the real
+`images` array from the search/detail JSON rather than hand-building when possible.
+
+**Failure modes**
+- Missing/ wrong `x-fr-clientid` header → 403 / empty. It's mandatory on every call.
+- Cross-origin `fetch()` (e.g. running it from a herschel tab) → "Failed to fetch". One tab per origin.
+- AirSense blazers, fleece, "Double Face" coats, many "washable" knits, and rayon/HeatTech lines are
+  **predominantly synthetic** — they fail a natural-fibre gate. Don't fall in love before reading
+  `composition`. Uniqlo outerwear especially tends to blend; the 100% cotton Denim Trucker Jacket
+  was the only clean outerwear option found.
+- `x-fr-client-version` drifts over time; if calls start failing, refresh both header values from a
+  live network capture.
+
+## Herschel — Shopify storefront JSON (kids backpacks etc.)
+
+Global; DTC brand. It's a Shopify store, so the standard Shopify JSON endpoints work with **no bot
+wall** once a herschel.com tab is loaded (same-origin). Great for kids' bags sized by age. Verified
+2026-08-13.
+
+- **Predictive search**: `GET /search/suggest.json?q=<terms>&resources[type]=product&resources[limit]=10`
+  → `resources.results.products[]` with `title`, `url`, `price`, `available`, `featured_image.url`.
+- **Product detail**: `GET /products/<handle>.json` → `product.title`, `product.variants[]`
+  (`title`, `price`, `available`), `product.images[].src`, and `product.body_html` — the **age range
+  lives in `body_html`** (e.g. "young adventurers aged 3–7 years" vs the Youth pack "aged 8–12").
+  Read it: the "Kids" and "Youth" Heritage packs look identical but are sized years apart.
+
+```js
+const r = await fetch('/products/herschel-heritage-kids-backpack.json',{headers:{'accept':'application/json'}});
+const p = (await r.json()).product;  // p.variants[].price/available, p.images[0].src, p.body_html
+```
+
+**Failure modes**
+- US site is `herschel.com` with `/shop/...` and `/pages/...` paths; the `/en-ca/collections/...`
+  paths 404 on it. Navigating `products.json` directly can return `ERR_HTTP_RESPONSE_CODE_FAILURE` —
+  fetch same-origin from a loaded page instead. The US catalog is fine for identifying the right
+  product/handle; hand the user the `.ca` link for checkout.
+- A sandboxed/404 error page has `location.origin === "null"` → all `fetch()` fail. Navigate to a
+  real store page (e.g. `/pages/kids`) first, then fetch.
+
 ## Simons — JSON-LD
 
 Category URLs bounce to `/en` under bot protection: `browser_navigate`, `location.assign()`, and
