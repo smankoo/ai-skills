@@ -489,4 +489,10 @@ anyone's sizes or budget.
   how the deciding fact came from asking the user rather than from the records.
 - `references/retailer-recipes.md` — extraction snippets per retailer, and every browser failure
   mode hit so far.
+- `references/retailers-tried.md` — the reconnaissance ledger: which retailers have a working
+  recipe, which are blocked, and a candidate queue. Read it before investigating a new retailer so
+  you don't redo one that's already `done`.
 - `references/cart-schema.md` — the cart JSON the builder consumes.
+- `scripts/` — tested, repeatable extraction helpers. When a run works out how to pull a retailer's
+  data reliably, save the working script here (named `<retailer>_extract.py` or `.js`) with a header
+  comment on how to run it, so the next run reuses it instead of rediscovering it.
