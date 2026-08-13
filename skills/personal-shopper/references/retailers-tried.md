@@ -36,18 +36,61 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 
 ## Candidate queue (not yet tried — good picks for future runs)
 
-Canadian-delivering, mix of natural-fibre-friendly and kid/adult coverage. Pick from here when
-choosing the next retailer, or choose another that fits Sumeet's household better:
+### ⭐ CONFIRMED FROM SUMEET'S YNAB PURCHASE HISTORY — prioritize these first
+
+These are retailers Sumeet has **actually purchased from** (verified against his YNAB payee list,
+2026-08-13). A recon run should prefer these over speculative picks — a working recipe here has
+immediate real-world value. Grouped by role; ones already cracked are marked.
+
+**Apparel & footwear**
+- Uniqlo Canada — ✅ `done` (see recipe). His confirmed kids' store.
+- Old Navy CA — ✅ `done`. His confirmed kids' store.
+- Gap CA — ✅ `done`.
+- La Maison Simons — ✅ `done` (Mac delegation).
+- Aritzia — `blocked` (Cloudflare); worth a fresh Mac-CDP attempt.
+- **Zara CA** (zara.com/ca) — bought at Square One; check bot-wall class.
+- **The Children's Place** (childrensplace.ca) — kids' clothing, directly relevant.
+- **Carter's / OshKosh CA** (carters.com) — baby/toddler, directly relevant.
+- **Reitmans** (reitmans.com) — women's (Priyanka).
+- **La Vie En Rose** (lavieenrose.com) — lingerie/loungewear.
+- **Tommy Hilfiger CA** — natural-fibre-friendly (cotton oxfords/chinos).
+- **Michael Kors CA** — accessories/gifts.
+- **Aldo** (aldoshoes.com) — footwear (note skill's "never order kids' shoes" rule; adults OK).
+- **Crocs CA** — footwear.
+- **ASICS Canada** — athletic footwear.
+- **Sport Chek** (sportchek.ca) — athletic apparel/gear; his fitness angle (Strava/Fitbod).
+- **Winners** (winners.ca) — off-price; likely no online catalog, verify.
+
+**General merchandise / marketplace / home**
+- Amazon.ca — usable per SKILL.md §8 (his single most-used retailer by far); a fallback, not recon.
+- **Walmart CA** (walmart.ca) — used via Instacart + direct; general merch + kids.
+- **Costco CA** — `blocked` (press-and-hold); membership warehouse, his CIBC Costco card.
+- **Canadian Tire** (canadiantire.ca) — Triangle Rewards member; home/auto/seasonal.
+- **IKEA CA** (ikea.ca) — furniture/home; frequent.
+- **Indigo / Chapters** (chapters.indigo.ca) — books & gifts.
+- **Staples CA** (staples.ca) — office/electronics.
+- **Michaels** (michaels.com) — crafts/gifts.
+- **Party City CA** (partycity.ca) — party/kids events.
+- **Toys R Us CA** (toysrus.ca) — kids' gifts.
+- **RONA** (rona.ca) — home improvement.
+
+**Beauty / personal care**
+- **Deciem / The Ordinary** (deciem.com) — skincare; Shopify-ish, likely easy.
+- **The Body Shop CA** — natural beauty.
+- **Bath & Body Works CA** — gifts.
+
+**Specialty / gifts**
+- **Brilliant Earth** (brilliantearth.com) — fine jewelry (a real past purchase; gift direction).
+- **EyeBuyDirect** (eyebuydirect.com) — prescription eyewear.
+- **Etsy** — handmade/gifts (has a public API + JSON-LD).
+
+### Other good picks (not confirmed in YNAB, but fit the household)
 
 - **Roots** (roots.com) — Canadian, heavy cotton/fleece; kids + adults; natural-fibre-friendly.
 - **Frank And Oak** (frankandoak.com) — Canadian, cotton/wool/linen focus, sustainability angle.
-- **Marks / Mark's** (marks.com) — workwear, cotton basics, Canadian Tire platform.
+- **Mark's** (marks.com) — workwear, cotton basics, Canadian Tire platform.
 - **Tilley** (tilley.com) — natural-fibre travel/outdoor, Canadian.
-- **MEC** (mec.ca) — outdoor co-op; merino/cotton available; Canadian.
+- **MEC** (mec.ca) — outdoor co-op; merino/cotton; Canadian.
 - **Kotn** (kotn.com) — Canadian, Egyptian-cotton essentials; very natural-fibre-friendly.
 - **Hudson's Bay** (thebay.com) — department store, house + designer brands; kids + adults.
-- **Peavey Mart / Carhartt CA** — durable cotton/duck workwear.
-- **Zara CA** (zara.com/ca) — fast fashion; check bot wall class.
 - **Mountain Warehouse CA**, **Decathlon CA** — value outdoor.
-- **Well.ca**, **Indigo** (chapters.indigo.ca) — non-clothing gift directions (books, home).
-- **Amazon.ca** — already usable per SKILL.md §8; a fallback, not a recon target.
