@@ -31,6 +31,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Wayfair.ca | CA | Press-and-Hold; CDP windowed Chrome on Mac works for product pages | partial | note | 2026-08-12 |
 | Pottery Barn Kids CA | CA | Loads clean via CDP windowed Chrome on Mac | done | note | 2026-08-12 |
 | The Brick | CA | Press-and-Hold on grids; CDP windowed Chrome + deep links works | partial | note | 2026-08-12 |
+| The Children's Place | CA | Rendered-DOM via web_extract + `childrensplace_extract.py` (no JSON-LD/API) | done | yes | 2026-08-15 |
 
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
@@ -49,7 +50,7 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 - La Maison Simons — ✅ `done` (Mac delegation).
 - Aritzia — `blocked` (Cloudflare); worth a fresh Mac-CDP attempt.
 - **Zara CA** (zara.com/ca) — bought at Square One; check bot-wall class.
-- **The Children's Place** (childrensplace.ca) — kids' clothing, directly relevant.
+- **The Children's Place** (childrensplace.com/ca) — ✅ `done` (see recipe). Kids' workhorse clothes.
 - **Carter's / OshKosh CA** (carters.com) — baby/toddler, directly relevant.
 - **Reitmans** (reitmans.com) — women's (Priyanka).
 - **La Vie En Rose** (lavieenrose.com) — lingerie/loungewear.

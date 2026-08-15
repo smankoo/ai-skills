@@ -289,6 +289,71 @@ Old Navy runs ~50% off frequently — it's why two children's wardrobes come in 
 when pricing looks promotional and won't hold. Conversely, big-ticket adult outerwear (Barbour
 and similar) goes on sale in November, so it can wait.
 
+## The Children's Place (CA) — rendered-DOM via web_extract (no JSON-LD, no API)
+
+Canada, cheap/resilient kids' chain — a natural workhorse-clothes store (uniform polos,
+basic tees, joggers, PJs) in the "kids, play clothes" role. Confirmed in Sumeet's YNAB
+history. Domain is **`childrensplace.com/ca`** (NOT `childrensplace.ca`). Sister brand
+Gymboree shares the platform (`gymboree.com/ca`) — the recipe should transfer.
+
+**Which rung worked: `web_extract` (rendered DOM) — rung 4.** No usable `application/ld+json`
+block, and no clean public JSON API was found. But the JS-rendered markdown that `web_extract`
+returns carries **everything** the skill needs: title, sale + original price, % off, fabric
+composition (the `FABRICATION:` line — critical for the natural-fibre gate), colour swatches,
+Cloudinary image URL, and item number. Parse it with
+`scripts/childrensplace_extract.py`. Verified 2026-08-15 on two live products
+(cotton polo `1124756_NJ`, polyester PJs `3058635_IV`) — prices, %off, and composition
+matched the live pages exactly.
+
+**Product URL shape:** `https://www.childrensplace.com/ca/p/<Slug-Words>-<productId>-<colorCode>`
+e.g. `.../p/Boys-Uniform-Short-Sleeve-Pique-Polo-1124756-NJ`. The `Item #: <productId>_<colorCode>`
+line at the bottom of the page is the authoritative id. Find candidate URLs via
+`web_search "childrensplace.com/ca <category> <keyword>"` — search result snippets even carry
+the `FABRICATION:` line sometimes.
+
+```bash
+# 1. Render the PDP (retry on Akamai — see failure modes):
+#    web_extract(urls=["https://www.childrensplace.com/ca/p/<slug>-<id>-<color>"])
+#    -> saves full page to /home/deploy/.hermes/cache/web/<host>-<hash>.md
+# 2. Parse it:
+python3 scripts/childrensplace_extract.py /home/deploy/.hermes/cache/web/www.childrensplace.com-XXXX.md
+#    -> {title, sale_price, original_price, pct_off, final_sale, composition,
+#        natural_pct, sizes[], colors[], image, item_no, url}
+```
+
+**Key fields (verified 2026-08-15)**
+| What | Where in rendered markdown |
+|---|---|
+| Composition | `FABRICATION: 100% cotton pique, imported` (in Product Description) |
+| Sale price | `Sale Price: $11` / `$11.00` |
+| Original price | `Original Price: $16.95` |
+| % off | runs into the price: `$16.9535% OFF` → parse `\.\d\d(\d{1,2})% OFF` |
+| Sizes | under the `Size:` header: `XS (4)`, `S (5/6)`, `M (7/8)`, `L (10/12)`, `XL (14)`, `XXL (16)` |
+| Per-size stock | `ADD TO BAG` (in stock) vs `OUT OF STOCK` after each size — **partial only, see below** |
+| Colours | swatch alt-text lines: `NAUTICO![NAUTICO](...swatch...)` |
+| Image | `https://assets.theplace.com/image/upload/.../ecom/assets/products/tcp/<id>/<id>_<color>.(jpg|png)` |
+| Volume price | `GET 6+ FOR $8 EACH` (multi-buy — surface it if buying ×N) |
+| Flame/safety | PJs carry `flame resistant` + OEKO-TEX note; PJs are usually 100% polyester (fail natural gate) |
+
+**Failure modes**
+- **Akamai intermittently blocks web_extract** → `"Blocked by anti-bot protection: Akamai block"`.
+  It is NOT a hard wall and NOT press-and-hold — just **retry the same URL**; a 2nd/3rd call renders
+  clean (one of two URLs blocked on first pass, succeeded on retry, 2026-08-15). No exit node or Mac
+  delegation needed.
+- **A `FEATURED PRODUCTS` nav block renders BEFORE the real product** and carries its OWN
+  prices/images/%OFF. Naïvely grabbing the first `Sale Price:`/image/`% OFF` gives the wrong
+  product's data. Fix: anchor all extraction to the slice AFTER the product `# <Title>` H1
+  (the parser does this via `title_pos`).
+- **Per-size stock is only PARTIALLY reliable from the render.** The rendered DOM emits
+  `ADD TO BAG`/`OUT OF STOCK` tokens only for the first sizes shown, so mid/large sizes come back
+  `in_stock: null` (unknown). Treat `null` as "verify on the live page before recommending" — do
+  NOT assume in stock. For a firm per-size answer you'd need the browser/CDP path (click the size
+  swatch). Composition, price, and image are fully reliable; stock is best-effort.
+- **`%OFF` is glued to the price** (`$16.9535% OFF`) — a naïve `(\d+)% OFF` grabs `9535`. Anchor on
+  the two-decimal cents first: `\.\d\d(\d{1,2})% OFF`.
+- No JSON-LD on the PDP; don't waste time grepping for `application/ld+json` (there isn't one).
+- Domain confusion: `childrensplace.ca` is NOT the site — it's `childrensplace.com/ca`.
+
 ## Colour diversity — a curation rule (learned 2026-08-08)
 
 A harvest that ignores colour converges on one colour (whatever the retailer photographs most —
