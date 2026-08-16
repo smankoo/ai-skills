@@ -45,7 +45,7 @@ Output shape (one dict per URL):
   {url, name, brand, image, currency, composition, natural_pct,
    sizes: [{size, sku, price, availability}], any_in_stock}
 """
-import json, re, sys, time, urllib.request, websocket
+import json, re, sys, time, urllib.request
 
 CDP = "http://localhost:9333"
 NATURAL = ("cotton", "wool", "linen", "silk", "cashmere", "lyocell", "tencel",
@@ -117,6 +117,7 @@ def natural_pct(comp):
     return round(nat * 100 / total) if total else None
 
 def extract(url):
+    import websocket  # lazy: only needed for the live CDP path, not for the pure parsers
     tab = open_tab("about:blank")
     ws = websocket.create_connection(tab["webSocketDebuggerUrl"], timeout=30)
     ws.send(json.dumps({"id": 1, "method": "Page.enable"}))
