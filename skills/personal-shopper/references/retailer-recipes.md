@@ -354,6 +354,77 @@ python3 scripts/childrensplace_extract.py ~/.hermes/cache/web/www.childrensplace
 - No JSON-LD on the PDP; don't waste time grepping for `application/ld+json` (there isn't one).
 - Domain confusion: `childrensplace.ca` is NOT the site — it's `childrensplace.com/ca`.
 
+## Carter's / OshKosh (CA) — JSON-LD ProductGroup via CDP windowed Chrome on the Mac
+
+Canada, cheap/resilient baby & toddler chain — the "kids, play clothes" role, and
+**very natural-fibre-friendly** (huge amount of 100% cotton: bodysuits, sleepers,
+pull-on pants, tees). Confirmed in Sumeet's YNAB history. CA domain is
+**`cartersoshkosh.ca`** (`/en_CA/`); US is `carters.com` / `oshkosh.com` — all the
+same Salesforce Commerce Cloud (Demandware) platform, so the recipe transfers. Sister
+brands OshKosh B'gosh and Skip Hop share it too. Verified 2026-08-15.
+
+**Which rung worked: CDP windowed Chrome on the Mac — rung 3 (bot-wall bypass).**
+From the VPS *every* path is walled and none is fixable VPS-side:
+- `curl` / `requests` → `403 "Just a moment..."` (Cloudflare JS challenge).
+- `web_extract` (Crawl4AI headless) → `"Blocked by anti-bot protection: PerimeterX block"`
+  — consistent across retries (not intermittent like Akamai on Children's Place).
+- The Demandware `/dw/shop/v20_4/products/...` OCAPI endpoint also 403s (Cloudflare).
+It's a **passive fingerprint wall + PerimeterX**, so an exit node does NOT help — go
+straight to a real windowed Chrome on the Mac over CDP (see retail-bot-wall-bypass).
+`www.cartersoshkosh.ca` loaded clean over CDP with a ~13s render wait; NO interactive
+press-and-hold.
+
+**The data, once the page renders:**
+- **JSON-LD `ProductGroup`** (`script[type=application/ld+json]`) is the money block.
+  It carries `hasVariant[]` = one entry **per size** with `{size, sku,
+  offers.price, offers.priceCurrency, offers.availability}`. This gives **per-size
+  price + stock** directly (`InStock`/`OutOfStock`) — no `--unavailable` class hunt,
+  no accordion clicking. Confirmed it discriminates correctly (a pants product showed
+  only `NB` InStock, all other sizes OutOfStock).
+- **Composition** is NOT in the JSON-LD. It lives in the description container
+  `[class*=description i]` under a `Fabric & Care:` header (e.g. `100% cotton`,
+  `100% cotton rib`), alongside `Imported` and an OEKO-TEX cert line. Read it from
+  there. Baby basics are overwhelmingly 100% cotton → clean natural-fibre pass.
+- **Image**: JSON-LD `image` (or `og:image`) — a Demandware static URL
+  `.../on/demandware.static/-/Sites-carters_master_catalog/default/<hash>/productimages/<styleid>.jpg`.
+
+**Tested extractor:** `scripts/carters_extract.py` (base64-ship to the Mac, run under
+the CDP venv). Verified 2026-08-15 on two live products (`V_1L790516` 100% cotton rib,
+`V_1L931210` 100% cotton) — name, image, per-size price+stock, and composition all
+matched the live pages. Output per URL: `{url, name, image, currency, composition,
+natural_pct, sizes:[{size,sku,price,availability}], any_in_stock}`.
+
+**Product URL shape:** `https://www.cartersoshkosh.ca/en_CA/<slug>/V_<styleid>.html`
+The `V_<8-digit>` style id is the `productGroupID` in the JSON-LD. Find candidate URLs
+via `web_search "site:cartersoshkosh.ca <category> <keyword>"` (search snippets carry
+direct product links).
+
+```js
+// runs in the CDP page context after ~13s render; pulls the ProductGroup + Fabric & Care
+(() => {
+  const lds = [...document.querySelectorAll('script[type="application/ld+json"]')]
+    .map(s => { try { return JSON.parse(s.textContent); } catch(e){ return null; } }).filter(Boolean);
+  const pg = lds.find(j => j['@type']==='ProductGroup') || lds.find(j => j['@type']==='Product');
+  const sizes = (pg.hasVariant||[]).map(v => {
+    const o = Array.isArray(v.offers)?v.offers[0]:(v.offers||{});
+    return {size:v.size, sku:v.sku, price:o.price, avail:String(o.availability||'').replace('https://schema.org/','')};
+  });
+  const d = document.querySelector('[class*=description i]');      // "...Fabric & Care:\n100% cotton\nImported..."
+  return {name:pg.name, image:Array.isArray(pg.image)?pg.image[0]:pg.image, sizes, desc:d && d.innerText};
+})()
+```
+
+**Failure modes**
+- Cloudflare + PerimeterX from the VPS on *every* transport (curl, web_extract, OCAPI).
+  Unlike Children's Place (Akamai, retry clears it), retrying web_extract does NOT help —
+  don't burn calls on it. Go to Mac CDP.
+- `brand` in the JSON-LD is often `null` — it's a house brand; label it "Carter's"
+  manually rather than trusting the field.
+- One image per ProductGroup (the default colourway). For alternate colours you'd need
+  the variant-image swap; not exposed in the top-level JSON-LD.
+- Baby sizes use `NB`/`PRE`/`3M`…`24M` labels (not cm); toddler uses `2T`…`5T`. Derive
+  from the child's measurement against Carter's own size chart as usual.
+
 ## Colour diversity — a curation rule (learned 2026-08-08)
 
 A harvest that ignores colour converges on one colour (whatever the retailer photographs most —
