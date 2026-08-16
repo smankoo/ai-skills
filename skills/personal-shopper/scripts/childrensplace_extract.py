@@ -13,10 +13,10 @@ USAGE
 -----
 1. In the agent, call web_extract on the PDP URL(s), e.g.:
      web_extract(urls=["https://www.childrensplace.com/ca/p/<slug>-<id>-<colorcode>"])
-   web_extract saves the full page to /home/deploy/.hermes/cache/web/<host>-<hash>.md
+   web_extract saves the full page to ~/.hermes/cache/web/<host>-<hash>.md
    and prints that path in its footer.
 2. Run this on the saved cache file (or any file holding the markdown):
-     python3 childrensplace_extract.py /home/deploy/.hermes/cache/web/www.childrensplace.com-XXXX.md
+     python3 childrensplace_extract.py ~/.hermes/cache/web/www.childrensplace.com-XXXX.md
    Prints a JSON object. Pass multiple files to get a JSON array.
 
 Akamai note: web_extract intermittently returns

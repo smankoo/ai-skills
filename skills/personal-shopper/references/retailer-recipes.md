@@ -314,9 +314,9 @@ the `FABRICATION:` line sometimes.
 ```bash
 # 1. Render the PDP (retry on Akamai — see failure modes):
 #    web_extract(urls=["https://www.childrensplace.com/ca/p/<slug>-<id>-<color>"])
-#    -> saves full page to /home/deploy/.hermes/cache/web/<host>-<hash>.md
+#    -> saves full page to ~/.hermes/cache/web/<host>-<hash>.md
 # 2. Parse it:
-python3 scripts/childrensplace_extract.py /home/deploy/.hermes/cache/web/www.childrensplace.com-XXXX.md
+python3 scripts/childrensplace_extract.py ~/.hermes/cache/web/www.childrensplace.com-XXXX.md
 #    -> {title, sale_price, original_price, pct_off, final_sale, composition,
 #        natural_pct, sizes[], colors[], image, item_no, url}
 ```

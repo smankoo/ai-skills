@@ -22,7 +22,7 @@ anything is wrong. The old version is never mutated, so rollback is instant.
 
 ## Core principles (learned the hard way — 2026-08-13, the v0.20.0 attempt)
 1. **Keep the core vanilla.** All customization lives in `HERMES_HOME`
-   (`/home/deploy/.hermes/`): config, plugins, skills, crons, memory. The code
+   (`~/.hermes/`): config, plugins, skills, crons, memory. The code
    tree is disposable. A new version is a fresh clone, not a patched tree. This
    is why blue/green is cheap — green shares the SAME `HERMES_HOME` state.
 2. **The agent cannot rescue its own runtime.** A tool call that restarts the
@@ -45,7 +45,7 @@ anything is wrong. The old version is never mutated, so rollback is instant.
 
 ## Layout (already built; reuse in place)
 ```
-/home/deploy/.hermes/
+~/.hermes/
   hermes-agent/                 # BLUE = current live install (leave untouched)
   releases/<tag>/               # GREEN = fresh clone at <tag> + own venv
   hermes-current -> {blue|green}# SYMLINK the gateway unit's ExecStart uses
@@ -106,7 +106,7 @@ restart, VERIFY where you landed (read-only): `readlink hermes-current`,
 ### 5. Roll back (any time, instant)
 Force back to blue: point `last_good` at blue then fire the oneshot:
 ```
-echo /home/deploy/.hermes/hermes-agent > bluegreen/last_good
+echo "$HOME/.hermes/hermes-agent" > bluegreen/last_good
 systemctl --user start --no-block hermes-rollback.service
 ```
 GOTCHA: a successful cutover overwrites `last_good` with green. Before a
