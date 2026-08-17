@@ -425,6 +425,70 @@ direct product links).
 - Baby sizes use `NB`/`PRE`/`3M`…`24M` labels (not cm); toddler uses `2T`…`5T`. Derive
   from the child's measurement against Carter's own size chart as usual.
 
+## Reitmans (CA) — Shopify `.js` (price/stock) + PDP-HTML accordion (composition). No bot wall.
+
+Canada, mid-market women's (also its banners Penningtons, Addition Elle, RW&CO, Hyba —
+same Shopify platform, swap the domain). **Natural-fibre-friendly**: deep 100% cotton
+dress/tee lines and linen(-blend) pants. Confirmed in Sumeet's YNAB history (Priyanka).
+**No bot wall from the VPS** — plain `curl`/`urllib` work, no exit node, no Mac delegation.
+Verified 2026-08-16.
+
+**Which rung worked: Shopify JSON (rung 2) + a small PDP-HTML fetch — all VPS-side.**
+It's a Shopify store, so the standard endpoints are open:
+- **`/products/<handle>.js`** is the money endpoint: `price`/`price_min`/`price_max`
+  (in **CENTS**), `compare_at_price` (original when on sale), top-level `available`, and a
+  `variants[]` grid each with `option1`=colour / `option2`=size / `option3`=length,
+  `price`, `compare_at_price`, and a real **`available`** boolean → **per-size/per-colour
+  stock directly**. (The `.js` gives `available`; `.json` does NOT — use `.js`.)
+- **Composition is NOT in the JSON** (`.js`/`.json` `description` only says e.g. "linen and
+  viscose blend" in prose). The exact percentages live in the PDP **HTML**, in the
+  "Materials" accordion as a single **`<li class="p3">55% Linen, 45% Viscose</li>`**. It's in
+  the *static* HTML (curl gets it — no click/accordion-expand needed). Grab the lone `p3` li
+  that contains a `%`.
+
+```bash
+# price/stock/image/variants (cents):
+curl -s -A "$UA" "https://www.reitmans.com/products/<handle>.js"
+# exact composition (MUST request text/html — see failure modes):
+curl -s -A "$UA" -H 'Accept: text/html' "https://www.reitmans.com/products/<handle>" \
+  | grep -oE '<li class="p3">[^<]*</li>'   # -> <li class="p3">55% Linen, 45% Viscose</li>
+```
+
+**Tested extractor:** `scripts/reitmans_extract.py` (pure `urllib`, runs on the VPS).
+Verified 2026-08-16 on two live products:
+- `wide-leg-linen-pants-women-s-collection-492032` → "55% Linen, 45% Viscose", natural_pct 55,
+  $14.97 (compare $64.90), 91/250 variants in stock.
+- `woven-fit-flare-midi-dress-100-cotton-498128` → "100% Cotton", natural_pct 100,
+  $39.99 (compare $79.90), 7/9 in stock.
+Output per URL: `{title, price, compare_at_price, on_sale, available, composition,
+natural_pct, image, colors[], sizes[], lengths[], variants:[{color,size,length,price,
+compare_at,available}], any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-08-16)
+| What | Where |
+|---|---|
+| Price / compare-at / stock / variants | `/products/<handle>.js` (prices in cents; `variants[].available`) |
+| Composition (fibre %) | PDP HTML, `<li class="p3">…%…</li>` under the "Materials" accordion |
+| Image | `.js` `featured_image` (protocol-relative `//cdn.shopify.com/...` → prefix `https:`) |
+| Product URL | `https://www.reitmans.com/products/<handle>` |
+| Handle | tail after `/products/`; often ends in the 6-digit style id (e.g. `-492032`) |
+
+**Failure modes**
+- **Reitmans content-negotiates on the `Accept` header.** Requesting the bare PDP URL with
+  `Accept: application/json` returns the *JSON product feed*, not the HTML — so the Materials
+  composition silently goes missing (`composition: None`). Send `Accept: text/html` for the
+  PDP fetch, `Accept: application/json` only for `.js`/`.json`. This bit the first extractor
+  run and is the single non-obvious trap here.
+- `.json` lacks `available`; use `.js` for stock. `.json` is fine for `body_html`/tags only.
+- Big products can have **hundreds of variants** (colour × size × length; e.g. 250) — dedup
+  colours/sizes for display and rely on `available` per variant, not the top-level flag.
+- **Viscose/rayon count as SYNTHETIC** per the skill's fibre rule, so a "linen blend" pant at
+  55% linen / 45% viscose is natural_pct **55**, not 100 — it clears a 50% rule but fails 70%.
+  Read the actual `%`, don't trust the "linen" in the title.
+- Search snippets from `web_search "site:reitmans.com <keyword>"` carry the composition line and
+  the `/products/<handle>` URL directly — good for discovery. A handle can go stale/renamed
+  (a `.json` 404); re-derive from a fresh search.
+
 ## Colour diversity — a curation rule (learned 2026-08-08)
 
 A harvest that ignores colour converges on one colour (whatever the retailer photographs most —

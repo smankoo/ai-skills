@@ -33,6 +33,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | The Brick | CA | Press-and-Hold on grids; CDP windowed Chrome + deep links works | partial | note | 2026-08-12 |
 | The Children's Place | CA | Rendered-DOM via web_extract + `childrensplace_extract.py` (no JSON-LD/API) | done | yes | 2026-08-15 |
 | Carter's / OshKosh CA | CA | JSON-LD `ProductGroup` (per-size price+stock) via CDP Chrome on Mac; `carters_extract.py`. VPS fully walled (CF+PerimeterX) | done | yes | 2026-08-15 |
+| Reitmans | CA | Shopify `/products/<handle>.js` (price/stock, cents) + PDP-HTML `<li class="p3">` composition; `reitmans_extract.py`. No bot wall, VPS-side | done | yes | 2026-08-16 |
 
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
@@ -53,7 +54,7 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 - **Zara CA** (zara.com/ca) — bought at Square One; check bot-wall class.
 - **The Children's Place** (childrensplace.com/ca) — ✅ `done` (see recipe). Kids' workhorse clothes.
 - **Carter's / OshKosh CA** (cartersoshkosh.ca) — ✅ `done` (see recipe). Baby/toddler, mostly 100% cotton. VPS-walled → Mac CDP.
-- **Reitmans** (reitmans.com) — women's (Priyanka).
+- **Reitmans** (reitmans.com) — ✅ `done` (see recipe). Women's (Priyanka); Shopify, no bot wall.
 - **La Vie En Rose** (lavieenrose.com) — lingerie/loungewear.
 - **Tommy Hilfiger CA** — natural-fibre-friendly (cotton oxfords/chinos).
 - **Michael Kors CA** — accessories/gifts.
