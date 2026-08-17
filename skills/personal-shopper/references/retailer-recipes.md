@@ -489,6 +489,80 @@ compare_at,available}], any_in_stock}`.
   the `/products/<handle>` URL directly — good for discovery. A handle can go stale/renamed
   (a `.json` 404); re-derive from a fresh search.
 
+## Tommy Hilfiger (CA) — JSON-LD `Product` + `div.content-column` composition, via CDP Chrome on the Mac
+
+Canada, mid-market — **natural-fibre-friendly**: cotton oxfords/chinos/pique polos for adults, and
+mostly cotton (often organic/regenerative) kids' tees, polos, shirts. Confirmed in Sumeet's YNAB
+history. Domain **`ca.tommy.com`** (`/en/`); runs on Salesforce Commerce Cloud (Demandware). Sister
+brand Calvin Klein CA is the same platform/owner (PVH) — the recipe should transfer. Verified 2026-08-17.
+
+**Which rung worked: CDP windowed Chrome on the Mac — rung 3 (bot-wall bypass).**
+From the VPS *every* path is walled and none is fixable VPS-side:
+- `curl` / `requests` → `403` (`Server: AkamaiGHost` — Akamai passive-fingerprint wall).
+- `web_extract` (Crawl4AI headless) → `"Blocked by anti-bot protection: HTTP 403"` — a HARD 403,
+  NOT the intermittent Akamai on Children's Place (retry does NOT clear it here).
+- Demandware `/s/<site>/dw/shop/v20_4/products/...` OCAPI → 403; `.json` on the PDP path → 403.
+It's a **passive** wall (no press-and-hold), so an exit node does NOT help. `ca.tommy.com` loaded
+clean over CDP with a ~14s render wait; no interactive challenge.
+
+**The data, once the page renders** (all reliable):
+- **JSON-LD is a single `Product`** (NOT a `ProductGroup`), so there is **no per-size variant array**
+  in it. It gives `name`, `image` (a scene7 URL), `offers.price` (the **sale/current** price),
+  `offers.priceCurrency`, `offers.availability` (product-level `InStock`/`OutOfStock`), and `sku`/`mpn`
+  (= the `<STYLE>-<COLOR>` code in the URL, e.g. `78JA876-WEB`).
+- **Composition** lives in a leaf **`div.content-column`** whose text IS the fibre line
+  (e.g. `98% organic cotton, 2% elastane.`, `100% regenerative cotton.`). NOT in the JSON-LD. Match
+  generically: a childless element with `N%` + a fibre name. ("organic"/"regenerative" cotton still
+  count as cotton → natural.)
+- **Original price + %off**: the first `[class*=price]` element's innerText holds all of it,
+  e.g. `$99.50 CAD $49.75 CAD 50% off`. The sale price = JSON-LD `offers.price`; the higher **$-prefixed**
+  number is the original.
+- **Per-size stock**: `label.size-enabled` (buyable) vs `label.size-disabled` (OOS). Colour swatches
+  share the swatch container but have NO `size-*` class — filter on `size-` to isolate real sizes.
+
+**Tested extractor:** `scripts/tommy_extract.py` (base64-ship to the Mac, run under the CDP venv).
+Verified 2026-08-17 on two live products (`78JA876-WEB` 98% organic cotton oxford $49.75/$99.50 50% off;
+`71J4179-YCI` 100% regenerative-cotton kids' tee $15.90/$26.50 40% off) — name, image, sale+original
+price, %off, availability, per-size stock, colours, and composition all matched the live pages. Both
+scene7 images returned `200 image/jpeg` from the VPS (no hotlink block). Output per URL:
+`{url, style, name, image, currency, price, original_price, pct_off, availability, composition,
+natural_pct, sizes:[{size,in_stock}], colors:[], any_size_in_stock}`.
+
+```js
+// runs in the CDP page context after ~14s render
+(() => {
+  const lds=[...document.querySelectorAll('script[type="application/ld+json"]')]
+    .map(s=>{try{return JSON.parse(s.textContent);}catch(e){return null;}}).filter(Boolean);
+  const p=lds.find(j=>j['@type']==='Product'); const o=(p&&(Array.isArray(p.offers)?p.offers[0]:p.offers))||{};
+  const fibre=/cotton|polyester|elastane|wool|linen|viscose|nylon|silk|cashmere|lyocell|spandex|acrylic|rayon|modal|hemp/i;
+  const comp=[...document.querySelectorAll('div.content-column, *')]
+    .filter(e=>e.children.length===0 && /\d{1,3}\s*%/.test(e.textContent) && fibre.test(e.textContent))
+    .map(e=>e.textContent.trim())[0];
+  const sizes=[...document.querySelectorAll('label[class*=size-]')]
+    .map(l=>({size:(l.getAttribute('aria-label')||l.textContent).trim(), in_stock:/size-enabled/.test(l.className)}));
+  return {name:p&&p.name, image:p&&(Array.isArray(p.image)?p.image[0]:p.image), price:o.price,
+          avail:String(o.availability||'').replace(/https?:\/\/schema\.org\//,''), comp, sizes};
+})()
+```
+
+**Product URL shape:** `https://ca.tommy.com/en/<dept>/.../<slug>/<STYLE>-<COLOR>.html`.
+Find candidates via `web_search "site:ca.tommy.com <category> <keyword>"` — snippets often carry the
+`FABRICATION`/composition line and the price directly.
+
+**Failure modes**
+- Akamai HARD-403s the VPS on *every* transport (curl, web_extract, OCAPI, `.json`). Unlike Children's
+  Place (Akamai but retry clears), retrying web_extract does NOT help — go straight to Mac CDP.
+- **`%off` pollutes a naïve price scrape.** `[...].match(/\$?(\d+...)/)` over `"$26.50 CAD $15.90 CAD 40% off"`
+  reads `40` as the max → wrong original price. Fix: only match **`$`-prefixed** amounts
+  (`/\$\s?(\d+(?:\.\d\d)?)/`); parse `%off` separately. (This bit the first extractor run and is the one
+  non-obvious trap.)
+- JSON-LD is a single `Product`, so it carries product-level stock only — for per-size stock you MUST
+  read `label.size-enabled/-disabled` from the DOM. Colours are in the same swatch group; filter on the
+  `size-` class prefix so a colour name isn't mistaken for a size.
+- Many kids' basics are "regenerative"/"organic" cotton (100% natural). Adult oxfords are frequently
+  98% cotton / 2% elastane — clears a 70% natural gate. But "TH Performance"/"wicking"/quick-dry lines
+  are predominantly synthetic — read `composition`, don't trust "cotton" in the title.
+
 ## Colour diversity — a curation rule (learned 2026-08-08)
 
 A harvest that ignores colour converges on one colour (whatever the retailer photographs most —
