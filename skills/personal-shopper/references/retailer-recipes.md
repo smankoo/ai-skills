@@ -563,6 +563,74 @@ Find candidates via `web_search "site:ca.tommy.com <category> <keyword>"` — sn
   98% cotton / 2% elastane — clears a 70% natural gate. But "TH Performance"/"wicking"/quick-dry lines
   are predominantly synthetic — read `composition`, don't trust "cotton" in the title.
 
+## Roots (CA) — JSON-LD `Product` + static PDP-HTML composition & stock. NO bot wall, VPS-side.
+
+Canada, mid/upper-mid — **very natural-fibre-friendly**: heavy heritage cotton fleece
+(the Original/Cooper sweats lines), plus tees, sweatshirts, and kids' basics. Deep 80–100%
+organic-cotton catalogue; kids 2T–14 and adults share one platform. Confirmed in Sumeet's
+household fit (not YNAB-confirmed but a natural-fibre workhorse). Domain **`roots.com`**;
+locale path `/ca/en/` (US is `/us/en/`). Runs on **Salesforce Commerce Cloud (Demandware)**.
+Verified 2026-08-17.
+
+**Which rung worked: JSON-LD + static HTML (rung 1/3) — ALL VPS-side, plain `curl`/`urllib`.**
+Unlike the other Demandware CA sites in this file (Carter's = PerimeterX, Tommy = Akamai — both
+hard-403 the VPS and force Mac CDP), **Roots has NO bot wall**: `curl -A <desktop UA>` on a PDP
+returns `HTTP 200` with the full server-rendered HTML. No exit node, no Mac delegation, no
+`web_extract` needed. (The root `/` 302-redirects `→ /ca/en/homepage`; `/products.json` is 404/500
+— it's Demandware, NOT Shopify, so don't try Shopify endpoints.)
+
+**The data, once you have the PDP HTML:**
+- **JSON-LD is a single `Product`** (not a `ProductGroup`): `name`, `sku`/`mpn` (= the 8-digit
+  style id in the URL), `image` (array of Demandware `dw/image/v2/.../<style>_<color>_a.jpg` URLs),
+  `offers.price` (current price), `offers.priceCurrency`, `offers.availability` (product-level
+  `InStock`/`OutOfStock`). No per-size variant array in it.
+- **Composition** is NOT in the JSON-LD. It's in the details tab under a bold label that **varies
+  by department**: adults → `<strong>Fibre Content</strong><br> 80% organic cotton, 20% recycled
+  polyester fleece (300gsm)`; kids → `<strong>ABOUT</strong><br />80% organic cotton, 20% recycled
+  polyester fleece`. Match **either** label. NB: Roots labels blends honestly as **"recycled
+  polyester"** → count as SYNTHETIC; "organic cotton" is still cotton → NATURAL. So the flagship
+  Original fleece is `natural_pct` **80**, not 100 — clears a 70% rule, fails an 80%+ rule. Read
+  the `%`, don't trust "cotton" in the name.
+- **Per-size stock**: `<span data-attr-value="<SIZE>" class="size-value ... selectable|unselectable">`.
+  `unselectable` = OOS. This reflects the DEFAULT/selected colour on the PDP.
+- **Colours**: same `selectable/unselectable` on `<span class="... color-value ...">` swatches
+  (`data-attr-value` = colour code like `041`/`232`; the human colour name is in nearby
+  `data-attr-name="TRUE NAVY"` attrs but not always on the same tag — code is authoritative).
+
+**Tested extractor:** `scripts/roots_extract.py` (pure `urllib`, runs on the VPS). Verified
+2026-08-17 on three live products across departments — women's Original Sweatpant `54496019`
+($84, 80% organic cotton / 20% recycled poly, XXS–XXL in stock, 3X/4X OOS), women's heavier
+`54232174` ($84, 360gsm), and kids' `29070216` ($44, sizes 6–14 all in stock). Output per URL:
+`{url, style, name, price, currency, availability, composition, natural_pct, image,
+colors:[{code,name,in_stock}], sizes:[{size,in_stock}], any_size_in_stock}`.
+
+```bash
+python3 scripts/roots_extract.py \
+  "https://www.roots.com/ca/en/organic-original-sweatpant-54496019.html"
+# find candidates: web_search "site:roots.com /ca/en <category> <keyword>"
+```
+
+**Selectors / endpoints** (verified 2026-08-17)
+| What | Where |
+|---|---|
+| Name / price / currency / availability / sku / image | JSON-LD `<script type="application/ld+json">` `Product` |
+| Composition (fibre %) | PDP HTML: `<strong>Fibre Content</strong><br>…` (adult) or `<strong>ABOUT</strong><br />…` (kids) |
+| Per-size stock | `<span data-attr-value="<SIZE>" class="size-value … selectable\|unselectable">` |
+| Colour stock | `<span class="… color-value …" data-attr-value="<code>">` — same `selectable\|unselectable` |
+| Product URL | `https://www.roots.com/ca/en/<slug>-<8-digit-style>.html` |
+
+**Failure modes**
+- Root `/` 302-redirects to `/ca/en/homepage`; `/products.json` → 404/500. It's **Demandware,
+  not Shopify** — don't waste time on Shopify `.js`/`.json` endpoints. Go straight to the PDP HTML.
+- Composition label differs adult (`Fibre Content`) vs kids (`ABOUT`) — a matcher keyed only on
+  "Fibre Content" silently returns `composition: null` on kids' pages (bit the first run). Match both.
+- "Recycled polyester" reads as a good thing but is SYNTHETIC for the fibre gate; the ubiquitous
+  Original fleece caps at 80% natural. Don't assume Roots = 100% cotton.
+- JSON-LD is a single `Product`, so per-size stock must come from the DOM `size-value` swatches,
+  and those reflect only the currently-selected colour. For stock in a *specific other* colour,
+  refetch the Demandware `Product-Variation` URL (the `value="…dwvar_<style>_color=<code>…"` on each
+  swatch) — not needed for the common "is this piece buyable in size X" check.
+
 ## Colour diversity — a curation rule (learned 2026-08-08)
 
 A harvest that ignores colour converges on one colour (whatever the retailer photographs most —

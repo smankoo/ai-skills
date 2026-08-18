@@ -35,6 +35,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Carter's / OshKosh CA | CA | JSON-LD `ProductGroup` (per-size price+stock) via CDP Chrome on Mac; `carters_extract.py`. VPS fully walled (CF+PerimeterX) | done | yes | 2026-08-15 |
 | Reitmans | CA | Shopify `/products/<handle>.js` (price/stock, cents) + PDP-HTML `<li class="p3">` composition; `reitmans_extract.py`. No bot wall, VPS-side | done | yes | 2026-08-16 |
 | Tommy Hilfiger CA | CA | JSON-LD `Product` (name/price/avail/image) + `div.content-column` composition + `label.size-enabled/-disabled` per-size stock, via CDP Chrome on Mac; `tommy_extract.py`. VPS Akamai-walled (hard 403) | done | yes | 2026-08-17 |
+| Roots CA | CA | JSON-LD `Product` + static PDP-HTML (`Fibre Content`/`ABOUT` composition, `size-value` swatches); pure `urllib`, NO bot wall; `roots_extract.py` | done | yes | 2026-08-17 |
 
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
@@ -90,7 +91,7 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 
 ### Other good picks (not confirmed in YNAB, but fit the household)
 
-- **Roots** (roots.com) — Canadian, heavy cotton/fleece; kids + adults; natural-fibre-friendly.
+- **Roots** (roots.com) — ✅ `done` (see recipe). Canadian, heavy organic-cotton fleece; kids + adults; natural-fibre-friendly. No bot wall, VPS-side.
 - **Frank And Oak** (frankandoak.com) — Canadian, cotton/wool/linen focus, sustainability angle.
 - **Mark's** (marks.com) — workwear, cotton basics, Canadian Tire platform.
 - **Tilley** (tilley.com) — natural-fibre travel/outdoor, Canadian.
