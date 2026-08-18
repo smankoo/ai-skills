@@ -36,6 +36,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Reitmans | CA | Shopify `/products/<handle>.js` (price/stock, cents) + PDP-HTML `<li class="p3">` composition; `reitmans_extract.py`. No bot wall, VPS-side | done | yes | 2026-08-16 |
 | Tommy Hilfiger CA | CA | JSON-LD `Product` (name/price/avail/image) + `div.content-column` composition + `label.size-enabled/-disabled` per-size stock, via CDP Chrome on Mac; `tommy_extract.py`. VPS Akamai-walled (hard 403) | done | yes | 2026-08-17 |
 | Roots CA | CA | JSON-LD `Product` + static PDP-HTML (`Fibre Content`/`ABOUT` composition, `size-value` swatches); pure `urllib`, NO bot wall; `roots_extract.py` | done | yes | 2026-08-17 |
+| Zara CA | CA | JSON-LD `ProductGroup` (per-size×colour price+stock+composition, all in one block) via CDP Chrome on Mac; `zara_extract.py`. VPS fully Akamai-walled (curl/web_extract/JSON-API all hard-403) | done | yes | 2026-08-18 |
 
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
@@ -53,7 +54,7 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 - Gap CA — ✅ `done`.
 - La Maison Simons — ✅ `done` (Mac delegation).
 - Aritzia — `blocked` (Cloudflare); worth a fresh Mac-CDP attempt.
-- **Zara CA** (zara.com/ca) — bought at Square One; check bot-wall class.
+- **Zara CA** (zara.com/ca) — ✅ `done` (see recipe). Bought at Square One. VPS Akamai-walled → Mac CDP; JSON-LD has it all.
 - **The Children's Place** (childrensplace.com/ca) — ✅ `done` (see recipe). Kids' workhorse clothes.
 - **Carter's / OshKosh CA** (cartersoshkosh.ca) — ✅ `done` (see recipe). Baby/toddler, mostly 100% cotton. VPS-walled → Mac CDP.
 - **Reitmans** (reitmans.com) — ✅ `done` (see recipe). Women's (Priyanka); Shopify, no bot wall.

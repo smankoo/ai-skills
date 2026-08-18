@@ -631,6 +631,85 @@ python3 scripts/roots_extract.py \
   refetch the Demandware `Product-Variation` URL (the `value="…dwvar_<style>_color=<code>…"` on each
   swatch) — not needed for the common "is this piece buyable in size X" check.
 
+## Zara (CA) — JSON-LD `ProductGroup` (per-size×colour price+stock), via CDP Chrome on the Mac
+
+Canada, fast-fashion mid-market — kids (0–14) + adults, plus its house sub-brands that share the
+platform and appear under the same JSON-LD (**Massimo Dutti** items surface with `brand:"MASSIMODUTTI"`
+inside zara.com). Confirmed in Sumeet's YNAB history (bought at Square One). Natural-fibre coverage is
+real but uneven — deep 100% cotton tee/shirt lines, but also heavy poly outerwear/knits, so the
+composition gate matters. Domain **`www.zara.com/ca/en`**. Verified 2026-08-18.
+
+**Which rung worked: CDP windowed Chrome on the Mac — rung 3 (bot-wall bypass).**
+From the VPS *every* path is walled and none is fixable VPS-side — it's a passive **Akamai**
+fingerprint wall (identical class to Tommy Hilfiger; an exit node does NOT help, changes IP not
+fingerprint):
+- `curl` / `requests` on any PDP or API → `403 "Access Denied"` (`Reference #…` Akamai page).
+- `web_extract` (Crawl4AI headless) → `"Blocked by anti-bot protection: Akamai block"` — a HARD
+  block, retry does NOT clear it (unlike Children's Place's intermittent Akamai).
+- Zara's own public JSON API (`/ca/en/products-details?productIds=…`, `/ca/en/product/<id>/extra-detail`)
+  also 403s from curl, AND keys off the **internal numeric productId** (e.g. `545944283`), NOT the SEO
+  id in the URL (`p01997303`) — so even from a browser it needs the internal id first. Skip it: the
+  PDP's embedded JSON-LD already has everything, no second call needed.
+`www.zara.com/ca/en/` loaded clean over CDP with a ~13s render wait; no interactive press-and-hold.
+
+**The data, once the page renders (all reliable, all in ONE JSON-LD block):**
+Each PDP embeds a `<script type="application/ld+json">` **`ProductGroup`** carrying:
+- `name`, `brand.name` (house brand — often `ZARA`, sometimes `MASSIMODUTTI`),
+- `material` (e.g. `"100% cotton"`) AND an `additionalProperty` entry
+  `{propertyID:"Composition", name:"OUTER SHELL", value:"100% cotton"}` — prefer the OUTER SHELL value,
+  fall back to `material`. (No accordion/XHR needed — composition is right in the JSON-LD, unlike
+  Carter's/Tommy/Roots where it hides in the DOM.)
+- `image[]` — clean `static.zara.net/...jpg?w=1920` CDN URLs (return `200 image/jpeg` from the VPS, no
+  hotlink block — the CDN is NOT behind the shop's Akamai wall).
+- **`hasVariant[]` = one entry per size×colour**, each `{size, color, sku, offers:{price, priceCurrency,
+  availability}}`. This gives **per-size AND per-colour price + stock directly** (`InStock`/`OutOfStock`).
+  Multi-colour products list every colourway in the same block. Confirmed it discriminates correctly
+  (a tee showed White/Brown/Gray InStock but Gray-S OutOfStock).
+
+**Tested extractor:** `scripts/zara_extract.py` (base64-ship to the Mac, run under the CDP venv).
+Verified 2026-08-18 on live products — `p06228935` (100% cotton tee, 3 colours, $59.90, mixed
+per-size stock) and `p01634403` (100% cotton shirt, $13.18, all OOS — the classic
+suspiciously-cheap-clearance case, correctly flagged `any_in_stock:false`). Output per URL:
+`{url, name, brand, composition, natural_pct, material, images[], colors[],
+sizes:[{size,color,price,currency,in_stock}], any_in_stock}`.
+
+```js
+// runs in the CDP page context after ~13s render — parse the ProductGroup JSON-LD
+(() => {
+  for (const s of document.querySelectorAll('script[type="application/ld+json"]')) {
+    try { const j = JSON.parse(s.textContent);
+      if (j['@type']==='ProductGroup' || j['@type']==='Product') {
+        const comp = (j.additionalProperty||[]).find(a => (a.propertyID||'').toLowerCase()==='composition');
+        return {name:j.name, brand:j.brand&&j.brand.name, composition:(comp&&comp.value)||j.material,
+                image:(Array.isArray(j.image)?j.image[0]:j.image),
+                variants:(j.hasVariant||[]).map(v => { const o=Array.isArray(v.offers)?v.offers[0]:(v.offers||{});
+                  return {size:v.size, color:v.color, price:o.price,
+                          avail:String(o.availability||'').split('/').pop()}; })};
+      }
+    } catch(e){}
+  }
+  return null;
+})()
+```
+
+**Product URL shape:** `https://www.zara.com/ca/en/<slug>-p<8-digit-seoId>.html` (the `p0…` id is the
+`productGroupID`; the internal numeric `productId` differs and isn't needed). Find candidates via
+`web_search "site:zara.com/ca/en <keyword>"` — snippets carry the composition prose and the direct URL.
+
+**Failure modes**
+- Akamai HARD-403s the VPS on *every* transport (curl, web_extract, the JSON API). Retry does NOT clear
+  it (unlike Children's Place). Go straight to Mac CDP; don't burn calls on the VPS.
+- Zara's public JSON API keys off the **internal numeric productId**, not the URL's SEO id — and 403s
+  from curl anyway. Don't bother; the JSON-LD in the PDP is complete.
+- **Suspiciously low price = sold-out clearance, not a bargain** (the universal rule bites hard here):
+  a $13.18 shirt came back all-OOS. Always check `any_in_stock` / per-variant `in_stock` before
+  believing a price.
+- Many Zara knits/outerwear/"technical" lines are predominantly polyester/acrylic/elastane → fail a
+  natural-fibre gate. Read `composition`; don't trust "cotton" in a title (a "cotton blend" shirt can be
+  well under threshold).
+- `w=1920` on the image URL is a resize param — swap to a smaller `w=` for email thumbnails if desired;
+  the base path is stable.
+
 ## Colour diversity — a curation rule (learned 2026-08-08)
 
 A harvest that ignores colour converges on one colour (whatever the retailer photographs most —
