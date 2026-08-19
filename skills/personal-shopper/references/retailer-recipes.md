@@ -786,3 +786,84 @@ usually navy/black), and the resulting cart reads as a uniform. Two-part fix:
 2. **Curate**: before finalizing, tally colours across the whole cart. No colour should exceed
    ~30% of items; the stated palette should all be represented. Where a piece comes in multiple
    colourways, name the specific colour to buy in the item's `meta` line.
+
+## Sport Chek (CA) — JSON-LD `Product` + `.nl-price`/`.nl-variants` DOM, via CDP Chrome on the Mac
+
+Canada, mid-market athletic/outdoor — the "kids + adults, activewear + casual" role, and
+Sumeet's fitness-angle store (confirmed in his YNAB history). Domain **`sportchek.ca`**
+(`/en/pdp/...`). Runs on the **Canadian Tire / FGL "Nucleus"** stack — so sister banners
+**Atmosphere, Sports Experts, Mark's, Canadian Tire, Party City** share the same DOM class
+prefixes (`nl-*`) and PDP shape; the recipe should transfer with a domain swap. Natural-fibre
+angle is real: house brand **Ripzone** and a lot of Nike/Under Armour/adidas/Carhartt/Vans tees
+are 100% or mostly cotton (read composition — "Charged Cotton" and performance lines blend).
+Verified 2026-08-19.
+
+**Which rung worked: CDP windowed Chrome on the Mac — rung 3 (bot-wall bypass).**
+From the VPS *every* transport is walled and none is fixable VPS-side:
+- `curl`/`urllib` on the PDP → `403` (Akamai edge; 471-byte body).
+- `web_extract` (Crawl4AI headless) → renders only the page *chrome* (header/footer/cookie
+  banner); the product body is client-side-rendered from an API it can't reach, so name/price/
+  composition/sizes all come back **empty**. NOT a retry-clears-it Akamai like Children's Place —
+  the shell renders "successfully" but is useless. Don't trust a 200 from web_extract here.
+- The product data API (`/api/v1/product/...` on `www.sportchek.ca` AND the APIM gateway
+  `apim.canadiantire.ca/v1/product/...`) → hard **Akamai `Access Denied`** from the VPS on every
+  path/verb tried (v1/v2/v3, `productFamily/<id>`, `product/<id>`, `sku`, `detail`, `products`).
+  The one path that got *past* Akamai, `apim…/v1/product/api/v1/product/<id>`, returned **410 Gone**
+  (deprecated) — so even with the wall down that endpoint is dead. The live subscription-key
+  (`ocp-apim-subscription-key` / `subscription-key` query param) leaks in the PDP's image URLs
+  (`…/api/v1/product/image/<id>?…&subscription-key=<hex>`) but does NOT unlock the data API from
+  the VPS. Treat the JSON API as **not reachable VPS-side** — go straight to Mac CDP.
+It's a **passive fingerprint wall (Akamai)**, no interactive press-and-hold, so an exit node does
+NOT help. `www.sportchek.ca` loaded clean over CDP with a ~14s render wait.
+
+**The data, once the page renders (no API needed — read the DOM):**
+- **JSON-LD `Product`** (`script[type=application/ld+json]`; there are ~6 blocks, pick
+  `@type==='Product'` — the others are WPHeader/ItemList/BreadcrumbList/WPFooter/AggregateRating).
+  Gives `name`, `brand.name`, `image`, and a **`description`** whose prose almost always states the
+  composition ("made of 100% cotton"). No per-variant offers in the JSON-LD (unlike Carter's/Zara).
+- **Composition**: best source is a dedicated leaf element `Contents: 100% Cotton.` (regex
+  `^(Contents|Composition|Fabrication|Material)\s*[:\-]`). Fall back to a fibre-% run mined out of
+  the JSON-LD `description` prose.
+- **Price**: `.nl-price__container` leaf carries the full string — on sale it reads
+  `NOW$8.88WAS±  $15.97price was $15.97Final Sale*`; at regular price just `$45.00`. Parse `NOW$…`
+  first, then `WAS…$…`; a `.nl-price--total--red` element (or was>now) signals a markdown, and
+  `Final Sale` in the text signals no-return clearance. `.nl-price--was` holds the strikethrough.
+  (Beware: the footer's Triangle-Mastercard finance table spews `$100/$500/$1000/$1.81…` — anchor
+  on the `.nl-price*` classes, never a bare `$` scan.)
+- **Per-size stock**: size chips are `.nl-variants__variant` divs (colour swatches are the same
+  class + `--colour-swatches`; filter those out, and drop the `Regular`/`Tall` length chips). An
+  out-of-stock size carries a `--disabled/--unavailable/--soldout/--out-of-stock` class modifier or
+  `aria-disabled=true`. NOTE: on a fully in-stock product all chips read in-stock (verified on the
+  Nike polo: S–XXL all OK); a single-colour clearance item (Ripzone tee) rendered **no** size chips
+  at all → `sizes: []` (verify on the live page before promising a size).
+
+**Tested extractor:** `scripts/sportchek_extract.py` (base64-ship to the Mac, run under the CDP
+venv). Verified 2026-08-19 on two live products:
+- `82641425` Nike Men's Core Cotton Polo → 100% cotton, natural_pct 100, $45.00 (no sale),
+  S/M/L/XL/XXL all in stock, image 200 image/jpeg.
+- `83828003` Ripzone Men's Giles Photo Tee → 100% cotton, natural_pct 100, **$8.88 was $15.97
+  Final Sale**, no size chips rendered, image 200 image/jpeg.
+Output per URL: `{url, name, brand, image, price, was_price, on_sale, final_sale, currency,
+composition, natural_pct, sizes:[{size,in_stock}], description, item_id}`.
+
+**Selectors / shapes** (verified 2026-08-19)
+| What | Where |
+|---|---|
+| Name / brand / image / desc | JSON-LD `@type==='Product'` (`name`, `brand.name`, `image`, `description`) |
+| Composition | leaf `Contents:/Composition:/Fabrication:` element; fallback = fibre-% run in `description` |
+| Price (now / was / sale) | `.nl-price__container` full text; `.nl-price--total(--red)`, `.nl-price--was` |
+| Per-size stock | `.nl-variants__variant` (not `--colour-swatches`); OOS = `--disabled/--unavailable/--soldout` |
+| Image (fallback) | `meta[property=og:image]` |
+| Product URL | `https://www.sportchek.ca/en/pdp/<slug>-<9digit>f.html` (the 9-digit before `f` is the item id) |
+| Leaked API key | image URLs carry `subscription-key=<hex>` — does NOT unlock the data API from the VPS |
+
+**Failure modes**
+- Akamai passive wall from the VPS on curl + the data API (www AND apim gateway). web_extract
+  returns a *hollow* 200 (chrome only). All fixed by Mac CDP; exit node won't help (fingerprint, not IP).
+- The live `/v1/product/api/v1/product/<id>` APIM path is **410 Gone** even past the wall — don't
+  chase the JSON API; the DOM has everything.
+- Colour swatches share the `.nl-variants__variant` class — filter `--colour-swatches` or you'll
+  read blank chips as sizes.
+- Finance/rewards boilerplate in the footer is full of `$` amounts; never regex a bare `$` for price.
+- Clearance/single-colour items may render **zero** size chips (`sizes: []`) — treat as "verify size
+  on the live page", not "one size". A very low "Final Sale" price is real clearance, likely thin stock.

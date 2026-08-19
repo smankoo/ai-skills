@@ -38,6 +38,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Roots CA | CA | JSON-LD `Product` + static PDP-HTML (`Fibre Content`/`ABOUT` composition, `size-value` swatches); pure `urllib`, NO bot wall; `roots_extract.py` | done | yes | 2026-08-17 |
 | Zara CA | CA | JSON-LD `ProductGroup` (per-size×colour price+stock+composition, all in one block) via CDP Chrome on Mac; `zara_extract.py`. VPS fully Akamai-walled (curl/web_extract/JSON-API all hard-403) | done | yes | 2026-08-18 |
 | La Vie En Rose | CA | JSON-LD `ProductGroup` (per-size price/stock/strike) + PDP `<li><p>NN% Fibre</p>` composition; `lavieenrose_extract.py`. EPiServer, NO bot wall, VPS-side `urllib` | done | yes | 2026-08-19 |
+| Sport Chek | CA | JSON-LD `Product` (name/brand/image/desc) + `.nl-price` / `.nl-variants__variant` DOM, via CDP Chrome on Mac; `sportchek_extract.py`. Canadian Tire/FGL "Nucleus" stack; VPS Akamai-walled (curl/web_extract/APIM all 403); data API is 410 Gone | done | yes | 2026-08-19 |
 
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
@@ -65,7 +66,7 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 - **Aldo** (aldoshoes.com) — footwear (note skill's "never order kids' shoes" rule; adults OK).
 - **Crocs CA** — footwear.
 - **ASICS Canada** — athletic footwear.
-- **Sport Chek** (sportchek.ca) — athletic apparel/gear; his fitness angle (Strava/Fitbod).
+- **Sport Chek** (sportchek.ca) — ✅ `done` (see recipe). Athletic/outdoor, his fitness angle. Canadian Tire/FGL stack; VPS Akamai-walled → Mac CDP; JSON-LD + `.nl-*` DOM.
 - **Winners** (winners.ca) — off-price; likely no online catalog, verify.
 
 **General merchandise / marketplace / home**
