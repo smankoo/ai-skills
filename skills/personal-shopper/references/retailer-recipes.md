@@ -710,6 +710,71 @@ sizes:[{size,color,price,currency,in_stock}], any_in_stock}`.
 - `w=1920` on the image URL is a resize param — swap to a smaller `w=` for email thumbnails if desired;
   the base path is stable.
 
+## la Vie en Rose (CA) — JSON-LD `ProductGroup` (per-size price+stock) + PDP `<li>` fibre bullet. NO bot wall, VPS-side.
+
+Canada, mid-market lingerie / sleepwear / loungewear (its banner **Bikini Village** shares the
+platform — swap the domain). Confirmed in Sumeet's YNAB history. Natural-fibre coverage is
+genuine but split: a deep 100% cotton pyjama/PJ line and modal camis (natural under this skill's
+convention), but also a lot of 100% polyester/satin sleepwear — so the composition gate matters.
+Domain **`www.lavieenrose.com`**; locale path `/en/` (also `/fr/`, `/us/`). Runs on **EPiServer /
+Optimizely Commerce** behind Cloudflare. Verified 2026-08-19.
+
+**Which rung worked: JSON-LD + a small static-HTML scrape (rung 1/3) — ALL VPS-side, plain
+`curl`/`urllib`.** Despite Cloudflare + a `.AspNetCore.Antiforgery` cookie, a desktop-UA `curl` on a
+PDP returns **HTTP 200 with the full server-rendered HTML** — NO exit node, NO Mac CDP, NO
+`web_extract` needed. (It is EPiServer, **not Shopify** and **not Demandware** — `/products.json`
+404s; don't try those endpoints.)
+
+**The data, once you have the PDP HTML:**
+- **JSON-LD is a `ProductGroup`** (the 2nd `application/ld+json` block; the 1st is a
+  `BreadcrumbList`). Its **`hasVariant[]` = one Product per size**, each carrying `size`, `color`,
+  `material` (**primary fibre only, NO percentages**), `image[]`, and
+  `offers{price, priceCurrency, availability(InStock/OutOfStock),
+  priceSpecification.price = StrikethroughPrice}`. So **per-size price + stock + the original
+  (strikethrough) price come straight from the JSON-LD** — no DOM class hunt.
+- **Exact fibre percentages are NOT in the JSON-LD `material`** (it's just "Modal"/"Cotton"/
+  "Pointelle"). The real composition is a lone bullet in the details list:
+  **`<li><p>93% Modal 7% Elastane</p></li>`** (or `100% Cotton`, `100% Polyester`). Grab the one
+  `<li><p>…</p></li>` whose text matches `\d+%\s*<fibre>`. NB: modal/lyocell counted **natural**
+  (plant-derived regenerated cellulose) here; viscose/rayon counted synthetic per skill convention.
+
+**Tested extractor:** `scripts/lavieenrose_extract.py` (pure `urllib`, runs on the VPS). Verified
+2026-08-19 on three live products: modal cami `6010014800001` (93% Modal/7% Elastane, natural_pct
+93, $13.99 strike $19.95, **all sizes OOS** — the suspiciously-cheap-clearance case, correctly
+`any_in_stock:false`); cotton PJ pants `…40200878p40620` (100% Cotton, natural_pct 100, $29.95 full
+price, all InStock); pointelle cami `4010086940188` (100% Polyester, natural_pct 0, $16.99 strike
+$24.95, **per-size discrimination** — XL OOS, rest InStock). The image URL returned `200 image/jpeg`
+from the VPS (no hotlink block). Output per URL: `{url, name, brand, category, composition,
+natural_pct, primary_material, image, colors[], strikethrough_price, price_range,
+sizes:[{size,color,price,currency,in_stock}], any_in_stock}`.
+
+```bash
+python3 scripts/lavieenrose_extract.py \
+  "https://www.lavieenrose.com/en/gingham-floral-print-cotton-pyjama-pants-blue-ginghamflowers-40200878p40620"
+# discover: web_search 'site:lavieenrose.com/en <category> <keyword>'
+```
+
+**Selectors / endpoints** (verified 2026-08-19)
+| What | Where |
+|---|---|
+| Name / brand / category | JSON-LD `ProductGroup` (2nd `ld+json` block) |
+| Per-size price / stock / original(strike) price / image | `hasVariant[].offers` + `.priceSpecification.price` + `hasVariant[].image[0]` |
+| Composition (fibre %) | PDP HTML: the lone `<li><p>NN% Fibre …</p></li>` bullet |
+| Product URL | `https://www.lavieenrose.com/en/<slug>-<color>-<id>` |
+
+**Failure modes**
+- **`material` in the JSON-LD is only the primary fibre, no `%`** — a gate keyed on it alone would
+  read "Modal"/"Pointelle" and miss the elastane/blend. Always scrape the `<li><p>` fibre bullet
+  for the real composition; that's the one non-obvious step.
+- **`hasVariant[]` includes placeholder rows for OTHER colourways with NO `offers`/`image`**
+  (their `size`/`color` are `null`). Skip any variant lacking `offers`, else you inject junk sizes.
+- **Suspiciously low price = sold-out clearance** (universal rule bites): the $13.99 modal cami
+  came back all-OOS. Always check `any_in_stock` / per-size `in_stock` before believing a price.
+- The URL slug can be **stale/renamed** but still resolves by trailing id — a `/en/peach-…-4010086940188`
+  URL resolved to a product now named "Hibiscus-Embroidered…". Trust the id, not the slug words.
+- A lot of the sleepwear is **100% polyester/satin** → fails a natural-fibre gate. Read the
+  composition; don't trust "silky"/"soft" marketing or a pretty print.
+
 ## Colour diversity — a curation rule (learned 2026-08-08)
 
 A harvest that ignores colour converges on one colour (whatever the retailer photographs most —
