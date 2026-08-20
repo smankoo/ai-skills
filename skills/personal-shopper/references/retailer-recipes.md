@@ -867,3 +867,72 @@ composition, natural_pct, sizes:[{size,in_stock}], description, item_id}`.
 - Finance/rewards boilerplate in the footer is full of `$` amounts; never regex a bare `$` for price.
 - Clearance/single-colour items may render **zero** size chips (`sizes: []`) — treat as "verify size
   on the live page", not "one size". A very low "Final Sale" price is real clearance, likely thin stock.
+
+## Walmart.ca (George etc.) — JSON-LD + `__NEXT_DATA__` specs, via CDP Chrome on the Mac with a HOMEPAGE WARM-UP
+
+Canada, cheapest general-merch + kids/adult apparel workhorse — the "kids, play clothes" role, and
+its house brand **George** is heavily 100% cotton (tees, polos, PJs, basics) so it's a solid
+natural-fibre source at rock-bottom prices ($8 for a 2-pack tee). Confirmed in Sumeet's YNAB.
+Domain is **`walmart.ca/en`**; runs on a Next.js frontend (`__NEXT_DATA__`) behind PerimeterX.
+Verified 2026-08-19.
+
+**Which rung worked: CDP windowed Chrome on the Mac — rung 3 (bot-wall bypass), with a twist.**
+From the VPS *every* path is walled: `curl` → 307 `blocked - redirecting` → `/blocked?...`
+px-captcha page; `web_extract` (Crawl4AI headless) → `"Blocked by anti-bot protection: PerimeterX
+block"`. It's a passive fingerprint + interactive "Verify Your Identity" wall, so an exit node does
+NOT help.
+- **The non-obvious twist: even a real windowed Chrome on the Mac gets bounced to `/blocked`
+  ("Verify Your Identity") on a COLD direct hit to a `/ip/...` product URL.** The fix is to
+  **warm the session on the homepage first** (`https://www.walmart.ca/en`, ~12s), THEN navigate to
+  each product **in the SAME tab** via `location.assign(url)`. The warmed session carries the
+  PerimeterX cookie and the product page then renders clean. A fresh tab per product re-triggers the
+  wall. This single trick is what makes Walmart tractable — without it you loop on `/blocked`.
+- NO interactive press-and-hold once warmed; the homepage itself loads clean.
+
+**The data, once the page renders:**
+- **JSON-LD**: a single-size product emits `@type: "Product"` (`name`, `brand.name`, `sku`, `image`,
+  `offers.price`/`priceCurrency`/`availability`). A multi-size product emits `@type: "ProductGroup"`
+  with `hasVariant[]` — one entry **per size** with `size` + `offers.price`/`availability`
+  (`InStock`/`OutOfStock`). NOTE: `hasVariant` also contains **empty entries for other colourways**
+  (no `size`/`offer`) — filter to entries that have a `size` or `price`.
+- **`__NEXT_DATA__`** (`#__NEXT_DATA__` script) carries a structured **`specifications`** array
+  under `props.pageProps` — `[{name:"Clothing Size",value:"4"}, {name:"Brand",value:"George"}, …]`.
+  Flatten to a dict; it gives size/colour/brand/UPC/Walmart-item#. A **`Fabric Material`/
+  `Composition`** spec is the authoritative composition WHEN PRESENT.
+- **Composition is often NOT a spec on cheap George items** — it lives in prose in the
+  `longDescription` ("Made of 100% cotton, …"). Extract fibre-`%` pairs from the description (and
+  body text as fallback); dedup case-insensitively (`100% cotton` vs `100% Cotton`) or natural_pct
+  double-counts. Cap natural_pct at 100.
+- **Image**: JSON-LD `image` or `og:image` — a `https://i5.walmartimages.ca/asr/<uuid>.<hash>.jpeg`
+  URL; returns `image/jpeg`, no hotlink block.
+
+**Tested extractor:** `scripts/walmart_extract.py` (base64-ship to the Mac, run under the CDP venv;
+it does the homepage warm-up + same-tab navigation itself). Verified 2026-08-19 on three live George
+products (`6000208542550` boys' tee 2-pack InStock, `6000196741979` kids' tee 2-pack OutOfStock,
+`6000208538686` toddler tee 2-pack InStock) — name, $8 CAD price, `100% cotton` (natural_pct 100),
+per-size stock, and image (200 image/jpeg) all matched the live pages. Output per URL:
+`{url, name, brand, sku, price, currency, availability, image, composition, natural_pct,
+sizes:[{size,price,availability}], specs:{…}, desc}`.
+
+**Selectors / shapes** (verified 2026-08-19)
+| What | Where |
+|---|---|
+| Name / brand / sku / image | JSON-LD `Product`/`ProductGroup` (`name`, `brand.name`, `sku`, `image`) |
+| Price / currency / availability | JSON-LD `offers` (single) or `hasVariant[].offers` (per size) |
+| Per-size stock | `hasVariant[].size` + `offers.availability` (`InStock`/`OutOfStock`); drop empty colour entries |
+| Specs (size/colour/brand/UPC/item#) | `__NEXT_DATA__` `props.pageProps` → `"specifications":[{name,value}]` |
+| Composition | `Fabric Material`/`Composition` spec if present; else fibre-% pairs in `longDescription` |
+| Image | JSON-LD `image` or `meta[property=og:image]` → `i5.walmartimages.ca/asr/...jpeg` |
+| Product URL | `https://www.walmart.ca/en/ip/<slug>/<10-digit-id>` |
+
+**Failure modes**
+- **Cold direct hit to a product URL → `/blocked` "Verify Your Identity"**, even on a real Mac
+  windowed Chrome over CDP. MUST warm on the homepage first, then same-tab `location.assign`. A per-
+  product fresh tab re-triggers the wall. This is THE trap here.
+- PerimeterX walls the VPS on every transport (curl `/blocked` px-captcha; web_extract "PerimeterX
+  block"). Retrying does NOT clear it (unlike Akamai on Children's Place). Go to Mac CDP.
+- Composition is usually prose, not a spec, on George basics — regex fibre-% pairs and dedup
+  case-insensitively, else natural_pct inflates (seen: 200 before the fix).
+- `hasVariant[]` mixes real size variants with empty other-colour stubs — filter on `size`/`price`.
+- Marketplace 3rd-party sellers (non-George, e.g. "Sales Today Clearance!" listings) may lack clean
+  JSON-LD/specs and quote junk composition — prefer first-party George / Walmart-brand items.

@@ -39,6 +39,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Zara CA | CA | JSON-LD `ProductGroup` (per-size×colour price+stock+composition, all in one block) via CDP Chrome on Mac; `zara_extract.py`. VPS fully Akamai-walled (curl/web_extract/JSON-API all hard-403) | done | yes | 2026-08-18 |
 | La Vie En Rose | CA | JSON-LD `ProductGroup` (per-size price/stock/strike) + PDP `<li><p>NN% Fibre</p>` composition; `lavieenrose_extract.py`. EPiServer, NO bot wall, VPS-side `urllib` | done | yes | 2026-08-19 |
 | Sport Chek | CA | JSON-LD `Product` (name/brand/image/desc) + `.nl-price` / `.nl-variants__variant` DOM, via CDP Chrome on Mac; `sportchek_extract.py`. Canadian Tire/FGL "Nucleus" stack; VPS Akamai-walled (curl/web_extract/APIM all 403); data API is 410 Gone | done | yes | 2026-08-19 |
+| Walmart CA | CA | JSON-LD `Product`/`ProductGroup` (per-size price+stock) + `__NEXT_DATA__` `specifications`; composition from `longDescription`. Via CDP Chrome on Mac WITH homepage warm-up + same-tab nav (cold hit → `/blocked`); `walmart_extract.py`. VPS PerimeterX-walled | done | yes | 2026-08-19 |
 
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
@@ -71,7 +72,7 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 
 **General merchandise / marketplace / home**
 - Amazon.ca — usable per SKILL.md §8 (his single most-used retailer by far); a fallback, not recon.
-- **Walmart CA** (walmart.ca) — used via Instacart + direct; general merch + kids.
+- **Walmart CA** (walmart.ca) — ✅ `done` (see recipe). General merch + kids; house brand George is heavily 100% cotton. VPS PerimeterX-walled → Mac CDP with homepage warm-up.
 - **Costco CA** — `blocked` (press-and-hold); membership warehouse, his CIBC Costco card.
 - **Canadian Tire** (canadiantire.ca) — Triangle Rewards member; home/auto/seasonal.
 - **IKEA CA** (ikea.ca) — furniture/home; frequent.
