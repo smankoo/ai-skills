@@ -936,3 +936,61 @@ sizes:[{size,price,availability}], specs:{…}, desc}`.
 - `hasVariant[]` mixes real size variants with empty other-colour stubs — filter on `size`/`price`.
 - Marketplace 3rd-party sellers (non-George, e.g. "Sales Today Clearance!" listings) may lack clean
   JSON-LD/specs and quote junk composition — prefer first-party George / Walmart-brand items.
+
+## Frank And Oak (CA) — Shopify `/products/<handle>.js` (everything incl. composition). NO bot wall.
+
+Canada, mid-market men's/women's with a strong sustainability + natural-fibre angle — deep
+**100% cotton / linen / hemp / TENCEL-lyocell / pima** lines (a browse of 30 SKUs was almost
+entirely natural fibres; the only synthetic seen was 2% spandex in stretch shorts/pants). A great
+adult natural-fibre source. It's a Shopify store on **`www.frankandoak.com`**, and — unlike the
+Cloudflare storefront root — the Shopify product JSON endpoints are **wide open from the VPS**:
+plain `curl`/`urllib`, no exit node, no Mac delegation. Verified 2026-08-20.
+
+**Which rung worked: Shopify JSON (rung 2) — all VPS-side, one request per product.**
+`/products/<handle>.js` is the whole money block:
+- `price` / `compare_at_price` in **CENTS**; top-level `available`.
+- `variants[]` each with `option1` = size and a real **`available`** boolean → **per-size stock
+  directly** (no `--unavailable` class hunt, no accordion click).
+- `featured_image` (protocol-relative `//cdn.shopify.com/...` → prefix `https:`).
+- **Composition is IN the `.js`** — `description` (== `body_html`) carries a
+  **`Content: <fibres>`** line, e.g. `Content: 100% Cotton`, `Content: 55% Hemp, 45% Organic Cotton`,
+  `Content: 55% Linen, 45%Cotton` (note: sometimes no space after the comma). No separate PDP-HTML
+  fetch needed (unlike Reitmans). Parse the fibre-% pairs and sum naturals for the gate.
+
+```bash
+# price/stock/image/variants/composition — one call, VPS-side:
+curl -s -A "$UA" "https://www.frankandoak.com/products/<handle>.js"
+#   .price (cents), .compare_at_price, .available, .variants[].{option1,available,price},
+#   .featured_image, .description -> "…Content: 100% Cotton…"
+```
+
+**Tested extractor:** `scripts/frankandoak_extract.py` (pure `urllib`, runs on the VPS).
+Verified 2026-08-20 on three live products:
+- `mens-knit-t-shirt-moss-green-2mkt0031fe-moss` → "100% Cotton", natural_pct 100, $39.00, all 6 sizes in stock.
+- `mens-woven-pants-pebble-khaki-2mwp005fe-ekha` → "55% Linen, 45%Cotton", natural_pct 100, $129.00.
+- `mens-knit-t-shirt-white-2mkt010fe-wht` → "70% Cotton, 30% Hemp", natural_pct 100, $45.00.
+Output per URL: `{url, handle, title, vendor, price, compare_at_price, on_sale, available,
+composition, natural_pct, image, sizes:[{size,price,available}], any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-08-20)
+| What | Where |
+|---|---|
+| Price / compare-at / stock / variants | `/products/<handle>.js` (prices in cents; `variants[].available`) |
+| Composition (fibre %) | `.js` `description`, the `Content: <fibres>` line |
+| Image | `.js` `featured_image` (`//cdn.shopify.com/...` → prefix `https:`) — returns `image/jpeg` |
+| Product URL | `https://www.frankandoak.com/products/<handle>` |
+| Discovery / catalog | `/products.json?limit=250` (handle, title, tags, body_html) |
+
+**Failure modes**
+- **`/search/suggest.json` is DISABLED** (returns empty), as is `/collections/all/products.json`
+  filtered oddly — but the top-level **`/products.json?limit=250`** works and lists everything.
+  For discovery use that or `web_search "site:frankandoak.com <keyword>"`.
+- The storefront HTML root is behind Cloudflare (`server: cloudflare`, redirects/complexity headers),
+  but the **`.js`/`.json` product endpoints are NOT walled** — don't be scared off by the CF root;
+  go straight to the JSON.
+- `vendor` reads `ThreadC` (a manufacturing/house label), not "Frank And Oak" — label the brand
+  manually. `brand` is not reliably meaningful.
+- Composition comma spacing is inconsistent (`45%Cotton` vs `45% Cotton`) — parse with a tolerant
+  `(\d+)\s*%\s*([A-Za-z™ -]+)` regex, not a fixed split.
+- Count TENCEL™/lyocell as **natural** (plant-derived); the lone synthetic seen is `2% Spandex` in
+  stretch bottoms (→ natural_pct 98, clears any sane threshold). No viscose/rayon seen in the sample.

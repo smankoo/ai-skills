@@ -40,6 +40,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | La Vie En Rose | CA | JSON-LD `ProductGroup` (per-size price/stock/strike) + PDP `<li><p>NN% Fibre</p>` composition; `lavieenrose_extract.py`. EPiServer, NO bot wall, VPS-side `urllib` | done | yes | 2026-08-19 |
 | Sport Chek | CA | JSON-LD `Product` (name/brand/image/desc) + `.nl-price` / `.nl-variants__variant` DOM, via CDP Chrome on Mac; `sportchek_extract.py`. Canadian Tire/FGL "Nucleus" stack; VPS Akamai-walled (curl/web_extract/APIM all 403); data API is 410 Gone | done | yes | 2026-08-19 |
 | Walmart CA | CA | JSON-LD `Product`/`ProductGroup` (per-size price+stock) + `__NEXT_DATA__` `specifications`; composition from `longDescription`. Via CDP Chrome on Mac WITH homepage warm-up + same-tab nav (cold hit → `/blocked`); `walmart_extract.py`. VPS PerimeterX-walled | done | yes | 2026-08-19 |
+| Frank And Oak | CA | Shopify `/products/<handle>.js` (price/stock/image + composition in `description` `Content:` line); `frankandoak_extract.py`. NO bot wall, pure `urllib` VPS-side | done | yes | 2026-08-20 |
 
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
@@ -96,7 +97,7 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 ### Other good picks (not confirmed in YNAB, but fit the household)
 
 - **Roots** (roots.com) — ✅ `done` (see recipe). Canadian, heavy organic-cotton fleece; kids + adults; natural-fibre-friendly. No bot wall, VPS-side.
-- **Frank And Oak** (frankandoak.com) — Canadian, cotton/wool/linen focus, sustainability angle.
+- **Frank And Oak** (frankandoak.com) — ✅ `done` (see recipe). Canadian, cotton/wool/linen/hemp focus, sustainability angle. Shopify, NO bot wall, VPS-side.
 - **Mark's** (marks.com) — workwear, cotton basics, Canadian Tire platform.
 - **Tilley** (tilley.com) — natural-fibre travel/outdoor, Canadian.
 - **MEC** (mec.ca) — outdoor co-op; merino/cotton; Canadian.
