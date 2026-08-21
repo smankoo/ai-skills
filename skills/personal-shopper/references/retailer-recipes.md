@@ -1059,3 +1059,66 @@ adds ISBN/publisher/author/rating from the PDP). Verified 2026-08-20 on three li
 - A `notify-when-available` tag / a format with `available:false` = that format is OOS even though the
   product page loads (e.g. Atomic Habits audiobook was OOS while hardcover + eBook were in stock).
 - Fibre composition is N/A (books/gifts) — the natural-fibre gate doesn't apply here; this is a gift-track store.
+
+## ALDO (CA) — JSON-LD `ProductGroup` + Materials accordion, from the rendered PDP HTML. NO bot wall.
+
+Canada, mid-market footwear + accessories (bags, jewelry, sunglasses). Confirmed in Sumeet's YNAB
+history. **Adult footwear only** — the skill's hard rule is NEVER order kids' shoes (fit needs
+in-person measuring); ALDO is adult sizing, so it's fine for the adult track. Domain
+**`aldoshoes.com`** → redirects to **`aldoshoes.com/en-ca`**. It's a Shopify store, but see the
+footwear-`.js`-404 trap below. **No bot wall from the VPS** — plain `urllib`/`curl` render the full
+PDP; no exit node, no Mac delegation. Verified 2026-08-21.
+
+**Which rung worked: JSON-LD from the rendered PDP HTML (rung 3) — all VPS-side.**
+Footwear composition is leather/suede/textile/synthetic, NOT fibre-%: judge natural (leather,
+suede, nubuck, canvas, cotton, wool) vs synthetic from the `Material:`/`Lining:`/`Sole:` labels.
+
+- **JSON-LD `ProductGroup`** on the PDP is the money block: `hasVariant[]` = one entry **per size**,
+  each `{name:"<Product> - <size>", sku, image, offers.price, offers.priceCurrency,
+  offers.availability}` → **per-size price + stock directly** (`InStock`/`OutOfStock`). The
+  top-level `size`/`image`/`material` fields are `null` — read size from each variant's `name`
+  (split on `" - "`), image from the variant's `image`.
+- **Composition** is NOT in the JSON-LD. It's in the **"Materials" accordion in the static HTML**
+  (no click/expand needed — curl gets it): `Material: Smooth Leather  Lining: Synthetic  Sole: Rubber`.
+  Grab the block between `Materials` and the next `</ul>`, strip tags, regex out `Material:`,
+  `Lining:`, `Sole:`.
+
+```bash
+# Full rendered PDP (static; en-ca prefix REQUIRED — see failure modes):
+curl -s -L -A "$UA" "https://www.aldoshoes.com/en-ca/products/fez-black" -o pdp.html
+# JSON-LD ProductGroup (per-size price+stock+image) + Materials accordion → composition
+python3 scripts/aldo_extract.py fez-black levie-black    # bare handle or full URL both work
+```
+
+**Tested extractor:** `scripts/aldo_extract.py` (pure `urllib`, runs on the VPS). Verified
+2026-08-21 on two live products:
+- `fez-black` → "Smooth Leather" (lining Synthetic, sole Rubber), $170.00 CAD, sizes 7/7.5 OOS,
+  8–12 InStock, 13/14 OOS.
+- `levie-black` → "Smooth Leather" (sole Rubber), $225.00 CAD, size 5 OOS, 6–9 InStock, 10–12 OOS.
+Output per URL: `{url, name, brand, image, currency, price_min, price_max, material, lining, sole,
+materials_raw, natural_material, sizes:[{size, sku, price, availability}], any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-08-21)
+| What | Where |
+|---|---|
+| Per-size price / stock / sku / image | PDP JSON-LD `ProductGroup.hasVariant[]` (`offers.price`, `offers.availability`, `name` holds the size after `" - "`) |
+| Composition | static PDP HTML, `Materials` accordion → `Material:` / `Lining:` / `Sole:` labels |
+| Product image | each variant's `image` (or `og:image` for the default colourway) |
+| Product URL | `https://www.aldoshoes.com/en-ca/products/<handle>` |
+| Handle | tail after `/products/`, e.g. `fez-black`, `levie-black`, `<name>-<colour>-<styleid>` |
+| Discovery | `products.json?limit=250` lists handles/types/`variants[].available`; or `web_search "site:aldoshoes.com <keyword>"` |
+
+**Failure modes**
+- **Footwear `.js`/`.json` 404 despite being Shopify.** `https://www.aldoshoes.com/products/<handle>.js`
+  works for SOME accessory/jewelry handles but **404s for footwear** — do NOT rely on the standard
+  Shopify `.js` money endpoint here. Use the rendered PDP JSON-LD instead (it's static, un-walled).
+- **The `en-ca` prefix is required for the PDP.** `/products/<handle>` (no locale) → **404**;
+  `/en-ca/products/<handle>` → 200. The extractor auto-prepends it when given a bare handle.
+- `products.json` at the root DOES work (VPS-side) and is good for enumerating handles + top-level
+  `available`, but it lacks per-size stock and composition — use it only for discovery.
+- `search/suggest.json` returns an **empty** `products` array (predictive search is disabled/gated);
+  don't use it for discovery — use `products.json` or `web_search` instead.
+- `material` in the JSON-LD is `null`; composition only exists in the Materials accordion HTML.
+- Footwear is leather/suede/synthetic, not fibre-%: `natural_material` is a leather/suede/canvas
+  heuristic on the `Material:` label, not a fibre percentage. A `Lining: Synthetic` is normal for
+  leather shoes and doesn't fail a natural gate (the upper is what matters for the material rule).
