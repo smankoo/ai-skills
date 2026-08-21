@@ -41,6 +41,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Sport Chek | CA | JSON-LD `Product` (name/brand/image/desc) + `.nl-price` / `.nl-variants__variant` DOM, via CDP Chrome on Mac; `sportchek_extract.py`. Canadian Tire/FGL "Nucleus" stack; VPS Akamai-walled (curl/web_extract/APIM all 403); data API is 410 Gone | done | yes | 2026-08-19 |
 | Walmart CA | CA | JSON-LD `Product`/`ProductGroup` (per-size price+stock) + `__NEXT_DATA__` `specifications`; composition from `longDescription`. Via CDP Chrome on Mac WITH homepage warm-up + same-tab nav (cold hit → `/blocked`); `walmart_extract.py`. VPS PerimeterX-walled | done | yes | 2026-08-19 |
 | Frank And Oak | CA | Shopify `/products/<handle>.js` (price/stock/image + composition in `description` `Content:` line); `frankandoak_extract.py`. NO bot wall, pure `urllib` VPS-side | done | yes | 2026-08-20 |
+| Indigo / Chapters | CA | Shopify `/products/<handle>.js` (per-format price+stock, cents) + PDP JSON-LD `ProductGroup` (ISBN/publisher/rating) + `<title>` author; `indigo_extract.py`. Books & gifts (gift track); NO bot wall, pure `urllib` VPS-side. Old `chapters.indigo.ca` retired → `indigo.ca` | done | yes | 2026-08-20 |
 
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
@@ -77,7 +78,7 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 - **Costco CA** — `blocked` (press-and-hold); membership warehouse, his CIBC Costco card.
 - **Canadian Tire** (canadiantire.ca) — Triangle Rewards member; home/auto/seasonal.
 - **IKEA CA** (ikea.ca) — furniture/home; frequent.
-- **Indigo / Chapters** (chapters.indigo.ca) — books & gifts.
+- **Indigo / Chapters** (indigo.ca) — ✅ `done` (see recipe). Books & gifts (gift track). Now a Shopify store, NO bot wall, VPS-side. Old `chapters.indigo.ca` retired.
 - **Staples CA** (staples.ca) — office/electronics.
 - **Michaels** (michaels.com) — crafts/gifts.
 - **Party City CA** (partycity.ca) — party/kids events.

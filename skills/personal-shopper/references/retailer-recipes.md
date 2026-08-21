@@ -994,3 +994,68 @@ composition, natural_pct, image, sizes:[{size,price,available}], any_in_stock}`.
   `(\d+)\s*%\s*([A-Za-z™ -]+)` regex, not a fixed split.
 - Count TENCEL™/lyocell as **natural** (plant-derived); the lone synthetic seen is `2% Spandex` in
   stretch bottoms (→ natural_pct 98, clears any sane threshold). No viscose/rayon seen in the sample.
+
+## Indigo / Chapters (indigo.ca) — Shopify `.js` + JSON-LD `ProductGroup`. NO bot wall, VPS-side.
+
+Canada — the **books & gifts** store (the "gift track" bookstore role: canonical books
+on a person's craft, plus home/decor/candles/stationery gifts). Confirmed in Sumeet's
+YNAB history. **The old `chapters.indigo.ca` domain is retired** — it 301-redirects to
+`www.indigo.ca` (and legacy `.../<isbn>-item.html` PDPs bounce to `/search?q=<isbn>`).
+The new site is a **Shopify store** with **NO bot wall from the VPS** — plain `urllib`/
+`curl` work, no exit node, no Mac delegation. Verified 2026-08-20.
+
+**Which rung worked: Shopify JSON (rung 2) + a small PDP-HTML JSON-LD read — all VPS-side.**
+
+- **`/products/<handle>.js`** is the money endpoint (one request, buyable facts):
+  `price`/`price_min`/`compare_at_price` in **CENTS**, top-level `available`, `type`
+  (`Book` | `GM` for gifts/merch), `vendor`, `tags` (`BOOK`, `YCRF_BOOK`, `notify-when-available`),
+  `featured_image` (protocol-relative `//cdn.shopify.com/...` -> prefix `https:`), and
+  **`variants[]` = one per FORMAT for books** (Hardcover / Paperback / Audiobook / Kobo eBook),
+  each with `price` (cents) + `available` boolean -> **per-format price & stock directly**.
+  WARNING: top-level `price`/`price_min` is the **lowest across formats** — usually the eBook.
+  For a physical gift, read the Hardcover/Paperback entry in `variants[]`, not the top-level price.
+- **PDP HTML `/products/<handle>`** carries two `application/ld+json` blocks; block[1] is a
+  **`ProductGroup`** whose `hasVariant[]` gives per-variant `sku`/`gtin13` (= **ISBN13** for books),
+  `brand.name` (= **publisher**), `offers.price` (DOLLARS), `offers.availability`, plus a top-level
+  `aggregateRating` (`ratingValue`, `ratingCount`). The **author is NOT in JSON-LD** — it's in the
+  `<title>`: `"<Book Name> by <Author>, (<Format>) | Indigo"` (regex `\bby\s+(.+?),\s*\(`).
+- **Discovery**: `/search/suggest.json?q=<terms>` with `resources[type]=product` &
+  `resources[limit]=N` (URL-encode the brackets: `resources%5Btype%5D=product`) ->
+  `resources.results.products[]` with `title, handle, url, price` (**DOLLARS** here, unlike `.js`),
+  `available`, `type`, `vendor`, `featured_image`. Works for books and gift/home items.
+  `web_search "site:indigo.ca <keyword>"` also returns clean `/products/<handle>` deep-links.
+
+**Tested extractor:** `scripts/indigo_extract.py` (pure `urllib`, runs on the VPS; `--full`
+adds ISBN/publisher/author/rating from the PDP). Verified 2026-08-20 on three live products:
+- `atomic-habits` -> Hardcover $27.00 InStock, Audiobook $19.99 **OOS**, Kobo eBook $16.99 InStock;
+  ISBN 9780735211292, publisher "Penguin Publishing Group", author "James Clear", rating 4.8 (567).
+- `the-atomic-habits-workbook` -> Paperback $36.00, Kobo $16.99, both InStock; ISBN 9798217180509.
+- `floral-decal-candle-11oz` (a GM gift) -> $10.00 (compare-at $28.00, on sale), 2 scent variants
+  both InStock, vendor "Foundry Candle Co.". Output per URL: `{handle,url,title,type,vendor,price,
+  compare_at_price,on_sale,available,image,formats:[{format,price,available}],isbn,publisher,author,
+  rating,rating_count}`.
+
+**Selectors / endpoints** (verified 2026-08-20)
+| What | Where |
+|---|---|
+| Per-format price + stock | `/products/<handle>.js` -> `variants[]` (`title`=format, `price` cents, `available`) |
+| Overall price / sale | `.js` `price`/`compare_at_price` (CENTS; `price` = lowest format, often eBook) |
+| Type (book vs gift) | `.js` `type`: `Book` \| `GM` |
+| Publisher / brand | ProductGroup JSON-LD `hasVariant[0].brand.name` (`.js` `vendor` is often `"None"` for books) |
+| ISBN13 | ProductGroup JSON-LD `hasVariant[].gtin13` (= `sku`) |
+| Author | PDP `<title>`: `… by <Author>, (<Format>) \| Indigo` |
+| Rating | ProductGroup JSON-LD `aggregateRating.ratingValue` / `.ratingCount` |
+| Image | `.js` `featured_image` (`//cdn.shopify.com/...` -> prefix `https:`) |
+| Discovery | `/search/suggest.json?q=…` + `resources%5Btype%5D=product` (prices DOLLARS) |
+
+**Failure modes**
+- `chapters.indigo.ca` is DEAD (301 -> `indigo.ca`); legacy `-item.html` ISBN PDPs -> `/search?q=<isbn>`.
+  Always use the new `/products/<handle>` shape; get handles from `web_search site:indigo.ca` or `suggest.json`.
+- `.js` `vendor` is frequently `"None"` for books — for publisher, read the ProductGroup `brand.name`
+  (needs the `--full`/PDP fetch), not `vendor`.
+- **Price unit differs by source**: `.js`/`variants[].price` are **cents**; `suggest.json` prices are **dollars**.
+- Top-level `.js` `price` = the cheapest format (usually Kobo eBook). Don't quote it as "the book's price"
+  for a physical gift — pick the Hardcover/Paperback variant.
+- A `notify-when-available` tag / a format with `available:false` = that format is OOS even though the
+  product page loads (e.g. Atomic Habits audiobook was OOS while hardcover + eBook were in stock).
+- Fibre composition is N/A (books/gifts) — the natural-fibre gate doesn't apply here; this is a gift-track store.
