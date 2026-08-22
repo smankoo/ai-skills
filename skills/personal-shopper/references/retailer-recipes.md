@@ -1122,3 +1122,60 @@ materials_raw, natural_material, sizes:[{size, sku, price, availability}], any_i
 - Footwear is leather/suede/synthetic, not fibre-%: `natural_material` is a leather/suede/canvas
   heuristic on the `Material:` label, not a fibre percentage. A `Lining: Synthetic` is normal for
   leather shoes and doesn't fail a natural gate (the upper is what matters for the material rule).
+
+## The Ordinary / Deciem (CA) — JSON-LD `Product` + static INCI attribute. No bot wall, VPS-side.
+
+Canada, affordable skincare (a **gift / personal-care** direction, not apparel). `theordinary.com`
+and parent `deciem.com` run on Salesforce Commerce Cloud (Demandware). Confirmed in Sumeet's YNAB
+history (beauty). Sister brands **NIOD** and **The Chemistry Brand** share the platform — swap the
+domain and the recipe transfers. **No bot wall from the VPS** — plain `urllib`/`curl` return the
+full rendered HTML (200); no Cloudflare, no exit node, no Mac delegation. Verified 2026-08-21.
+
+**Which rung worked: JSON-LD (rung 3) + one static-HTML attribute — all VPS-side, rung 1 transport.**
+- Demandware `products.json` / `/products/<handle>.json` do **not** exist here (the site is not a
+  Shopify store — those paths return the Demandware HTML shell, not JSON). Don't chase them.
+- The **PDP JSON-LD `Product`** block carries the money fields: `name`, `sku`, `brand`, `image`,
+  `offers.price` (CAD), `offers.priceCurrency`, `offers.availability` (`InStock`/`OutOfStock`).
+- **INCI ingredient list** (the "composition" analog for skincare — there's no fibre %) is in the
+  *static* HTML as a single attribute:
+  **`<p class="ingredients-flyout-content" data-original-ingredients="Aqua (Water), Niacinamide, …">`**.
+  Present in the raw HTML — no click/accordion-expand or XHR needed. Surface it so a clean/natural-
+  ingredient preference can be applied (parse the comma list; e.g. flag "Phenoxyethanol", fragrance,
+  drying alcohols as the user's rules dictate).
+- **Size** is encoded in the `sku` slug tail (e.g. `rdn-niacinamide-10pct-zinc-1pct-30ml` → `30ml`).
+  Some skus are bare GTINs (`769915233490`) with no size — read the `30ml`/`60ml`/`100ml` tile text
+  from the HTML instead. The catalog is single-size per PDP, so there's no per-size stock grid.
+
+```bash
+# name / price(CAD) / availability / image + full INCI — all VPS-side:
+python3 scripts/theordinary_extract.py \
+  "https://theordinary.com/en-ca/niacinamide-10-zinc-1-serum-100436.html"
+# -> {name, sku, brand, price, currency, availability, in_stock, size, image, ingredients, description}
+```
+
+**Tested extractor:** `scripts/theordinary_extract.py` (pure `urllib`, runs on the VPS).
+Verified 2026-08-21 on two live products:
+- `niacinamide-10-zinc-1-serum-100436` → $6.60 CAD InStock, 30ml, INCI `Aqua (Water), Niacinamide,…`.
+- `hyaluronic-acid-2-b5-serum-with-ceramides-100637` → $12.00 CAD InStock, INCI `Aqua (Water),
+  Sodium Hyaluronate,…`.
+
+**Selectors / endpoints** (verified 2026-08-21)
+| What | Where |
+|---|---|
+| Name / sku / brand / image | PDP JSON-LD `Product` (`script[type=application/ld+json]`, the `@type:"Product"` one) |
+| Price (CAD) / availability | JSON-LD `offers.price` / `offers.availability` (`InStock`/`OutOfStock`) |
+| Ingredients (INCI) | static HTML `<p class="ingredients-flyout-content" data-original-ingredients="…">` |
+| Size | `sku` slug tail `-<NN>ml`, else `\d+\s?ml` in the tile text |
+| Product URL | `https://theordinary.com/en-ca/<slug>-<productId>.html` |
+| Discovery | `web_search "site:theordinary.com/en-ca <keyword>"` (snippets carry the PDP URL) |
+
+**Failure modes**
+- **NOT a Shopify store** — `/products/<handle>.json` and root `products.json` return the Demandware
+  HTML shell, not JSON. Use the PDP JSON-LD, not Shopify endpoints.
+- There are **two JSON-LD blocks** on a PDP — a `Product` and an `FAQPage`. Filter on
+  `@type == "Product"` (the FAQ one has `offers: null`).
+- `offers.url` is an **empty object `{}`**, not the product URL — use the PDP URL you fetched.
+- `gtin`/`additionalProperty` are near-useless (`FSA Eligible: false`); don't rely on them.
+- Skincare has **no fibre-% composition** — the natural-fibre gate doesn't apply. The relevant filter
+  is the INCI list (fragrance/preservatives/actives), which the skill's material rule doesn't cover
+  directly; treat it as informational unless the user states an ingredient preference.

@@ -43,6 +43,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Frank And Oak | CA | Shopify `/products/<handle>.js` (price/stock/image + composition in `description` `Content:` line); `frankandoak_extract.py`. NO bot wall, pure `urllib` VPS-side | done | yes | 2026-08-20 |
 | Indigo / Chapters | CA | Shopify `/products/<handle>.js` (per-format price+stock, cents) + PDP JSON-LD `ProductGroup` (ISBN/publisher/rating) + `<title>` author; `indigo_extract.py`. Books & gifts (gift track); NO bot wall, pure `urllib` VPS-side. Old `chapters.indigo.ca` retired → `indigo.ca` | done | yes | 2026-08-20 |
 | ALDO | CA | Rendered-PDP JSON-LD `ProductGroup` (per-size price+stock+image) + static Materials accordion (`Material:`/`Lining:`/`Sole:`) composition; `aldo_extract.py`. Adult footwear/accessories; NO bot wall, pure `urllib` VPS-side. Footwear `.js`/`.json` 404 (use PDP); `en-ca/` prefix required | done | yes | 2026-08-21 |
+| The Ordinary / Deciem | CA | PDP JSON-LD `Product` (name/price CAD/avail/image) + static `data-original-ingredients` attribute (full INCI); `theordinary_extract.py`. Skincare (gift/personal-care); Demandware, NOT Shopify; NO bot wall, pure `urllib` VPS-side | done | yes | 2026-08-21 |
 
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
@@ -87,7 +88,7 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 - **RONA** (rona.ca) — home improvement.
 
 **Beauty / personal care**
-- **Deciem / The Ordinary** (deciem.com) — skincare; Shopify-ish, likely easy.
+- **Deciem / The Ordinary** (theordinary.com) — ✅ `done` (see recipe). Skincare (gift/personal-care). Demandware (NOT Shopify); PDP JSON-LD + static INCI attribute; NO bot wall, VPS-side.
 - **The Body Shop CA** — natural beauty.
 - **Bath & Body Works CA** — gifts.
 
