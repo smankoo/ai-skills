@@ -44,6 +44,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Indigo / Chapters | CA | Shopify `/products/<handle>.js` (per-format price+stock, cents) + PDP JSON-LD `ProductGroup` (ISBN/publisher/rating) + `<title>` author; `indigo_extract.py`. Books & gifts (gift track); NO bot wall, pure `urllib` VPS-side. Old `chapters.indigo.ca` retired → `indigo.ca` | done | yes | 2026-08-20 |
 | ALDO | CA | Rendered-PDP JSON-LD `ProductGroup` (per-size price+stock+image) + static Materials accordion (`Material:`/`Lining:`/`Sole:`) composition; `aldo_extract.py`. Adult footwear/accessories; NO bot wall, pure `urllib` VPS-side. Footwear `.js`/`.json` 404 (use PDP); `en-ca/` prefix required | done | yes | 2026-08-21 |
 | The Ordinary / Deciem | CA | PDP JSON-LD `Product` (name/price CAD/avail/image) + static `data-original-ingredients` attribute (full INCI); `theordinary_extract.py`. Skincare (gift/personal-care); Demandware, NOT Shopify; NO bot wall, pure `urllib` VPS-side | done | yes | 2026-08-21 |
+| Crocs CA | CA | PDP JSON-LD `Product` (name/price/image/rating) + `app.product.data.cache[...].masterData` JS block (per-size `inStock`+`ATS`, sale, OOS colours); `crocs_extract.py`. Adult+kids footwear; SFCC/Demandware, NO bot wall, pure `urllib` VPS-side. Croslite foam → no fibre-% (natural-fibre gate N/A) | done | yes | 2026-08-22 |
 
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
@@ -69,7 +70,7 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 - **Tommy Hilfiger CA** (ca.tommy.com) — ✅ `done` (see recipe). Cotton oxfords/chinos/polos (adult) + mostly-cotton kids' tees/shirts. VPS Akamai-walled → Mac CDP.
 - **Michael Kors CA** — accessories/gifts.
 - **Aldo** (aldoshoes.com) — ✅ `done` (see recipe). Adult footwear/accessories. Shopify but footwear `.js` 404s → rendered-PDP JSON-LD; NO bot wall, VPS-side. (skill's "never order kids' shoes" rule; adults OK.)
-- **Crocs CA** — footwear.
+- **Crocs CA** (crocs.ca) — ✅ `done` (see recipe). Adult + kids footwear; SFCC/Demandware, NO bot wall, VPS-side. Croslite foam → no fibre-% (natural-fibre gate N/A). Skill's "never order kids' shoes" rule applies.
 - **ASICS Canada** — athletic footwear.
 - **Sport Chek** (sportchek.ca) — ✅ `done` (see recipe). Athletic/outdoor, his fitness angle. Canadian Tire/FGL stack; VPS Akamai-walled → Mac CDP; JSON-LD + `.nl-*` DOM.
 - **Winners** (winners.ca) — off-price; likely no online catalog, verify.

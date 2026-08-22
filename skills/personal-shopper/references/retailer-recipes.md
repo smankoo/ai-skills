@@ -1179,3 +1179,71 @@ Verified 2026-08-21 on two live products:
 - Skincare has **no fibre-% composition** — the natural-fibre gate doesn't apply. The relevant filter
   is the INCI list (fragrance/preservatives/actives), which the skill's material rule doesn't cover
   directly; treat it as informational unless the user states an ingredient preference.
+
+## Crocs (CA) — masterData JS block (per-size ATS stock) + PDP JSON-LD. NO bot wall, VPS-side.
+
+Canada, mid-market footwear (adults + kids). Confirmed in Sumeet's YNAB history. Domain
+**`crocs.ca`** (`,en_CA,pd.html` suffix); Salesforce Commerce Cloud (Demandware). US `crocs.com`
+is the same platform → recipe transfers (swap the locale suffix). **No bot wall from the VPS** —
+plain `urllib`/`curl` with a browser UA returns HTTP 200; no exit node or Mac delegation. Verified
+2026-08-22.
+
+**Which rung worked: raw PDP HTML via `urllib` (rung 1-ish) — TWO server-rendered sources:**
+1. **JSON-LD `Product`** block → `name`, `brand`, `image` (Cloudinary), headline `offers.price` +
+   `priceCurrency`, and `aggregateRating` (`ratingValue`/`ratingCount`). Clean.
+2. **`app.product.data.cache["<styleid>"].masterData = {...}`** — a JS assignment carrying the
+   *money* block (regex `\.masterData\s*=\s*(\{"variations":.*?\});?\s*</script>`, parses as plain
+   JSON):
+   - **`variations`**: one entry **per colour×size SKU** → `{color, size, inStock (bool),
+     ATS (int qty), UPC}`. Aggregate across colours for per-size availability + total ATS.
+   - **`colors`**: a dict **keyed by price string** (so it models a sale) → `{isSale, price,
+     regularPrice, regularFormatted, colors[], oosColors[]}`. First value = the live price tier;
+     `isSale`/`regularPrice` give sale detection, `oosColors[]` = sold-out colourways.
+   - **`skusBySize.oosSkus`**, **`tagMinPrice`**, **`isOOS`** for quick top-level checks.
+
+```python
+import re, json, urllib.request
+UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
+html = urllib.request.urlopen(urllib.request.Request(
+    "https://www.crocs.ca/classic-clog/10001,en_CA,pd.html",
+    headers={"User-Agent": UA, "Accept": "text/html"}), timeout=30).read().decode("utf-8","replace")
+md = json.loads(re.search(r'\.masterData\s*=\s*(\{"variations":.*?\});?\s*</script>', html, re.S).group(1))
+# md["variations"]["10001-001-M5W7"] -> {"size":"M5W7","inStock":true,"ATS":804,...}
+```
+
+**Tested extractor:** `scripts/crocs_extract.py` (pure `urllib`, runs on the VPS). Verified
+2026-08-22 on two live products:
+- `10001` (Classic Clog) → $64.99 CAD, 21 colours (3 OOS), 16 unisex sizes all in stock,
+  rating 4.5 (30229).
+- `206991` (Kids' Classic Clog) → $49.99 CAD, 16 colours (8 OOS), 9 kids' sizes (C11–J6) in stock,
+  rating 4.5 (1690).
+Output per URL: `{url, style_id, name, brand, image, price, currency, on_sale, regular_price,
+rating, rating_count, num_colors, oos_colors[], sizes:[{size,in_stock,ats}], any_in_stock, details[]}`.
+
+**Selectors / endpoints** (verified 2026-08-22)
+| What | Where |
+|---|---|
+| Name / brand / image / rating / headline price | JSON-LD `Product` block (`@type == "Product"`) |
+| Per-size stock + ATS qty | `masterData.variations` (regex-extract the JS assignment, parse as JSON) |
+| Sale + OOS colours | `masterData.colors` (dict keyed by price string; first value = live tier) |
+| Product URL | `https://www.crocs.ca/<slug>/<styleid>,en_CA,pd.html` |
+| Style id | tail segment before `,en_CA,pd.html` (e.g. `10001`, `206991`) |
+| Image | JSON-LD `image` — Cloudinary `https://media.crocs.com/images/.../products/<style>_<color>_ALT100/...` |
+| Discovery | `web_search "site:crocs.ca <keyword>"` (snippets carry the `,en_CA,pd.html` PDP URL) |
+
+**Failure modes**
+- **web_extract (Crawl4AI) strips `<script>`, so it loses BOTH JSON-LD and `masterData`** — you get
+  visible price/title/colours/sizes but NO per-size stock and NO structured price. Use raw
+  `urllib`/`curl` (Crawl4AI is fine as a sanity-check of the visible price only).
+- **Sizes are unisex `M#W#` for adults** (e.g. `M5W7` = men's 5 / women's 7) and `C#`/`J#` for kids
+  (`C11` little-kid, `J1`+ big-kid/"junior"). Map the recipient's foot length to the Crocs size
+  chart — and per the skill's rule, **never order kids' shoes**; emit a measure-first + cm→size
+  table instead. Adults pick their own size.
+- **Croslite = EVA-type foam, NOT a woven fabric** → the natural-fibre gate does NOT apply to Crocs
+  footwear. The only material note is the `Details` bullet "made with N% bio-circular material"
+  (surfaced as `details[]`); there is no fibre-% composition to compute.
+- The `Details` bullet list is **rendered twice** on the PDP (main + accordion) — dedup or you get
+  doubled bullets. The extractor already dedups.
+- `masterData.colors` is keyed by a **price string** not a colour code; if a product ever had two
+  price tiers (some on sale) there'd be >1 key — the extractor takes the first (live) tier, which is
+  correct for the common single-tier case but re-check for a mixed-sale product.
