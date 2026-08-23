@@ -1247,3 +1247,68 @@ rating, rating_count, num_colors, oos_colors[], sizes:[{size,in_stock,ats}], any
 - `masterData.colors` is keyed by a **price string** not a colour code; if a product ever had two
   price tiers (some on sale) there'd be >1 key — the extractor takes the first (live) tier, which is
   correct for the common single-tier case but re-check for a mixed-sale product.
+
+## The Body Shop (CA) — Shopify `.js` (price/stock) + PDP-HTML INCI span. No bot wall.
+
+Canada, mass beauty/personal-care (body butter, shower gel, skincare, gift sets) — a **gift /
+personal-care** store, confirmed in Sumeet's YNAB history. Cruelty-free / "ingredients of natural
+origin" is its whole positioning. Domain **`thebodyshop.ca`**; it's a **Shopify** store
+(`myshopify_domain njstuz-x2.myshopify.com`), CAD. **No bot wall from the VPS** — plain
+`urllib`/`curl` work; no exit node, no Mac delegation. Verified 2026-08-23.
+
+**Which rung worked: Shopify JSON (rung 2) + a small PDP-HTML fetch — all VPS-side.**
+(web_extract also renders the PDP clean as a fallback, but the `.js` API is cleaner.)
+- **`/products/<handle>.js`** is the money endpoint: `title`, `price`/`compare_at_price`
+  (in **CENTS**; `compare_at_price` set only when on sale), top-level `available`, `type`,
+  `vendor`, `featured_image` (protocol-relative `//cdn.shopify.com/...` → prefix `https:`), and a
+  `variants[]` grid each with `title` (the **size**, e.g. `200ML`/`400ML`), `sku`, `price`, and a
+  real **`available`** boolean → **per-size price + stock directly**. (`.js` gives `available`;
+  `.json` does NOT — use `.js`.)
+- **Cosmetics, not fabric** → the personal-shopper natural-**fibre** gate is **N/A**. The analogous
+  signal is **"`<NN>% ingredients of natural origin`"**, in the `description`/`body_html` prose
+  (surfaced as `natural_origin_pct`). Not every product states it (the pure `100% Shea Butter`
+  didn't) → `null` = "not stated", don't infer.
+- **Full INCI ingredient list** lives in the PDP **HTML**, in the **FIRST**
+  `<span class="metafield-multi_line_text_field">` (the **SECOND** such span is the "how to use"
+  steps — don't grab it). It's in the *static* HTML (curl gets it; no accordion click needed).
+
+```bash
+# price/stock/image/variants (cents), + description prose with "% of natural origin":
+curl -s -A "$UA" "https://thebodyshop.ca/products/<handle>.js"
+# full INCI ingredient list (FIRST metafield span):
+curl -s -A "$UA" -H 'Accept: text/html' "https://thebodyshop.ca/products/<handle>" \
+  | grep -oE '<span class="metafield-multi_line_text_field">[^<]*'   # first hit = INCI
+```
+
+**Tested extractor:** `scripts/thebodyshop_extract.py` (pure `urllib`, runs on the VPS).
+Verified 2026-08-23 on three live products:
+- `shea-body-butter` → $10 (compare $26, on sale), 97% natural origin, 200ML + 400ML both in stock,
+  full INCI captured.
+- `shea-butter-body-butter` (`100% Shea Butter`) → $21, `natural_origin_pct: null` (not stated), in
+  stock, 2-ingredient INCI.
+- `british-rose-shower-gel-1` → $13, 92% natural origin, **`available: false`** (correctly caught
+  the OOS state; the `-POS` suffix in the title flags a point-of-sale/retail-only SKU).
+Output per URL: `{handle, url, title, type, vendor, price, compare_at_price, on_sale, available,
+image, natural_origin_pct, ingredients, variants:[{title,sku,price,available}], any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-08-23)
+| What | Where |
+|---|---|
+| Price / compare-at / stock / variants | `/products/<handle>.js` (prices in cents; `variants[].available`; variant `title` = size) |
+| % of natural origin | `.js` `description`, regex `(\d{1,3})% ingredients of natural origin` |
+| INCI ingredients | PDP HTML, **first** `<span class="metafield-multi_line_text_field">` |
+| Image | `.js` `featured_image` (protocol-relative → prefix `https:`) |
+| Product URL | `https://thebodyshop.ca/products/<handle>` |
+| PDP JSON-LD | present (`Product`, price in dollars, `availability`) — a redundant cross-check for `.js` |
+
+**Failure modes**
+- **`.js` vs `.json`**: only `.js` carries the per-variant `available` boolean and the `description`;
+  `.json` omits `available`. Use `.js`.
+- **TWO `metafield-multi_line_text_field` spans** per PDP: [0] = INCI ingredients, [1] = how-to-use.
+  Grabbing the wrong index gives usage steps instead of ingredients. Extractor takes [0].
+- **`natural_origin_pct` is often absent** — many products (and pure single-ingredient ones) don't
+  state a %. Treat `null` as "not stated", not 0. The INCI list is the reliable ingredient signal.
+- Titles sometimes carry a **`- POS`** suffix (point-of-sale / retail-only listing) and are usually
+  `available: false` online — trust the `available` flag, not the title.
+- JSON-LD `availability` uses BOTH `http://schema.org/...` and `https://schema.org/...` forms in the
+  same page; strip the scheme+host when comparing. (The `.js` boolean is simpler — prefer it.)

@@ -45,6 +45,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | ALDO | CA | Rendered-PDP JSON-LD `ProductGroup` (per-size price+stock+image) + static Materials accordion (`Material:`/`Lining:`/`Sole:`) composition; `aldo_extract.py`. Adult footwear/accessories; NO bot wall, pure `urllib` VPS-side. Footwear `.js`/`.json` 404 (use PDP); `en-ca/` prefix required | done | yes | 2026-08-21 |
 | The Ordinary / Deciem | CA | PDP JSON-LD `Product` (name/price CAD/avail/image) + static `data-original-ingredients` attribute (full INCI); `theordinary_extract.py`. Skincare (gift/personal-care); Demandware, NOT Shopify; NO bot wall, pure `urllib` VPS-side | done | yes | 2026-08-21 |
 | Crocs CA | CA | PDP JSON-LD `Product` (name/price/image/rating) + `app.product.data.cache[...].masterData` JS block (per-size `inStock`+`ATS`, sale, OOS colours); `crocs_extract.py`. Adult+kids footwear; SFCC/Demandware, NO bot wall, pure `urllib` VPS-side. Croslite foam → no fibre-% (natural-fibre gate N/A) | done | yes | 2026-08-22 |
+| The Body Shop CA | CA | Shopify `/products/<handle>.js` (price/stock CENTS, per-variant `available`) + PDP-HTML first `<span class="metafield-multi_line_text_field">` (INCI) + `% natural origin` from desc; `thebodyshop_extract.py`. Beauty/personal-care (gift track); NO bot wall, pure `urllib` VPS-side. Cosmetic → fibre gate N/A | done | yes | 2026-08-23 |
 
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
@@ -90,7 +91,7 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 
 **Beauty / personal care**
 - **Deciem / The Ordinary** (theordinary.com) — ✅ `done` (see recipe). Skincare (gift/personal-care). Demandware (NOT Shopify); PDP JSON-LD + static INCI attribute; NO bot wall, VPS-side.
-- **The Body Shop CA** — natural beauty.
+- **The Body Shop CA** — ✅ `done` (see recipe). Beauty/personal-care (gift track). Shopify `.js` + PDP INCI span; NO bot wall, VPS-side.
 - **Bath & Body Works CA** — gifts.
 
 **Specialty / gifts**
