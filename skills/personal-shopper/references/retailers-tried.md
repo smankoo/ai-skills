@@ -46,6 +46,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | The Ordinary / Deciem | CA | PDP JSON-LD `Product` (name/price CAD/avail/image) + static `data-original-ingredients` attribute (full INCI); `theordinary_extract.py`. Skincare (gift/personal-care); Demandware, NOT Shopify; NO bot wall, pure `urllib` VPS-side | done | yes | 2026-08-21 |
 | Crocs CA | CA | PDP JSON-LD `Product` (name/price/image/rating) + `app.product.data.cache[...].masterData` JS block (per-size `inStock`+`ATS`, sale, OOS colours); `crocs_extract.py`. Adult+kids footwear; SFCC/Demandware, NO bot wall, pure `urllib` VPS-side. Croslite foam → no fibre-% (natural-fibre gate N/A) | done | yes | 2026-08-22 |
 | The Body Shop CA | CA | Shopify `/products/<handle>.js` (price/stock CENTS, per-variant `available`) + PDP-HTML first `<span class="metafield-multi_line_text_field">` (INCI) + `% natural origin` from desc; `thebodyshop_extract.py`. Beauty/personal-care (gift track); NO bot wall, pure `urllib` VPS-side. Cosmetic → fibre gate N/A | done | yes | 2026-08-23 |
+| Kotn | CA | Next.js `__NEXT_DATA__` (price/composition/image) + headless-Shopify Storefront GraphQL by GID (per-size live stock); `kotn_extract.py`. Egyptian/organic-cotton essentials — top natural-fibre source; NO bot wall, pure `urllib` VPS-side. NOT a Shopify front end (`.js`/`.json` on kotn.com return SPA shell) | done | yes | 2026-08-23 |
 
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
@@ -106,6 +107,6 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 - **Mark's** (marks.com) — workwear, cotton basics, Canadian Tire platform.
 - **Tilley** (tilley.com) — natural-fibre travel/outdoor, Canadian.
 - **MEC** (mec.ca) — outdoor co-op; merino/cotton; Canadian.
-- **Kotn** (kotn.com) — Canadian, Egyptian-cotton essentials; very natural-fibre-friendly.
+- **Kotn** (kotn.com) — ✅ `done` (see recipe). Canadian, Egyptian-cotton essentials; near-100%-cotton catalog, top natural-fibre source. Next.js front + headless Shopify; NO bot wall, VPS-side.
 - **Hudson's Bay** (thebay.com) — department store, house + designer brands; kids + adults.
 - **Mountain Warehouse CA**, **Decathlon CA** — value outdoor.

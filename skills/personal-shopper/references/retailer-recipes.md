@@ -1312,3 +1312,91 @@ image, natural_origin_pct, ingredients, variants:[{title,sku,price,available}], 
   `available: false` online — trust the `available` flag, not the title.
 - JSON-LD `availability` uses BOTH `http://schema.org/...` and `https://schema.org/...` forms in the
   same page; strip the scheme+host when comparing. (The `.js` boolean is simpler — prefer it.)
+
+## Kotn (CA) — Next.js `__NEXT_DATA__` (price/composition/image) + headless-Shopify Storefront GraphQL (per-size stock). No bot wall.
+
+Canada, mid-market DTC essentials — **the strongest natural-fibre source found after Uniqlo**:
+almost the entire catalog is 100% long-staple / Egyptian / organic cotton (tees, sweaters,
+button-downs, denim, loungewear), plus some linen. A 70% natural-fibre gate passes trivially on most
+SKUs. Kids' line is thin/seasonal — this is primarily an adult store. **No bot wall from the VPS** —
+plain `urllib` works, no exit node, no Mac delegation. Verified 2026-08-23.
+
+**The architecture (why it takes two sources):** kotn.com is a **custom Next.js/Vercel** front end
+(served by Vercel, NOT Shopify — so `/products/<handle>.js`/`.json` and `/products.json` all return
+the SPA HTML shell, NOT Shopify JSON). Behind it sits a **headless Shopify store**
+(`kotn-ss15.myshopify.com`). Product content is rendered server-side from Sanity CMS into the page's
+`<script id="__NEXT_DATA__">` blob; live per-size stock comes from the public Shopify **Storefront
+GraphQL** API.
+
+**Which rungs worked:**
+- **Rung 4 (SSR JSON in the HTML)** for title, price (CAD), image, colour/size options, and
+  **composition** — no click/accordion needed, it's all in `__NEXT_DATA__`.
+- **Rung 1 (public JSON API)** for live per-size stock — the Shopify Storefront GraphQL endpoint.
+
+**1. PDP HTML → `__NEXT_DATA__`** (`props.pageProps`):
+- `product.title`, `product.shopifyProducts[0].productReferenceV2.store` → `priceRange.minVariantPrice`
+  (a **bare number** e.g. `158`, NOT a `{amount,currencyCode}` dict — currency is CAD), `previewImageUrl`
+  (a `cdn.shopify.com/...` URL), and `options[]` (`{name:"Colour"|"Size", values:[...]}`).
+- `pageProps.shopifyProductID` = the numeric Shopify product id (needed for the GraphQL call).
+- **Composition** lives in `product.details[]` — the section whose `detailTitle` starts with `"Fabric"`
+  ("Fabric & Care"), inside `detailContent` (Sanity portable-text blocks). Flatten the blocks and pick
+  the line naming a fibre/`%` (e.g. `"100% Cotton"`, `"Made from 100% Egyptian cotton yarn. 5GG"`) —
+  skip the wash-care line.
+
+**2. Live per-size stock → Shopify Storefront GraphQL**
+`POST https://kotn-ss15.myshopify.com/api/2023-01/graphql.json`
+header `X-Shopify-Storefront-Access-Token: <token>`. The token is a **public storefront token** baked
+into the site's JS bundle (the `pages/_app-*.js` chunk, as `access_token:"<32hex>"` next to
+`storefront_uri:"https://kotn-ss15.myshopify.com/api/2023-01/graphql.json"`). Verified token
+`bf270532d43fe486e0585779d2c8ae7d` (2026-08-23). **Query by GID, not handle** — the myshopify handle
+differs from the kotn.com slug (`product(handle:...)` returns `null`; `node(id:"gid://shopify/Product/<id>")`
+works). Returns `variants[].{selectedOptions, availableForSale, quantityAvailable, price}` — real live
+inventory counts per size.
+
+```bash
+# 1. price/composition/image/options — VPS-side, no auth:
+curl -s -A "$UA" "https://kotn.com/products/<handle>" -o pdp.html
+#    then parse <script id="__NEXT_DATA__">  (see scripts/kotn_extract.py)
+# 2. per-size live stock:
+curl -s -X POST "https://kotn-ss15.myshopify.com/api/2023-01/graphql.json" \
+  -H "Content-Type: application/json" \
+  -H "X-Shopify-Storefront-Access-Token: bf270532d43fe486e0585779d2c8ae7d" \
+  -d '{"query":"{ node(id:\"gid://shopify/Product/15190015869296\") { ... on Product { variants(first:100){edges{node{availableForSale quantityAvailable price{amount currencyCode} selectedOptions{name value}}}} } } }"}'
+```
+
+**Tested extractor:** `scripts/kotn_extract.py` (pure `urllib`, runs on the VPS). Verified 2026-08-23 on
+two live products:
+- `mens-relaxed-check-shirt` → "100% Cotton", natural_pct 100, $158 CAD, XS–XL all in stock (12/45/126/109/39).
+- `womens-hamatah-sweater` → "100% Egyptian cotton", natural_pct 100, $148 CAD, XS–XL all in stock.
+Output per URL: `{url, title, shopify_gid, price, currency, composition, natural_pct, image, colors[],
+sizes:[{size, price, quantity, in_stock}], any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-08-23)
+| What | Where |
+|---|---|
+| Title / price (CAD, bare number) / image / options | PDP `__NEXT_DATA__` → `props.pageProps.product...store.{priceRange.minVariantPrice, previewImageUrl, options}` |
+| Composition (fibre) | `product.details[]` section with `detailTitle`≈"Fabric & Care" → `detailContent` portable-text |
+| Shopify product id | `props.pageProps.shopifyProductID` |
+| Per-size live stock/price | Storefront GraphQL `node(id:"gid://shopify/Product/<id>")` → `variants[].{availableForSale,quantityAvailable}` |
+| Storefront token | `pages/_app-*.js` chunk: `access_token:"<32hex>"` (public; re-scrape if rotated) |
+| Product URL | `https://kotn.com/products/<handle>` (discover via `web_search "site:kotn.com <keyword>"` or `/sitemap.xml`) |
+
+**Failure modes**
+- **NOT a Shopify front end despite being backed by Shopify.** `kotn.com/products/<handle>.js`, `.json`,
+  and `/products.json` all return the Next.js SPA HTML shell (served by Vercel), NOT Shopify JSON. Don't
+  waste time on the Shopify convenience endpoints on the `kotn.com` origin — the real Shopify data is
+  only reachable via the Storefront GraphQL API on the `kotn-ss15.myshopify.com` origin.
+- **Query the Storefront API by GID, not handle.** The myshopify handle (e.g.
+  `mens-relaxed-check-shirt-in-pitch-navy-taupe-check`) ≠ the kotn.com slug (`mens-relaxed-check-shirt`),
+  so `product(handle:<kotn-slug>)` returns `null`. Use `node(id:"gid://shopify/Product/<shopifyProductID>")`.
+- **`priceRange.minVariantPrice` in the SSR blob is a bare integer, not an `{amount,currencyCode}` object**
+  — cost the first extractor run an `AttributeError`. Treat it as a number; currency is CAD.
+- **Variant references in the SSR blob are unresolved** (`{_ref:"shopifyProductVariant-...", _weak:true}`)
+  — SSR carries NO stock/quantity. Stock only comes from the GraphQL call. (grep for `availableForSale`
+  in `__NEXT_DATA__` → 0 hits.)
+- **Descriptions use "100% Egyptian cotton" prose without a bare `%N` fibre-pair** on some knits — the
+  natural-fibre parser must fall back to detecting a named natural fibre + "100%", not only `\d+%\s*fibre`
+  pairs. (Handled in `kotn_extract.py::natural_pct`.)
+- The public storefront token can rotate; if GraphQL calls 401/error, re-scrape it from the current
+  `pages/_app-*.js` chunk (`grep -oE 'access_token:"[a-f0-9]{32}"'`). Price/composition still come from
+  SSR even if stock is unavailable.
