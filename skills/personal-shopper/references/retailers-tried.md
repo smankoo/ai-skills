@@ -85,7 +85,7 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 - **Walmart CA** (walmart.ca) — ✅ `done` (see recipe). General merch + kids; house brand George is heavily 100% cotton. VPS PerimeterX-walled → Mac CDP with homepage warm-up.
 - **Costco CA** — `blocked` (press-and-hold); membership warehouse, his CIBC Costco card.
 - **Canadian Tire** (canadiantire.ca) — Triangle Rewards member; home/auto/seasonal.
-- **IKEA CA** (ikea.ca) — ✅ `done` (see recipe). Furniture/home/textiles; frequent. Cloudflare-walled to curl/API → `web_extract` rendered-DOM. Live stock not in render.
+- **IKEA CA** (ikea.ca) — ✅ `done` (see recipe). Furniture, home goods & textiles; frequent. Cloudflare-walled to curl/API → `web_extract` rendered-DOM. Live stock not in render.
 - **Indigo / Chapters** (indigo.ca) — ✅ `done` (see recipe). Books & gifts (gift track). Now a Shopify store, NO bot wall, VPS-side. Old `chapters.indigo.ca` retired.
 - **Staples CA** (staples.ca) — office/electronics.
 - **Michaels** (michaels.com) — crafts/gifts.
