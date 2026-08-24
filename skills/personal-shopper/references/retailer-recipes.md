@@ -1400,3 +1400,69 @@ sizes:[{size, price, quantity, in_stock}], any_in_stock}`.
 - The public storefront token can rotate; if GraphQL calls 401/error, re-scrape it from the current
   `pages/_app-*.js` chunk (`grep -oE 'access_token:"[a-f0-9]{32}"'`). Price/composition still come from
   SSR even if stock is unavailable.
+
+## IKEA (CA) — rendered-DOM via web_extract (Cloudflare-walled to curl/JSON; NO JSON-LD)
+
+Canada, home/furniture/textiles/kitchenware — the "home" role, and a real natural-fibre
+textile source (GURLI/AINA cotton cushion covers, DVALA cotton bedding, VÅRELD, cotton
+throws). Confirmed in Sumeet's YNAB history (frequent). Domain **`ikea.com/ca/en`**
+(`/p/<slug>-<article>/`). Global IKEA runs the same platform per-market — swap the
+`/<cc>/<lang>/` prefix and the recipe should transfer. Verified 2026-08-24.
+
+**Which rung worked: `web_extract` (rendered DOM) — rung 4.** From the VPS *every* cheap
+transport is Cloudflare/Akamai-403'd and none is fixable VPS-side:
+- `curl`/`urllib` to the PDP, to `/ca/en/products/<article>.json`, to the legacy
+  `/iows/catalog/availability/<article>` endpoint, and to `api.ingka.ikea.com/salesitem/...`
+  → **all HTTP 403** ("Access Denied" / Cloudflare `__cf_bm` challenge / AkamaiGHost).
+- There is **NO `application/ld+json`** block on the PDP (`grep -c` → 0). Don't hunt for one.
+But `web_extract` (Crawl4AI headless Chromium) **passes the passive Cloudflare check** and
+returns the fully-rendered page carrying name, live price, article no., **Materials/composition**
+(critical for the natural-fibre gate), full-res image, and rating — no exit node, no Mac CDP.
+
+**Product URL shape:** `https://www.ikea.com/ca/en/p/<slug>-<article8>/`
+e.g. `.../p/gurli-cushion-cover-unbleached-10598777/`. The 8-digit tail is the article id;
+it renders on the page as the dotted `NNN.NNN.NN` (`10598777` → `105.987.77`). A STALE/renamed
+handle redirects to the **category listing** (still useful — the grid carries current product
+URLs + visible prices). Find candidate URLs via `web_search "site:ikea.com/ca/en <product>"` —
+snippets even carry the "100% cotton" composition line for textiles.
+
+```bash
+# 1. Render the PDP (web_extract tool call — passes Cloudflare):
+#      web_extract(urls=["https://www.ikea.com/ca/en/p/<slug>-<article>/"])
+#    -> saves full page to ~/.hermes/cache/web/www.ikea.com-<hash>.md
+# 2. Parse it:
+python3 scripts/ikea_extract.py ~/.hermes/cache/web/www.ikea.com-XXXX.md \
+        "https://www.ikea.com/ca/en/p/<slug>-<article>/"
+#    -> {url, name, price, currency, article_no, composition, natural_pct,
+#        is_textile, image, rating, reviews}
+```
+
+**Key fields (verified 2026-08-24 on BILLY bookcase `205.220.46` = furniture, and GURLI
+cushion cover `105.987.77` = textile 100% cotton)**
+| What | Where in rendered markdown |
+|---|---|
+| Name | product H1 `# <NAME>, <colour>, [<size>](url)` — unwrap the md link, strip category H1s ("Products", "<Series> bookcases") |
+| Price | `Price $ 7.99` label (space-tolerant). No sale strike in the render — shown price IS the live price |
+| Article no. | the `NNN.NNN.NN` line right after the series-name block (e.g. `205.220.46`) |
+| Composition | `#### Material` block under "Materials and care". Textiles → `100 % cotton` / `55 % linen, 45 % viscose`; furniture → `Particleboard, Paper foil` (no fibre %) |
+| natural_pct | sum of natural-fibre % — only meaningful when `is_textile`; `null` for furniture (fibre gate N/A) |
+| Image | first `.../images/products/<slug>__<id>_s5.jpg`; parser strips the `?f=` size query for full-res |
+| Rating / reviews | `Review: 4.2 out of 5` / `Total reviews: 99` |
+
+**Failure modes**
+- **All JSON/API transports 403 from the VPS** (Cloudflare + Akamai) — curl, `products/<id>.json`,
+  `iows` availability, `api.ingka.ikea.com`. Don't burn calls; go straight to `web_extract`.
+- **NO JSON-LD on the PDP** — unlike most Demandware/SFCC retailers. Data is only in the rendered DOM.
+- **Live stock/availability is NOT reliably in the render.** The PDP shows "Delivery: Checking
+  availability..." / "Store: Select store" placeholders — the stock reads from a *separate XHR*
+  keyed to a postal code that `web_extract` can't fire. So this recipe gives price + composition +
+  image reliably, but **stock is unknown** (`in_stock: null`) — verify on the live page (enter a
+  postal code) before promising availability, or escalate to CDP for a firm answer. IKEA also runs
+  occasional "storefront currently unavailable / checkout not available" banners (seen on one render).
+- **The "Complete with" / accessory blocks name their OWN materials** (e.g. an INNER cushion
+  "Synthetic fibers" right under a 100%-cotton cover). The parser anchors composition to the FIRST
+  `#### Material` block, which is the product's own — don't grab a later accessory's material line.
+- **Furniture "Material" is board/foil/veneer, not fibre** — `is_textile` is False and the natural-
+  fibre gate simply doesn't apply (a bookcase isn't a fabric). Only gate textiles/soft goods.
+- **`%` glued to fibre name is fine** (`100 % cotton` with a space, or `55% linen`) — the parser
+  handles both; viscose/rayon still count as SYNTHETIC per the everywhere rule.

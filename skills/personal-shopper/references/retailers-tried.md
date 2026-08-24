@@ -47,6 +47,8 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Crocs CA | CA | PDP JSON-LD `Product` (name/price/image/rating) + `app.product.data.cache[...].masterData` JS block (per-size `inStock`+`ATS`, sale, OOS colours); `crocs_extract.py`. Adult+kids footwear; SFCC/Demandware, NO bot wall, pure `urllib` VPS-side. Croslite foam → no fibre-% (natural-fibre gate N/A) | done | yes | 2026-08-22 |
 | The Body Shop CA | CA | Shopify `/products/<handle>.js` (price/stock CENTS, per-variant `available`) + PDP-HTML first `<span class="metafield-multi_line_text_field">` (INCI) + `% natural origin` from desc; `thebodyshop_extract.py`. Beauty/personal-care (gift track); NO bot wall, pure `urllib` VPS-side. Cosmetic → fibre gate N/A | done | yes | 2026-08-23 |
 | Kotn | CA | Next.js `__NEXT_DATA__` (price/composition/image) + headless-Shopify Storefront GraphQL by GID (per-size live stock); `kotn_extract.py`. Egyptian/organic-cotton essentials — top natural-fibre source; NO bot wall, pure `urllib` VPS-side. NOT a Shopify front end (`.js`/`.json` on kotn.com return SPA shell) | done | yes | 2026-08-23 |
+| IKEA CA | CA | Rendered-DOM via `web_extract` + `ikea_extract.py` (name/price/article/composition/image). NO JSON-LD; curl/`.json`/iows/ingka API all Cloudflare-403. Home/furniture/textiles; live STOCK not in render (null). | done | yes | 2026-08-24 |
+| Toys R Us CA | CA | **No online catalog** — site is store-locator/FAQ only ("shop in-store"); no product/PDP pages exist to scrape. | n/a | note | 2026-08-24 |
 
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
@@ -82,12 +84,12 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 - **Walmart CA** (walmart.ca) — ✅ `done` (see recipe). General merch + kids; house brand George is heavily 100% cotton. VPS PerimeterX-walled → Mac CDP with homepage warm-up.
 - **Costco CA** — `blocked` (press-and-hold); membership warehouse, his CIBC Costco card.
 - **Canadian Tire** (canadiantire.ca) — Triangle Rewards member; home/auto/seasonal.
-- **IKEA CA** (ikea.ca) — furniture/home; frequent.
+- **IKEA CA** (ikea.ca) — ✅ `done` (see recipe). Furniture/home/textiles; frequent. Cloudflare-walled to curl/API → `web_extract` rendered-DOM. Live stock not in render.
 - **Indigo / Chapters** (indigo.ca) — ✅ `done` (see recipe). Books & gifts (gift track). Now a Shopify store, NO bot wall, VPS-side. Old `chapters.indigo.ca` retired.
 - **Staples CA** (staples.ca) — office/electronics.
 - **Michaels** (michaels.com) — crafts/gifts.
 - **Party City CA** (partycity.ca) — party/kids events.
-- **Toys R Us CA** (toysrus.ca) — kids' gifts.
+- **Toys R Us CA** (toysrus.ca) — ❌ `n/a`: NO online catalog (store-locator/FAQ only, "shop in-store"). Nothing to scrape.
 - **RONA** (rona.ca) — home improvement.
 
 **Beauty / personal care**
