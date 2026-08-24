@@ -1466,3 +1466,72 @@ cushion cover `105.987.77` = textile 100% cotton)**
   fibre gate simply doesn't apply (a bookcase isn't a fabric). Only gate textiles/soft goods.
 - **`%` glued to fibre name is fine** (`100 % cotton` with a space, or `55% linen`) — the parser
   handles both; viscose/rayon still count as SYNTHETIC per the everywhere rule.
+
+## Tilley (CA) — Shopify `.js` (price/stock/variants) + PDP `<h6>Fabric</h6>` composition. No bot wall.
+
+Canada, mid/premium — iconic natural-fibre travel/outdoor brand (100% cotton "Wanderer"/"Airflo"
+hats, organic-cotton tees, 100% linen jersey, merino). One of the cleaner natural-fibre sources:
+most of the hat + apparel catalog is single-fibre cotton/linen. It's a Shopify store, so the
+standard endpoints are open **from the VPS with a plain UA** — no exit node, no Mac CDP.
+Verified 2026-08-24.
+
+**Which rung worked: Shopify JSON (rung 2) + a small PDP-HTML fetch — all VPS-side `urllib`.**
+- **`/products/<handle>.js`** is the money endpoint: `price`/`compare_at_price` (in **CENTS**),
+  top-level `available`, and a `variants[]` grid each with `option1`=Colour / `option2`=Size,
+  `price`, `compare_at_price`, and a real **`available`** boolean → **per-size/per-colour stock
+  directly**. Also `featured_image` (protocol-relative `//cdn.shopify.com/...` → prefix `https:`),
+  `vendor`, `type`, `tags`. (Use `.js`, not `.json` — only `.js` carries `available`.)
+- **Composition is NOT in the JSON** (the `.js` `description` is marketing prose). It lives in the
+  PDP **static HTML** under a "Fabric, Care & Origin" accordion, anchored by an **`<h6>Fabric</h6>`**
+  header. The wrapper after that header **varies by template**:
+    - hats: `<div class="specs"><h6>Fabric</h6><p>100% Cotton</p></div>`
+    - apparel: `<h6>Fabric</h6>` … loose text / `ewa-rteLine` divs → `100% Linen`
+  So anchor on `<h6>Fabric</h6>`, take text up to the next `<h6>`/`Care`/accordion end, strip tags.
+  It's in the *static* HTML (no click needed). Some certified-organic tees state fibre only in
+  prose ("certified organic cotton", **no %**) — treat composition as a phrase and leave
+  `natural_pct` = None when there's no percentage to sum.
+
+```bash
+UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36"
+# price/stock/variants/image (cents):
+curl -s -A "$UA" "https://www.tilley.com/products/<handle>.js"
+# composition (static HTML — no accordion click needed):
+curl -s -A "$UA" -H 'Accept: text/html' "https://www.tilley.com/products/<handle>" \
+  | grep -oE '<h6>Fabric</h6>[^<]*(<[^>]+>[^<]*){0,3}'   # e.g. ...100% Cotton / 100% Linen
+```
+
+**Discovery** (find handles): `GET /search/suggest.json?q=<terms>&resources[type]=product&resources[limit]=10`
+→ `resources.results.products[]` with `title`, `handle`, `url`, `price`, `available`, `image`.
+(URL-encode the brackets: `resources%5Btype%5D=product&resources%5Blimit%5D=10`.)
+
+**Tested extractor:** `scripts/tilley_extract.py` (pure `urllib`, runs on the VPS).
+Verified 2026-08-24 on four live products:
+- `t3-wanderer-hat` → "100% Cotton", natural_pct 100, $99, 12 colours × 10 sizes in stock.
+- `ltm6-airflo-sun-hat` → "100% Recycled Nylon. Mesh: 100% polyester", natural_pct 0, $99.
+- `linen-jersey-t-shirt` → "100% Linen", natural_pct 100, $90.
+- `organic-crew-t-shirt` → "certified organic cotton" (prose, no %), natural_pct None, $28.
+Output per URL: `{handle, url, title, vendor, type, price, compare_at_price, on_sale, available,
+composition, natural_pct, image, colors[], sizes[], variants:[{color,size,price,compare_at,
+available}], any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-08-24)
+| What | Where |
+|---|---|
+| Price / compare-at / stock / variants | `/products/<handle>.js` (prices in cents; `variants[].available`) |
+| Composition (fibre %) | PDP HTML, text after `<h6>Fabric</h6>` (in the "Fabric, Care & Origin" accordion; static) |
+| Image | `.js` `featured_image` (protocol-relative `//cdn.shopify.com/...` → prefix `https:`) |
+| JSON-LD | PDP has a `Product` block too (`offers[]` per variant, `priceCurrency` **USD**) — but no `material`; use it only as a price cross-check, prefer `.js` |
+| Product URL | `https://www.tilley.com/products/<handle>` |
+
+**Failure modes**
+- **Hat sizes are fitted (`6 7/8`…`8+`), not S/M/L**, and there are ~100+ variants (colour × head
+  size). Dedup colours/sizes for display; rely on per-variant `available`, not the top-level flag.
+- **JSON-LD prices are in USD** (`priceCurrency: "USD"`), even on the CA-facing site — do NOT show
+  the JSON-LD `price` as CAD. The `.js` `price` (cents) is the storefront (CAD) price; use it.
+- **Composition-fallback trap:** a naïve "first `NN% <word>`" match grabs CSS (`100% repeat-x`,
+  `width:100%`). Gate the fallback to real textile-fibre words (cotton/linen/nylon/polyester/…);
+  the extractor does this, then falls back to a prose fibre phrase (certified-organic tees).
+- **"Recycled nylon"/"recycled polyester" is still SYNTHETIC** — recycled ≠ natural. `100% Recycled
+  Nylon` is natural_pct 0. (Recycled *cotton* would still count as cotton.)
+- No bot wall observed VPS-side (200 on homepage, `.js`, `suggest.json`, PDP HTML). If that ever
+  changes, it's a standard Shopify front — the recipe transfers to any Shopify origin.

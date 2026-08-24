@@ -49,6 +49,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Kotn | CA | Next.js `__NEXT_DATA__` (price/composition/image) + headless-Shopify Storefront GraphQL by GID (per-size live stock); `kotn_extract.py`. Egyptian/organic-cotton essentials — top natural-fibre source; NO bot wall, pure `urllib` VPS-side. NOT a Shopify front end (`.js`/`.json` on kotn.com return SPA shell) | done | yes | 2026-08-23 |
 | IKEA CA | CA | Rendered-DOM via `web_extract` + `ikea_extract.py` (name/price/article/composition/image). NO JSON-LD; curl/`.json`/iows/ingka API all Cloudflare-403. Home/furniture/textiles; live STOCK not in render (null). | done | yes | 2026-08-24 |
 | Toys R Us CA | CA | **No online catalog** — site is store-locator/FAQ only ("shop in-store"); no product/PDP pages exist to scrape. | n/a | note | 2026-08-24 |
+| Tilley | CA | Shopify `/products/<handle>.js` (price/stock/variants, cents) + PDP `<h6>Fabric</h6>` composition; `tilley_extract.py`. NO bot wall, pure `urllib` VPS-side. JSON-LD prices are USD | done | yes | 2026-08-24 |
 
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
@@ -107,7 +108,7 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 - **Roots** (roots.com) — ✅ `done` (see recipe). Canadian, heavy organic-cotton fleece; kids + adults; natural-fibre-friendly. No bot wall, VPS-side.
 - **Frank And Oak** (frankandoak.com) — ✅ `done` (see recipe). Canadian, cotton/wool/linen/hemp focus, sustainability angle. Shopify, NO bot wall, VPS-side.
 - **Mark's** (marks.com) — workwear, cotton basics, Canadian Tire platform.
-- **Tilley** (tilley.com) — natural-fibre travel/outdoor, Canadian.
+- **Tilley** (tilley.com) — ✅ `done` (see recipe). Canadian natural-fibre travel/outdoor (100% cotton/linen hats + tees). Shopify, NO bot wall, VPS-side.
 - **MEC** (mec.ca) — outdoor co-op; merino/cotton; Canadian.
 - **Kotn** (kotn.com) — ✅ `done` (see recipe). Canadian, Egyptian-cotton essentials; near-100%-cotton catalog, top natural-fibre source. Next.js front + headless Shopify; NO bot wall, VPS-side.
 - **Hudson's Bay** (thebay.com) — department store, house + designer brands; kids + adults.
