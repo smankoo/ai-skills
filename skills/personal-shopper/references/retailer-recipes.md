@@ -1600,3 +1600,80 @@ rating, n_reviews, categories[], image, variants[], any_in_stock}`.
 - **Not an apparel store** — `material` is usually a construction word ("Mesh/Fabric", "Faux
   Leather", "Wood"), not a fibre %, so `natural_pct` is almost always `null`. That's expected; the
   natural-fibre gate simply doesn't apply to a chair or a monitor.
+
+## MEC (CA) — rendered-DOM via web_extract (headless Next.js over BigCommerce; no JSON-LD, no API)
+
+Canada, outdoor co-op — the "kids, adults, outerwear/base-layer" role and a genuinely
+**natural-fibre-friendly** source: deep merino-wool base layers, organic-cotton tees, and
+merino/cotton blends across men/women/kids. Fits the household's fitness/outdoor angle. Domain
+**`mec.ca`** (`/en/`). Runs on a **headless Next.js storefront over BigCommerce** (store hash
+`s-xw5rh7060c`, images on `cdn11.bigcommerce.com`). Verified 2026-08-25.
+
+**Which rung worked: `web_extract` (rendered DOM) — rung 4.** Same class as The Children's Place.
+From the VPS, `curl`/`requests` get a hard **Cloudflare 403** (`"Just a moment..."`), and there is
+**NO usable `application/ld+json`** on the PDP. But the JS-rendered markdown that `web_extract`
+returns carries everything the skill needs: title, sale + original price + %OFF + sale flag, **fibre
+composition** (the "Fabric content" tech-spec row — critical for the natural-fibre gate), colours,
+sizes, style id, fabric weight, country of origin, and the BigCommerce CDN product image. NO exit
+node or Mac delegation needed; mec.ca rendered clean on the FIRST web_extract pass for both test
+products (no Akamai-style intermittent block seen). Parse with `scripts/mec_extract.py`.
+
+Verified 2026-08-25 on two live products — prices, %OFF, composition, colours, sizes, made-in, and
+the image (which returns `image/png`) all matched the live pages:
+- Mountain SS Tee (`6036-412`) → 60% organically grown cotton / 40% recycled polyester,
+  natural_pct **60**, $39.95, made in China, S–XXL, 3 colours.
+- T2 Merino Base Layer Bottoms (`6019-342`) → 46% merino wool / 35% recycled polyester / 19%
+  polyester, natural_pct **46**, $54.94 (was $109.95, 50% OFF, "Last chance"), made in Viet Nam.
+
+**Product URL shape:** `https://www.mec.ca/en/product/<style-id>/<slug>` where `<style-id>` is the
+`NNNN-NNN` "Style ID" shown on the page (e.g. `6036-412`). Find candidates via
+`web_search "site:mec.ca <category> <keyword>"` — result URLs are already the `/en/product/...` form.
+
+```bash
+# 1. Render the PDP (renders clean first pass; no retry/exit-node needed):
+#    web_extract(urls=["https://www.mec.ca/en/product/<style-id>/<slug>"])
+#    -> saves full page to ~/.hermes/cache/web/www.mec.ca-<hash>.md
+# 2. Parse it:
+python3 scripts/mec_extract.py ~/.hermes/cache/web/www.mec.ca-XXXX.md \
+  "https://www.mec.ca/en/product/<style-id>/<slug>"
+#    -> {title, price, original_price, on_sale, pct_off, sale_flag, composition,
+#        natural_pct, colors[], sizes[], style_id, made_in, image, fabric_weight}
+```
+
+**Key fields (verified 2026-08-25)**
+| What | Where in rendered markdown |
+|---|---|
+| Title | product H1 after the `[MEC](.../brands/mec)\nCompare\n# <Title>` anchor |
+| Style ID | `Style ID: 6036-412` (authoritative product id; == URL segment) |
+| Regular price | standalone `\n$NN.NN\n` line under the description |
+| Sale price + original | `Current price $54.94, original price $109.95~~$109.95~~` |
+| % OFF | `50% OFF` line (own line; NOT glued to the price like Children's Place) |
+| Sale flag | `Last chance` / `Final sale` / `Clearance` line |
+| Composition | tech-spec row `| Fabric content | \n  * 46% merino wool\n  * 35% recycled polyester ... |` |
+| Fabric weight | tech-spec row `| Fabric weight | 180gsm |` |
+| Made in | tech-spec row `| Made in | Viet Nam |` |
+| Colours | swatch bullets between `Colour:<first>` and `Size:` |
+| Sizes | glued run after `Size: SelectSize guide` (e.g. `SmallMediumLargeX-LargeXX-Large`) — split on known size tokens |
+| Image | `_next/image?url=<pct-encoded cdn11.bigcommerce.com/.../products/<n>/images/<n>/...png>` — decode & prefer the `/products/` path (NOT the `/attribute_value_images/...preview.jpg` swatch) |
+
+**Failure modes**
+- **`curl`/`requests` from the VPS → hard Cloudflare 403 (`"Just a moment..."`)** on the PDP.
+  Do NOT grind curl or hunt a client-id — go straight to `web_extract`, which renders clean.
+- **NO `application/ld+json` on the PDP** — don't waste time grepping for it (there isn't one).
+  All structured data is only in the rendered DOM.
+- **Per-size STOCK is NOT in the render.** MEC loads delivery/pickup availability from a separate
+  XHR only *after* a size is selected — the render shows only "Select a size to see delivery
+  availability". So `mec_extract.py` returns sizes but no per-size stock; treat stock as UNKNOWN and
+  verify on the live page before recommending. (For a firm per-size answer you'd need the CDP/browser
+  path to click each size swatch — not attempted, since composition/price/image were the goal.)
+- **Image trap:** the first `cdn11.bigcommerce.com` URL in the markdown is often the 64px colour
+  **swatch** (`/images/stencil/.../attribute_value_images/...preview.jpg`), not the hero product
+  image. The real image lives under `/products/<n>/images/<n>/...(png|jpg)` and renders ABOVE the
+  title — the extractor scans the FULL markdown and prefers the `/products/` path.
+- **"recycled polyester" is still polyester (synthetic)** for the fibre gate — the merino base
+  layer at 46% merino / 54% (recycled+virgin) polyester is natural_pct **46**, not a wool product.
+  MEC leans heavily performance-synthetic (its whole base-layer/rain/insulation range); the
+  natural-fibre wins are the **organic-cotton tees**, **merino-dominant** knits, and cotton/hemp
+  casual lines. Always read `Fabric content`, don't trust "merino"/"cotton" in the title.
+- BigCommerce store hash `s-xw5rh7060c` is stable in image URLs; if the images 404 in future,
+  re-derive it from a fresh render.

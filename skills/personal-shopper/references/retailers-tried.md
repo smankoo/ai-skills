@@ -51,6 +51,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Toys R Us CA | CA | **No online catalog** — site is store-locator/FAQ only ("shop in-store"); no product/PDP pages exist to scrape. | n/a | note | 2026-08-24 |
 | Tilley | CA | Shopify `/products/<handle>.js` (price/stock/variants, cents) + PDP `<h6>Fabric</h6>` composition; `tilley_extract.py`. NO bot wall, pure `urllib` VPS-side. JSON-LD prices are USD | done | yes | 2026-08-24 |
 | Staples CA | CA | Shopify `/products/<handle>.js` (price/stock cents + rich `tags[]`: brand/model/UPC/rating/breadcrumb/material); `staples_extract.py`. `.json`/PDP/`suggest.json` Cloudflare-403, `.js` open; pure `urllib` VPS-side | done | yes | 2026-08-24 |
+| MEC | CA | Rendered-DOM via `web_extract` + `mec_extract.py` (title/price/sale/composition/colours/sizes/style-id/made-in/image). Headless Next.js over BigCommerce (`s-xw5rh7060c`); curl→Cloudflare-403, NO JSON-LD, NO API. Renders clean first pass. Live per-size STOCK not in render (XHR). Natural-fibre: organic-cotton tees + merino knits | done | yes | 2026-08-25 |
 
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
@@ -110,7 +111,7 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 - **Frank And Oak** (frankandoak.com) — ✅ `done` (see recipe). Canadian, cotton/wool/linen/hemp focus, sustainability angle. Shopify, NO bot wall, VPS-side.
 - **Mark's** (marks.com) — workwear, cotton basics, Canadian Tire platform.
 - **Tilley** (tilley.com) — ✅ `done` (see recipe). Canadian natural-fibre travel/outdoor (100% cotton/linen hats + tees). Shopify, NO bot wall, VPS-side.
-- **MEC** (mec.ca) — outdoor co-op; merino/cotton; Canadian.
+- **MEC** (mec.ca) — ✅ `done` (see recipe). Outdoor co-op; merino/organic-cotton; Canadian. Headless Next.js over BigCommerce; curl→Cloudflare-403 → `web_extract` rendered-DOM (renders clean first pass). Live stock not in render.
 - **Kotn** (kotn.com) — ✅ `done` (see recipe). Canadian, Egyptian-cotton essentials; near-100%-cotton catalog, top natural-fibre source. Next.js front + headless Shopify; NO bot wall, VPS-side.
 - **Hudson's Bay** (thebay.com) — department store, house + designer brands; kids + adults.
 - **Mountain Warehouse CA**, **Decathlon CA** — value outdoor.
