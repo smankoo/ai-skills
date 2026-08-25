@@ -1535,3 +1535,68 @@ available}], any_in_stock}`.
   Nylon` is natural_pct 0. (Recycled *cotton* would still count as cotton.)
 - No bot wall observed VPS-side (200 on homepage, `.js`, `suggest.json`, PDP HTML). If that ever
   changes, it's a standard Shopify front — the recipe transfers to any Shopify origin.
+
+## Staples (CA) — Shopify `/products/<handle>.js` (Cloudflare guards `.json`/PDP, not `.js`). No Mac needed.
+
+Canada, general-merchandise / office / tech / home-office — office chairs and furniture,
+monitors/laptops/peripherals, school and office supplies, some home. Confirmed in Sumeet's
+YNAB history. Mostly a **gift / home-office / gap-filler** retailer, **not apparel**, so the
+natural-fibre gate is usually **N/A** (a chair or monitor has no fibre %). Verified 2026-08-24.
+
+**Which rung worked: Shopify JSON (rung 2) — all VPS-side, pure `urllib`.** staples.ca is a
+Shopify store. The bare PDP and `/products/<handle>.json` are Cloudflare-walled (`403 "Just a
+moment..."`), but **`/products/<handle>.js` is NOT** — it returns the full product JSON
+(title, price/compare_at in **CENTS**, per-variant `available`, image, and a very rich
+`tags[]` array). No exit node, no Mac delegation.
+
+The `tags[]` array is the differentiator vs. a plain Shopify store — it carries structured spec
+data Staples flattens into Shopify tags:
+- `brand:Office Star`, `model_num:WD387-U6`, `upc_code:090234154761`
+- `AverageOverallRating:number:3.4583`, `TotalSubmittedReviews:number:24`
+- category breadcrumb `bc_l1_name:...` to `bc_l4_name:...` (Furniture and Home, Office Furniture, ...)
+- material/spec attributes as `chair_seat_material_*:Faux Leather`, `chair_upholstery_*:...`,
+  `colour_family_*:Black`, `chair_weight_capacity_*:Supports up to 250 lb.` — the extractor
+  pulls any `*_material_*`/`*_upholstery_*`/`*_fabric_*`/`*_fill_*` tag into `material`.
+
+```bash
+UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36"
+# money endpoint — price(cents)/compare_at/available/variants/image/tags:
+curl -s -A "$UA" "https://www.staples.ca/products/2837129-en-staples-berwood-meshfabric-task-chair.js" | python3 -m json.tool | head
+```
+
+**Tested extractor:** `scripts/staples_extract.py` (pure `urllib`, runs on the VPS). Verified
+2026-08-24 on three live products — an office chair (`2837129`, $149.99 sale / $199.99, 522
+reviews), a faux-leather guest chair (`755550`, Office Star, material "Faux Leather"), and an
+ASUS monitor (`3014644`, $179.99 sale / $289.99) — title, price, sale, image, brand, model,
+UPC, rating, and category breadcrumb all matched the live pages. Output per URL: `{url, handle,
+title, brand, price, compare_at_price, on_sale, available, material[], natural_pct, model, upc,
+rating, n_reviews, categories[], image, variants[], any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-08-24)
+| What | Where |
+|---|---|
+| Price / compare-at / stock / variants | `/products/<handle>.js` (prices in CENTS; `variants[].available`) |
+| Brand | `tags[]` `brand:<name>` (falls back to `vendor`, which is literally "staples") |
+| Model # / UPC | `tags[]` `model_num:<code>` / `upc_code:<digits>` |
+| Rating / #reviews | `tags[]` `AverageOverallRating:number:<f>` / `TotalSubmittedReviews:number:<n>` |
+| Category breadcrumb | `tags[]` `bc_l1_name:` ... `bc_l4_name:` (in order) |
+| Material / upholstery | `tags[]` `*_material_*` / `*_upholstery_*` / `*_fabric_*` value after last `:` |
+| Image | `.js` `featured_image` (protocol-relative `//cdn.shopify.com/...` prefix `https:`) |
+| Product URL | `https://www.staples.ca/products/<handle>` |
+
+**Failure modes**
+- **`/products/<handle>.json` and the bare PDP are Cloudflare-walled from the VPS** (`403 "Just a
+  moment..."`) — but **`.js` is open**. Always use `.js`; don't waste a call on `.json`/PDP.
+- **`/search/suggest.json` is also Cloudflare-blocked** (returns empty body, not JSON) — the usual
+  Shopify predictive-search discovery does NOT work here. Discover candidate URLs via
+  `web_search "site:staples.ca products <keyword>"`; result URLs are already `/products/<handle>`.
+- **Most Staples SKUs have a single `Default` variant** — furniture/electronics aren't sized, so
+  `variants[]` is length-1 and `available` is the whole-product stock flag. Colour variants (when
+  they exist) come through as `option1` = a raw tag like `chair_colour_8637:Cherry/Black` rather
+  than a clean colour word; strip the `key:` prefix for display.
+- **`vendor` is always literally `"staples"`** — it's the store, not the brand. Use the
+  `brand:` tag for the real manufacturer (Office Star, ASUS, ...); fall back to `vendor` only if
+  absent.
+- **Not an apparel store** — `material` is usually a construction word ("Mesh/Fabric", "Faux
+  Leather", "Wood"), not a fibre %, so `natural_pct` is almost always `null`. That's expected; the
+  natural-fibre gate simply doesn't apply to a chair or a monitor.

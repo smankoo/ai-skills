@@ -50,6 +50,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | IKEA CA | CA | Rendered-DOM via `web_extract` + `ikea_extract.py` (name/price/article/composition/image). NO JSON-LD; curl/`.json`/iows/ingka API all Cloudflare-403. Home/furniture/textiles; live STOCK not in render (null). | done | yes | 2026-08-24 |
 | Toys R Us CA | CA | **No online catalog** — site is store-locator/FAQ only ("shop in-store"); no product/PDP pages exist to scrape. | n/a | note | 2026-08-24 |
 | Tilley | CA | Shopify `/products/<handle>.js` (price/stock/variants, cents) + PDP `<h6>Fabric</h6>` composition; `tilley_extract.py`. NO bot wall, pure `urllib` VPS-side. JSON-LD prices are USD | done | yes | 2026-08-24 |
+| Staples CA | CA | Shopify `/products/<handle>.js` (price/stock cents + rich `tags[]`: brand/model/UPC/rating/breadcrumb/material); `staples_extract.py`. `.json`/PDP/`suggest.json` Cloudflare-403, `.js` open; pure `urllib` VPS-side | done | yes | 2026-08-24 |
 
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
@@ -87,7 +88,7 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 - **Canadian Tire** (canadiantire.ca) — Triangle Rewards member; home/auto/seasonal.
 - **IKEA CA** (ikea.ca) — ✅ `done` (see recipe). Furniture, home goods & textiles; frequent. Cloudflare-walled to curl/API → `web_extract` rendered-DOM. Live stock not in render.
 - **Indigo / Chapters** (indigo.ca) — ✅ `done` (see recipe). Books & gifts (gift track). Now a Shopify store, NO bot wall, VPS-side. Old `chapters.indigo.ca` retired.
-- **Staples CA** (staples.ca) — office/electronics.
+- **Staples CA** (staples.ca) — ✅ `done` (see recipe). Office/tech/home-office (gift/gap-filler). Shopify; `.json`/PDP Cloudflare-walled but `.js` open, pure `urllib` VPS-side.
 - **Michaels** (michaels.com) — crafts/gifts.
 - **Party City CA** (partycity.ca) — party/kids events.
 - **Toys R Us CA** (toysrus.ca) — ❌ `n/a`: NO online catalog (store-locator/FAQ only, "shop in-store"). Nothing to scrape.
