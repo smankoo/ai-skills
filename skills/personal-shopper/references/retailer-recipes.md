@@ -1737,3 +1737,65 @@ python3 scripts/asics_extract.py ~/.hermes/cache/web/www.asics.com-XXXX.md
 - **No JSON-LD, no Shopify/`.js`, no fibre composition.** Don't grep for `ld+json` (absent)
   or attempt a natural-fibre % (footwear — gate N/A).
 - web_extract emits prices with an escaped `\$`; the parser un-escapes before matching.
+
+## Mountain Warehouse (CA) — static-HTML from a plain curl (Next.js over BigCommerce). NO bot wall.
+
+Canada, value-priced outdoor apparel and gear; **natural-fibre-friendly** (lots of 100%
+cotton / organic-cotton graphic tees, merino base layers, cotton fleece). Domain
+**`mountainwarehouse.com/ca`** (`/ca/fr/` for French). It's a Next.js front over
+BigCommerce (store `s-nb5it5hcrj`), but — unusually — **every field the skill needs is
+baked into the STATIC HTML** returned by a plain `curl`/`urllib` GET. Verified 2026-08-26.
+
+**Which rung worked: plain `urllib` GET (below rung 1) — NO bot wall, NO render, NO XHR,
+NO CDP, NO exit node.** The homepage and PDPs return `200` to a vanilla curl (contrast
+Canadian Tire / Michaels / Party City / Marks, all `403` from the VPS). The visible
+DOM (not the RSC/JSON-LD, which is present but multiply-escaped and painful) carries
+title, sale+was price, %off, full fabric composition, og:image, and **per-size stock**.
+
+**The data, in the static HTML:**
+- **Price**: an `aria-label="Original Price: $39.99, Price: $11.99, You save 70%"` on the
+  price container gives sale price, was-price, and %off in one shot. Not-on-sale products
+  give a bare `aria-label="Price: $X"`.
+- **Composition**: `<h3>Fabric Composition</h3><p>Main fabric: Cotton (organic) 100%, Rib:
+  Cotton (organic) 97%, Elastane 3%</p>`. **The string chains multiple sections** (`Main
+  fabric: ... , Rib: ... , Lining: ...`), each summing to ~100 — so naively summing natural
+  fibres across the WHOLE string double-counts (gave `natural_pct: 197`). Fix: isolate the
+  `Main fabric:` section (up to the next `Rib/Lining/Trim/...` keyword) before summing.
+- **Per-size stock**: each size is a `<input ... class="...VariantOption_radioInput..." [disabled=""]/>
+  <label title="Small">S</label>`. A `disabled=""` on the input === that size is OUT OF STOCK.
+  Confirmed correct: on `038538` exactly 4 sizes carry `disabled` (XXS, XS, 3XL, 4XL) and
+  the extractor flags precisely those. (Colour swatches use a *different* class,
+  `Option_radioInput` / `Option_radioLabel`, and carry a per-colour price span.)
+- **Image**: `property="og:image"` — a BigCommerce `cdn11.bigcommerce.com/s-nb5it5hcrj/...`
+  stencil URL. Returns `image/webp 200` (verified) even though the URL ends `.jpg`.
+- Overall availability also sits in the embedded (escaped) JSON-LD `Offer` (`InStock`).
+
+**Tested extractor:** `scripts/mountainwarehouse_extract.py` (pure `urllib`, VPS-side).
+Verified 2026-08-26 on two live products:
+- `038540` Mountain Explorer Tee → `Main fabric: Cotton (organic) 100%`, natural_pct **100**,
+  $11.99 (was $39.99, 70% off), XXS+4XL OOS, rest in stock.
+- `038538` Bike Tee → `Cotton (organic) 92%, Polyester 8%`, natural_pct **92**, $11.99,
+  XXS/XS/3XL/4XL OOS. Both image URLs return `image/*`.
+Output per URL: `{url, title, price, was_price, save_pct, composition, natural_pct, image,
+availability, sizes:[{size,in_stock}], colours:[{name,price}], any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-08-26)
+| What | Where |
+|---|---|
+| Price / was / %off | `aria-label="Original Price: $X, Price: $Y, You save Z%"` |
+| Composition (fibre %) | `<h3>Fabric Composition</h3><p>...</p>` — use the `Main fabric:` section only |
+| Per-size stock | `<input class="...VariantOption_radioInput..." [disabled=""]/><label title="...">SZ</label>` |
+| Image | `<meta property="og:image" content="...cdn11.bigcommerce.com/s-nb5it5hcrj/...">` |
+| Product URL | `https://www.mountainwarehouse.com/ca/p/<6-digit>/mw/<slug>/` |
+| Find candidates | `web_search "site:mountainwarehouse.com/ca <category> <keyword>"` (snippets carry the `100% cotton` line + direct PDP URL) |
+
+**Failure modes**
+- **Fabric-composition double-count**: the string chains `Main fabric / Rib / Lining` sections,
+  each ~100% — sum ONLY the `Main fabric:` section, or you get a bogus >100 natural_pct.
+- The Next.js RSC payload and the JSON-LD are BOTH present but **multiply backslash-escaped**
+  (`\\\\\"`) — don't try to `JSON.parse` them; read the visible DOM attributes instead
+  (aria-label, `disabled=""`, og:image). Far simpler and it's all there.
+- Colour swatches vs size swatches use different classes (`Option_*` vs `VariantOption_*`) —
+  don't conflate; only the `VariantOption` inputs carry per-size `disabled`.
+- Live per-size stock IS reliable here (unlike MEC/ASICS/IKEA where it needs an XHR) because
+  `disabled` is rendered server-side into the static HTML.

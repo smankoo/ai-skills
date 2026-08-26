@@ -53,6 +53,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Staples CA | CA | Shopify `/products/<handle>.js` (price/stock cents + rich `tags[]`: brand/model/UPC/rating/breadcrumb/material); `staples_extract.py`. `.json`/PDP/`suggest.json` Cloudflare-403, `.js` open; pure `urllib` VPS-side | done | yes | 2026-08-24 |
 | MEC | CA | Rendered-DOM via `web_extract` + `mec_extract.py` (title/price/sale/composition/colours/sizes/style-id/made-in/image). Headless Next.js over BigCommerce (`s-xw5rh7060c`); curl→Cloudflare-403, NO JSON-LD, NO API. Renders clean first pass. Live per-size STOCK not in render (XHR). Natural-fibre: organic-cotton tees + merino knits | done | yes | 2026-08-25 |
 | ASICS CA | CA | Rendered-DOM via `web_extract` + `asics_extract.py` (name/price/sale/avail/style#/rating/image). Adobe Commerce/Magento; curl/`.json`/API all hard-403, NO JSON-LD, NO Shopify. Renders clean FIRST pass. Footwear → natural-fibre gate N/A; live per-size stock not in render (XHR) | done | yes | 2026-08-25 |
+| Mountain Warehouse CA | CA | **Static HTML from a plain `urllib` GET** (Next.js over BigCommerce `s-nb5it5hcrj`) — price/was/%off (aria-label), `Main fabric:` composition, per-size stock (`disabled=""` on `VariantOption` input), og:image; `mountainwarehouse_extract.py`. NO bot wall, VPS-side. Value outdoor apparel; strong organic-cotton/merino natural-fibre lines | done | yes | 2026-08-26 |
 
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
@@ -115,4 +116,4 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 - **MEC** (mec.ca) — ✅ `done` (see recipe). Outdoor co-op; merino/organic-cotton; Canadian. Headless Next.js over BigCommerce; curl→Cloudflare-403 → `web_extract` rendered-DOM (renders clean first pass). Live stock not in render.
 - **Kotn** (kotn.com) — ✅ `done` (see recipe). Canadian, Egyptian-cotton essentials; near-100%-cotton catalog, top natural-fibre source. Next.js front + headless Shopify; NO bot wall, VPS-side.
 - **Hudson's Bay** (thebay.com) — department store, house + designer brands; kids + adults.
-- **Mountain Warehouse CA**, **Decathlon CA** — value outdoor.
+- **Mountain Warehouse CA** (mountainwarehouse.com/ca) — ✅ `done` (see recipe). Value outdoor apparel; strong organic-cotton/merino natural-fibre lines. Next.js over BigCommerce; NO bot wall — all fields in the static HTML from a plain `urllib` GET. **Decathlon CA** — `403` to curl from the VPS, not yet cracked.
