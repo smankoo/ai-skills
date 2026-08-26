@@ -1677,3 +1677,63 @@ python3 scripts/mec_extract.py ~/.hermes/cache/web/www.mec.ca-XXXX.md \
   casual lines. Always read `Fabric content`, don't trust "merino"/"cotton" in the title.
 - BigCommerce store hash `s-xw5rh7060c` is stable in image URLs; if the images 404 in future,
   re-derive it from a fresh render.
+
+## ASICS Canada — rendered-DOM via web_extract (Magento/Adobe Commerce, footwear)
+
+Canada, mid/upper athletic footwear + activewear. Confirmed in Sumeet's YNAB history
+(his fitness angle). Domain **`asics.com/ca/en-ca`**; runs on Adobe Commerce / Magento
+(the "Pearl" theme, Lyonscg/WeltPixel integration). **Footwear → the natural-fibre gate is
+N/A** (uppers are engineered mesh/synthetic; no fibre-% is published — same situation as
+Crocs). Verified 2026-08-25.
+
+**Which rung worked: `web_extract` (rendered DOM) — rung 4, first-pass clean.**
+From the VPS every `curl`/`requests`/`.json` hit is a hard **403** (Akamai-style header
+wall — `Attention Required! | Cloudflare` shell). But `web_extract` (Crawl4AI headless
+Chromium) renders the PDP cleanly on the **first** call — NO retry loop (unlike Children's
+Place's intermittent Akamai), NO exit node, NO Mac delegation. There is **no usable
+`application/ld+json`** block and **no open JSON/`.js` API**, so all fields come from the
+rendered markdown. Parse with `scripts/asics_extract.py`.
+
+**Product URL shape:** `https://www.asics.com/ca/en-ca/<model-slug>-<styleid>-<color>`
+e.g. `.../novablast-5-1011b974-004`. The `<styleid>` is the 7-char Magento style
+(`1011b974`) and `<color>` the 3-digit colourway (`004`); together they form the
+`Style#: 1011B974.004` shown on the page. Find candidates via
+`web_search "site:asics.com/ca <model> running shoe"` — snippets carry the deep URL and
+"As low as $NNN" price.
+
+```bash
+# 1. Render the PDP (first pass is enough — no retry needed):
+#    web_extract(urls=["https://www.asics.com/ca/en-ca/<slug>-<style>-<color>"])
+#    -> returns markdown, also cached to ~/.hermes/cache/web/www.asics.com-<hash>.md
+# 2. Parse it:
+python3 scripts/asics_extract.py ~/.hermes/cache/web/www.asics.com-XXXX.md
+#    -> {name, subtitle, price, regular_price, on_sale, availability, in_stock,
+#        style_no, style_url_id, rating, review_count, image, url}
+```
+
+**Key fields (verified 2026-08-25)**
+| What | Where in rendered markdown |
+|---|---|
+| Name | product `# <NAME>` H1 |
+| Subtitle | line after title, e.g. `Men's Running Shoes` |
+| Price / sale | `As low as $149.99 Regular Price $190.00` (sale) or `As low as $180.00` (no sale) |
+| Availability | `In stock` / `Out of stock` — **overall only, NOT per-size** |
+| Style # | `**Style#:**` then `1011B974.004` |
+| Rating / reviews | `4.4 out of 5 stars` + `Read 25 Reviews` |
+| Image | `https://images.asics.com/is/image/asics/<STYLE>_<COLOR>_SL_LT_GLB?$product$&fmt=png-alpha` (returns `image/png`, 200) |
+
+**Failure modes**
+- **VPS is 403-walled on every non-render transport** (`curl`, `requests`, any `.json`/API
+  guess). Don't burn time on curl — go straight to `web_extract`, which renders first-pass.
+- **Live per-size stock is NOT in the render.** The PDP shows a single overall `In stock`
+  line; the size buttons fetch their own availability via an XHR the headless render never
+  fires. Fine for this skill (it never orders shoes; adults pick size at checkout) — but do
+  NOT claim a specific size is in stock from this data.
+- **A 404 renders as a real page** titled `OOPS! THAT PAGE CAN'T BE FOUND.` with a
+  `We Recommend` grid of *other* products carrying their own `As low as $NNN` prices — a
+  naïve price grab would read a wrong product. The extractor detects the 404 sentinel and
+  returns `{error: "404 / product not found"}`. Stale/renamed style URLs 404 → re-derive
+  from a fresh `web_search`.
+- **No JSON-LD, no Shopify/`.js`, no fibre composition.** Don't grep for `ld+json` (absent)
+  or attempt a natural-fibre % (footwear — gate N/A).
+- web_extract emits prices with an escaped `\$`; the parser un-escapes before matching.

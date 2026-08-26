@@ -52,6 +52,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Tilley | CA | Shopify `/products/<handle>.js` (price/stock/variants, cents) + PDP `<h6>Fabric</h6>` composition; `tilley_extract.py`. NO bot wall, pure `urllib` VPS-side. JSON-LD prices are USD | done | yes | 2026-08-24 |
 | Staples CA | CA | Shopify `/products/<handle>.js` (price/stock cents + rich `tags[]`: brand/model/UPC/rating/breadcrumb/material); `staples_extract.py`. `.json`/PDP/`suggest.json` Cloudflare-403, `.js` open; pure `urllib` VPS-side | done | yes | 2026-08-24 |
 | MEC | CA | Rendered-DOM via `web_extract` + `mec_extract.py` (title/price/sale/composition/colours/sizes/style-id/made-in/image). Headless Next.js over BigCommerce (`s-xw5rh7060c`); curl→Cloudflare-403, NO JSON-LD, NO API. Renders clean first pass. Live per-size STOCK not in render (XHR). Natural-fibre: organic-cotton tees + merino knits | done | yes | 2026-08-25 |
+| ASICS CA | CA | Rendered-DOM via `web_extract` + `asics_extract.py` (name/price/sale/avail/style#/rating/image). Adobe Commerce/Magento; curl/`.json`/API all hard-403, NO JSON-LD, NO Shopify. Renders clean FIRST pass. Footwear → natural-fibre gate N/A; live per-size stock not in render (XHR) | done | yes | 2026-08-25 |
 
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
@@ -78,7 +79,7 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 - **Michael Kors CA** — accessories/gifts.
 - **Aldo** (aldoshoes.com) — ✅ `done` (see recipe). Adult footwear/accessories. Shopify but footwear `.js` 404s → rendered-PDP JSON-LD; NO bot wall, VPS-side. (skill's "never order kids' shoes" rule; adults OK.)
 - **Crocs CA** (crocs.ca) — ✅ `done` (see recipe). Adult + kids footwear; SFCC/Demandware, NO bot wall, VPS-side. Croslite foam → no fibre-% (natural-fibre gate N/A). Skill's "never order kids' shoes" rule applies.
-- **ASICS Canada** — athletic footwear.
+- **ASICS Canada** (asics.com/ca) — ✅ `done` (see recipe). Athletic footwear, his fitness angle. Adobe Commerce/Magento; VPS hard-403 on curl/API → `web_extract` renders clean first pass. Footwear → natural-fibre gate N/A.
 - **Sport Chek** (sportchek.ca) — ✅ `done` (see recipe). Athletic/outdoor, his fitness angle. Canadian Tire/FGL stack; VPS Akamai-walled → Mac CDP; JSON-LD + `.nl-*` DOM.
 - **Winners** (winners.ca) — off-price; likely no online catalog, verify.
 
