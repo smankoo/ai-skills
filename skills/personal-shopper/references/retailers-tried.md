@@ -55,6 +55,9 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | ASICS CA | CA | Rendered-DOM via `web_extract` + `asics_extract.py` (name/price/sale/avail/style#/rating/image). Adobe Commerce/Magento; curl/`.json`/API all hard-403, NO JSON-LD, NO Shopify. Renders clean FIRST pass. Footwear → natural-fibre gate N/A; live per-size stock not in render (XHR) | done | yes | 2026-08-25 |
 | Mountain Warehouse CA | CA | **Static HTML from a plain `urllib` GET** (Next.js over BigCommerce `s-nb5it5hcrj`) — price/was/%off (aria-label), `Main fabric:` composition, per-size stock (`disabled=""` on `VariantOption` input), og:image; `mountainwarehouse_extract.py`. NO bot wall, VPS-side. Value outdoor apparel; strong organic-cotton/merino natural-fibre lines | done | yes | 2026-08-26 |
 
+| Mark's | CA | CDP Chrome on Mac + **Network-intercept** the app's own XHR: `productFamily/<id>` (name/brand/image/`specifications[]` composition/`optionIds[]` size-colour) + `PriceAvailability?pCode=<id>` (price/sale/`Corporate.Quantity` live stock); `marks_extract.py`. Canadian Tire/FGL stack; VPS Akamai-403; do NOT replay XHR (401/400) — intercept only. Denver Hayes/WindRiver = cotton-rich | done | yes | 2026-08-26 |
+| Hudson's Bay / thebay.com | CA | DEFUNCT — Hudson's Bay closed 2025; `thebay.com` 301-redirects to canadiantire.ca (Stripes home-goods collab only). No apparel catalog to scrape. | n/a | note | 2026-08-26 |
+
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
 ## Candidate queue (not yet tried — good picks for future runs)
@@ -111,9 +114,9 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 
 - **Roots** (roots.com) — ✅ `done` (see recipe). Canadian, heavy organic-cotton fleece; kids + adults; natural-fibre-friendly. No bot wall, VPS-side.
 - **Frank And Oak** (frankandoak.com) — ✅ `done` (see recipe). Canadian, cotton/wool/linen/hemp focus, sustainability angle. Shopify, NO bot wall, VPS-side.
-- **Mark's** (marks.com) — workwear, cotton basics, Canadian Tire platform.
+- **Mark's** (marks.com) — ✅ `done` (see recipe). Workwear/casual, cotton basics (Denver Hayes/WindRiver). Canadian Tire/FGL stack; VPS Akamai-403 → Mac CDP Network-intercept.
 - **Tilley** (tilley.com) — ✅ `done` (see recipe). Canadian natural-fibre travel/outdoor (100% cotton/linen hats + tees). Shopify, NO bot wall, VPS-side.
 - **MEC** (mec.ca) — ✅ `done` (see recipe). Outdoor co-op; merino/organic-cotton; Canadian. Headless Next.js over BigCommerce; curl→Cloudflare-403 → `web_extract` rendered-DOM (renders clean first pass). Live stock not in render.
 - **Kotn** (kotn.com) — ✅ `done` (see recipe). Canadian, Egyptian-cotton essentials; near-100%-cotton catalog, top natural-fibre source. Next.js front + headless Shopify; NO bot wall, VPS-side.
-- **Hudson's Bay** (thebay.com) — department store, house + designer brands; kids + adults.
+- **Hudson's Bay** (thebay.com) — ❌ `n/a`: DEFUNCT (closed 2025); thebay.com redirects to canadiantire.ca. No catalog.
 - **Mountain Warehouse CA** (mountainwarehouse.com/ca) — ✅ `done` (see recipe). Value outdoor apparel; strong organic-cotton/merino natural-fibre lines. Next.js over BigCommerce; NO bot wall — all fields in the static HTML from a plain `urllib` GET. **Decathlon CA** — `403` to curl from the VPS, not yet cracked.

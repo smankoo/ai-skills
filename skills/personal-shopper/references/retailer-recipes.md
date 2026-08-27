@@ -1799,3 +1799,73 @@ availability, sizes:[{size,in_stock}], colours:[{name,price}], any_in_stock}`.
   don't conflate; only the `VariantOption` inputs carry per-size `disabled`.
 - Live per-size stock IS reliable here (unlike MEC/ASICS/IKEA where it needs an XHR) because
   `disabled` is rendered server-side into the static HTML.
+
+## Mark's (CA) — CDP Network-intercept of the app's own product XHR (Canadian Tire/FGL stack)
+
+Canada, mid-market workwear/casual basics — **natural-fibre-friendly**: house brands **Denver
+Hayes** (heaps of 100% cotton tees/henleys/woven shirts, cotton chinos) and **WindRiver**
+(cotton-rich flannels, 98% cotton / 2% spandex stretch flannel). YNAB-candidate. Domain
+**`marks.com`** (`/en/pdp/...`). Same **Canadian Tire / FGL "Nucleus"** platform as **Sport Chek**
+— so the VPS wall and the fix mirror that recipe. Verified 2026-08-26.
+
+**Which rung worked: CDP windowed Chrome on the Mac — rung 3, but by NETWORK INTERCEPTION, not fetch replay.**
+From the VPS *everything* is hard-Akamai-403 (`edgesuite.net` "Access Denied"): `curl` on the root,
+on `/products.json`, and on the product API all 403. `web_extract` (Crawl4AI headless) renders
+ONLY the footer/nav chrome — the PDP is a client-side SPA that hydrates product data from XHR, so
+price/composition/stock never appear in the rendered markdown. So: Mac CDP.
+
+**The two money XHRs the PDP fires (both same-origin, `www.marks.com`):**
+- `GET /api/v1/product/api/v2/product/productFamily/<id>?baseStoreId=MKS&lang=en_CA&storeId=392`
+  → `name`, `brand.label`, `images[].url`, and `skus[]` where each sku has:
+  - `specifications[]` — the **composition** lives here as pairs
+    `primary_fabric_1_cd` (e.g. `" Cotton"`) + `primary_fabric_1_percentage_amt` (e.g. `" 100"`),
+    repeating `_2_`, `_3_` for blends. Values are space-padded — `.strip()` them. Also `fit_cd`,
+    `neckline_style_cd`, `colour_group_cd`, `gender_cd`.
+  - `optionIds[]` — the size/colour of THAT sku: `SIZE_CD_4X_LARGE`, `SECOND_SIZE_RANGE_CD_TALL`,
+    `COLOUR_GREEN`.
+- `GET /api/v1/product/api/v2/product/sku/PriceAvailability?lang=en_CA&storeId=392&cache=true&pCode=<id>&isLoyaltyUser=false`
+  → `skus[]` each: `currentPrice.value`, `originalPrice.value`, `isOnSale`, `saleCut`,
+  `isUrgentLowStock`, and **live stock** at `fulfillment.availability.Corporate.Quantity`.
+
+Join the two arrays on sku `code`. `<id>` = the style id ending in `f`, tail of the PDP URL
+(`.../<slug>-12597467f.html`).
+
+**CRITICAL — intercept, do NOT replay.** The page's own calls return **200** using cookie/edge
+auth. Replaying either URL with a same-origin `fetch()` from the page context returns **401**
+("missing subscription key"), and adding the APIM key (`subscription-key=c01ef3612328420c9f5cd9277e815a0e`,
+liftable from the PDP image URL's `subscription-key=` param) only moves it to **400/404** — the app
+injects a further header the replay lacks. So the reliable rung is **CDP `Network.enable` +
+`Network.getResponseBody`**: navigate the PDP, watch `Network.responseReceived` for URLs containing
+`/product/productFamily/` and `PriceAvailability`, and pull their bodies. `scripts/marks_extract.py`
+does exactly this.
+
+**Tested extractor:** `scripts/marks_extract.py` (base64-ship to the Mac; run under the CDP venv,
+same launch recipe as `sportchek`/`carters`). Verified 2026-08-26 on three live PDPs:
+- `12597467f` Denver Hayes 50-Wash crew tee → 100% Cotton, natural_pct 100, $19.99, 180 variants, in stock.
+- `71223583f` Denver Hayes chest-pocket tee → 100% Cotton, natural_pct 100, $19.99, 117 variants, in stock.
+- `84350932f` WindRiver stretch flannel → 98% Cotton, 2% Spandex, natural_pct 98, $14.88 on sale, OOS clearance (2 variants).
+Image URL verified `image/jpeg` 232 KB (no hotlink block). Output per URL:
+`{url, id, name, brand, image, composition, natural_pct, currency, price, price_max, on_sale,
+variants:[{sku,size,second_range,colour,price,original_price,on_sale,qty,in_stock,urgent_low}], any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-08-26)
+| What | Where |
+|---|---|
+| Name / brand / images / specs / size-colour | `productFamily/<id>` → `name`, `brand.label`, `images[].url`, `skus[].specifications[]`, `skus[].optionIds[]` |
+| Composition (fibre %) | `specifications[]` pairs `primary_fabric_N_cd` + `primary_fabric_N_percentage_amt` (space-padded → strip) |
+| Price / sale / live stock | `PriceAvailability?pCode=<id>` → `currentPrice.value`, `originalPrice.value`, `isOnSale`, `fulfillment.availability.Corporate.Quantity`, `isUrgentLowStock` |
+| Product id | tail of PDP URL: `-([0-9]+f)\.html` |
+| Find candidates | `web_search "site:marks.com/en/pdp <brand> <keyword>"` (snippets carry the PDP URL + Product Details) |
+
+**Failure modes**
+- VPS Akamai hard-403 on *every* transport (curl/root, `/products.json`, product API). Not
+  intermittent (unlike Children's Place Akamai) — don't retry, go straight to Mac CDP.
+- **Do not replay the product XHR with `fetch()`** — 401 without the APIM key, 400/404 with it. The
+  app adds an extra header; only `Network.getResponseBody` interception gets the real 200 body.
+- Fabric spec values are **space-padded** (`" Cotton"`, `" 100"`) — strip before use.
+- Big products have colour×size×tall/regular = **100+ skus**; dedup for display, rely on per-sku
+  `Corporate.Quantity` for stock, not a top-level flag.
+- A `$14.88`-type price with only 2 remaining variants and `isOnSale` is **sold-out clearance**,
+  not a bargain (the everywhere-rule) — check `any_in_stock` and `Quantity` before recommending.
+- `productFamilyList` (a "you may also need" carousel) also fires — ignore it; it's cross-sell, not
+  the current product.
