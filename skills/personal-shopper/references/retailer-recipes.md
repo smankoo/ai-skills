@@ -1924,3 +1924,71 @@ python3 scripts/sephora_extract.py ~/.hermes/cache/web/www.sephora.com-XXXX.md
 - Product **API is Akamai-403 from the VPS on every version** — do not burn time on `/api/v3` or
   `/api/v2`; they will not open VPS-side. Image + ingredients require Mac CDP (same-origin fetch of
   the API from a loaded tab) — out of scope for a bounded VPS recon run.
+
+## Brilliant Earth (CA) — rendered-DOM via web_extract (GIFT track: fine jewelry)
+
+Canada/US, ethical fine jewelry — engagement/wedding rings, necklaces, earrings, bracelets.
+A **gift-track** retailer (a real Sumeet past purchase). There is NO textile fibre content here:
+"composition" is the precious METAL (14K/18K gold, platinum) + gemstone, so the **natural-fibre
+gate is N/A** — don't try to compute a fibre %. Verified 2026-08-28.
+
+**Which rung worked: `web_extract` (rendered DOM) — rung 4.** `curl`/`requests` from the VPS hit a
+Cloudflare **403 "Brilliant Earth - Verifying"** wall (615 KB challenge shell, 0 JSON-LD). But
+`web_extract`'s headless Crawl4AI renders the PDP **clean on the first pass** (like MEC/ASICS —
+no retry needed, unlike Children's Place). No JSON-LD, no public Shopify/JSON API found — parse the
+rendered markdown with `scripts/brilliantearth_extract.py`.
+
+**CRITICAL — use the `/en-ca/` path for CAD prices.**
+- `https://www.brilliantearth.com/en-ca/<Slug>-<STYLE>/` → price renders as **`CAD 1,065`** (what
+  Sumeet pays). ALWAYS use this for his carts.
+- Bare `.com/<Slug>-<STYLE>/` (US) → price renders in **USD**, and design-your-own settings show
+  `$795 (Setting Only)`.
+
+**FINISHED piece vs DESIGN-YOUR-OWN setting** (the single most important distinction here):
+- **Finished piece** (birthstone pendant, hoops, studs, pearls, tennis chain) → ONE fixed price +
+  an **`ADD TO BAG`** button → buyable as-is. `is_setting_only=False`.
+- **"Design your own" setting** (an engagement-ring / pendant / stud SETTING) → shows
+  `$N (Setting Only)` + a **`CHOOSE THIS SETTING`** button; the real total depends on the centre
+  diamond you separately select. `is_setting_only=True` → this is NOT a single buyable price. For a
+  gift cart, prefer finished pieces; if you use a setting, flag it ("setting only; centre stone extra").
+
+**Product URL shape:** `https://www.brilliantearth.com/en-ca/<Descriptive-Slug>-<STYLE>-<numeric>/`
+e.g. `.../Lab-Alexandrite-and-Diamond-Birthstone-Pendant-Necklace-14K-Gold-BE4DLCAL376/`. The
+`Style: BE...-<metal>` line in Product Details is authoritative. Find candidates via
+`web_search "site:brilliantearth.com <category> <keyword>"` — snippets carry direct PDP links.
+Metal variants are separate URLs (each metal = its own STYLE-<metal> + numeric id).
+
+```bash
+# 1. Render the PDP (en-ca for CAD):
+#    web_extract(urls=["https://www.brilliantearth.com/en-ca/<Slug>-<STYLE>/"])
+#    -> saves to ~/.hermes/cache/web/www.brilliantearth.com-<hash>.md
+# 2. Parse it:
+python3 scripts/brilliantearth_extract.py ~/.hermes/cache/web/www.brilliantearth.com-XXXX.md
+#    -> {title, price, currency, is_setting_only, in_stock, ship_by, metal, style,
+#        gemstone[], chain_length, image, url}
+```
+
+**Key fields (verified 2026-08-28)**
+| What | Where in rendered markdown |
+|---|---|
+| Title | the product `# ` H1 (not `## `/`#### ` nav, not the `Brilliant Earth`/`Choose`/`Privacy` H1s) |
+| Price (CAD) | `CAD 1,065` on `/en-ca/` finished pieces; `$N (Setting Only)` on US settings |
+| In stock / ship | `ADD TO BAG` (finished) or `CHOOSE THIS SETTING` (setting); `ships by <date>` |
+| Metal | `Metal:` bullet (`14K Yellow Gold`, `18K White Gold`, `Platinum`) |
+| Style id | `Style: BE...-14KY` (base before the `-<metal>` = the slug id) |
+| Gemstone | `Type: Lab Grown Alexandrite` / `Type: Diamond` bullets under Details |
+| Chain length | `Chain Length: 18 in.` (necklaces) |
+| Image | `https://image.brilliantearth.com/media/product_images/<XX>/<STYLE>_..._top.jpg` — CDN is NOT walled (curl returns real `image/jpeg` bytes; safe to hotlink in the email) |
+
+**Failure modes**
+- `curl`/`requests` → Cloudflare **403 "Verifying"** on every PDP (title `Brilliant Earth - Verifying`,
+  ~615 KB, 0 JSON-LD). Do NOT retry curl; go straight to `web_extract` (renders clean first pass).
+- **No JSON-LD and no public JSON/Shopify API** found on the PDP — don't waste time grepping for
+  `application/ld+json` or trying `/products/<h>.json`. The rendered markdown is the only source.
+- **Design-your-own galleries render BEFORE the product H1**, so their thumbnails sit outside the
+  post-H1 slice. Anchor the hero image on the **style-base filename** (`<STYLE>_..._top.jpg`), which
+  is unique across the doc — the extractor searches the whole doc for that, not just after the H1.
+- A naïve "first URL with a capitalised slug" grabs the `gift-certificate-BEGC` promo link, not the
+  PDP. Anchor the product URL on the **style base** too (extractor does this).
+- Bare `.com` gives USD; **only `/en-ca/` gives CAD**. Don't email a US price as if it were CAD.
+- `brand` is always "Brilliant Earth" (house) — label manually.

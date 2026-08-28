@@ -61,6 +61,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Winners CA | CA | **No online catalog** — winners.ca is store-locator/articles only ("Products shown are representative… styles vary by store"; shop in-store). Like Toys R Us. Nothing to scrape. | n/a | note | 2026-08-27 |
 | Canadian Tire | CA | `web_extract` renders only the shell (products hydrate from Akamai-walled APIM `apim.canadiantire.ca` / `/api/v1/product/...`, hard-403 from VPS — same FGL/Nucleus stack as Sport Chek/Mark's). Render leaks the `subscription-key` but the endpoint still 403s VPS-side → Mac CDP Network-intercept needed (see Mark's recipe). | wip | note | 2026-08-27 |
 | RONA / Etsy / EyeBuyDirect.ca / Party City / Bath & Body Works CA / Michael Kors CA / Michaels CA | CA | Hard-walled from VPS: RONA & Etsy & EyeBuyDirect = DataDome/Akamai on PDP (`web_extract` → DataDome captcha / Akamai shell); Party City & B&BW = Akamai/PerimeterX; Michael Kors & Michaels = curl-403, no render path found. All would need Mac CDP. | blocked | note | 2026-08-27 |
+| Brilliant Earth | CA | Rendered-DOM via `web_extract` + `brilliantearth_extract.py` (title/CAD price/stock/metal/style/gemstone/chain/image). GIFT track fine jewelry — natural-fibre gate N/A. curl→Cloudflare-403 "Verifying"; NO JSON-LD/API. Renders clean FIRST pass. **Use `/en-ca/` for CAD**; distinguish finished piece (`ADD TO BAG`) from design-your-own setting (`Setting Only`) | done | yes | 2026-08-28 |
 
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
@@ -110,7 +111,7 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 - **Bath & Body Works CA** — gifts. `blocked` (PerimeterX px-captcha on VPS; needs Mac CDP).
 
 **Specialty / gifts**
-- **Brilliant Earth** (brilliantearth.com) — fine jewelry (a real past purchase; gift direction).
+- **Brilliant Earth** (brilliantearth.com) — ✅ `done` (see recipe). Fine jewelry (a real past purchase; gift direction). GIFT track — natural-fibre gate N/A. curl→Cloudflare-403 → `web_extract` renders clean first pass; use `/en-ca/` for CAD.
 - **EyeBuyDirect** (eyebuydirect.com) — prescription eyewear. `blocked` (redirects to eyebuydirect.ca; PDP Akamai-walled to curl AND `web_extract`; category renders but PDPs return the Akamai shell). Needs Mac CDP.
 - **Sephora CA** (sephora.com/ca/en) — ✅ `partial` (see recipe). Prestige beauty (gift track). Product API Akamai-403 from VPS; `web_extract` renders name+list+sale price (image/INCI/stock need Mac CDP).
 - **Etsy** — handmade/gifts. `blocked` from VPS (DataDome captcha on `web_extract`, curl-403; the public API needs an OAuth app key). Would need Mac CDP or a registered API key.
