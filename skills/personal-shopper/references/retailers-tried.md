@@ -57,6 +57,10 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 
 | Mark's | CA | CDP Chrome on Mac + **Network-intercept** the app's own XHR: `productFamily/<id>` (name/brand/image/`specifications[]` composition/`optionIds[]` size-colour) + `PriceAvailability?pCode=<id>` (price/sale/`Corporate.Quantity` live stock); `marks_extract.py`. Canadian Tire/FGL stack; VPS Akamai-403; do NOT replay XHR (401/400) — intercept only. Denver Hayes/WindRiver = cotton-rich | done | yes | 2026-08-26 |
 | Hudson's Bay / thebay.com | CA | DEFUNCT — Hudson's Bay closed 2025; `thebay.com` 301-redirects to canadiantire.ca (Stripes home-goods collab only). No apparel catalog to scrape. | n/a | note | 2026-08-26 |
+| Sephora CA | CA | Rendered buy-box via `web_extract` + `sephora_extract.py` (name/list/sale price + %off). Product API (`/api/v3/catalog/products/<PID>`) Akamai-403 from VPS; NO JSON-LD/`__NEXT_DATA__`. Beauty/personal-care (gift track); fibre gate N/A. Image/INCI/stock hydrate via walled XHR (needs Mac CDP) → **partial** | partial | yes | 2026-08-27 |
+| Winners CA | CA | **No online catalog** — winners.ca is store-locator/articles only ("Products shown are representative… styles vary by store"; shop in-store). Like Toys R Us. Nothing to scrape. | n/a | note | 2026-08-27 |
+| Canadian Tire | CA | `web_extract` renders only the shell (products hydrate from Akamai-walled APIM `apim.canadiantire.ca` / `/api/v1/product/...`, hard-403 from VPS — same FGL/Nucleus stack as Sport Chek/Mark's). Render leaks the `subscription-key` but the endpoint still 403s VPS-side → Mac CDP Network-intercept needed (see Mark's recipe). | wip | note | 2026-08-27 |
+| RONA / Etsy / EyeBuyDirect.ca / Party City / Bath & Body Works CA / Michael Kors CA / Michaels CA | CA | Hard-walled from VPS: RONA & Etsy & EyeBuyDirect = DataDome/Akamai on PDP (`web_extract` → DataDome captcha / Akamai shell); Party City & B&BW = Akamai/PerimeterX; Michael Kors & Michaels = curl-403, no render path found. All would need Mac CDP. | blocked | note | 2026-08-27 |
 
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
@@ -80,35 +84,37 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 - **Reitmans** (reitmans.com) — ✅ `done` (see recipe). Women's (Priyanka); Shopify, no bot wall.
 - **La Vie En Rose** (lavieenrose.com) — ✅ `done` (see recipe). Lingerie/sleepwear/loungewear; EPiServer, NO bot wall, VPS-side.
 - **Tommy Hilfiger CA** (ca.tommy.com) — ✅ `done` (see recipe). Cotton oxfords/chinos/polos (adult) + mostly-cotton kids' tees/shirts. VPS Akamai-walled → Mac CDP.
-- **Michael Kors CA** — accessories/gifts.
+- **Michael Kors CA** — accessories/gifts. `blocked` (curl-403, no VPS render path; would need Mac CDP).
 - **Aldo** (aldoshoes.com) — ✅ `done` (see recipe). Adult footwear/accessories. Shopify but footwear `.js` 404s → rendered-PDP JSON-LD; NO bot wall, VPS-side. (skill's "never order kids' shoes" rule; adults OK.)
 - **Crocs CA** (crocs.ca) — ✅ `done` (see recipe). Adult + kids footwear; SFCC/Demandware, NO bot wall, VPS-side. Croslite foam → no fibre-% (natural-fibre gate N/A). Skill's "never order kids' shoes" rule applies.
 - **ASICS Canada** (asics.com/ca) — ✅ `done` (see recipe). Athletic footwear, his fitness angle. Adobe Commerce/Magento; VPS hard-403 on curl/API → `web_extract` renders clean first pass. Footwear → natural-fibre gate N/A.
 - **Sport Chek** (sportchek.ca) — ✅ `done` (see recipe). Athletic/outdoor, his fitness angle. Canadian Tire/FGL stack; VPS Akamai-walled → Mac CDP; JSON-LD + `.nl-*` DOM.
-- **Winners** (winners.ca) — off-price; likely no online catalog, verify.
+- **Winners** (winners.ca) — ❌ `n/a`: NO online catalog (store-locator/articles only, "shop in-store"). Like Toys R Us. Nothing to scrape.
 
 **General merchandise / marketplace / home**
 - Amazon.ca — usable per SKILL.md §8 (his single most-used retailer by far); a fallback, not recon.
 - **Walmart CA** (walmart.ca) — ✅ `done` (see recipe). General merch + kids; house brand George is heavily 100% cotton. VPS PerimeterX-walled → Mac CDP with homepage warm-up.
 - **Costco CA** — `blocked` (press-and-hold); membership warehouse, his CIBC Costco card.
-- **Canadian Tire** (canadiantire.ca) — Triangle Rewards member; home/auto/seasonal.
+- **Canadian Tire** (canadiantire.ca) — `wip`: Triangle member; home/auto/seasonal. `web_extract` renders only the shell; products hydrate from Akamai-walled APIM (`apim.canadiantire.ca`) — same FGL/Nucleus stack as Sport Chek/Mark's → Mac CDP Network-intercept needed.
 - **IKEA CA** (ikea.ca) — ✅ `done` (see recipe). Furniture, home goods & textiles; frequent. Cloudflare-walled to curl/API → `web_extract` rendered-DOM. Live stock not in render.
 - **Indigo / Chapters** (indigo.ca) — ✅ `done` (see recipe). Books & gifts (gift track). Now a Shopify store, NO bot wall, VPS-side. Old `chapters.indigo.ca` retired.
 - **Staples CA** (staples.ca) — ✅ `done` (see recipe). Office/tech/home-office (gift/gap-filler). Shopify; `.json`/PDP Cloudflare-walled but `.js` open, pure `urllib` VPS-side.
-- **Michaels** (michaels.com) — crafts/gifts.
-- **Party City CA** (partycity.ca) — party/kids events.
+- **Michaels** (michaels.com) — crafts/gifts. `blocked` (curl-403 on .com and canada.michaels.com; no VPS render path).
+- **Party City CA** (partycity.ca) — party/kids events. `blocked` (Akamai on `web_extract`).
 - **Toys R Us CA** (toysrus.ca) — ❌ `n/a`: NO online catalog (store-locator/FAQ only, "shop in-store"). Nothing to scrape.
-- **RONA** (rona.ca) — home improvement.
+- **RONA** (rona.ca) — home improvement. `blocked` (homepage 200 but PDP DataDome-captcha on `web_extract` + curl-403; needs Mac CDP).
 
 **Beauty / personal care**
 - **Deciem / The Ordinary** (theordinary.com) — ✅ `done` (see recipe). Skincare (gift/personal-care). Demandware (NOT Shopify); PDP JSON-LD + static INCI attribute; NO bot wall, VPS-side.
 - **The Body Shop CA** — ✅ `done` (see recipe). Beauty/personal-care (gift track). Shopify `.js` + PDP INCI span; NO bot wall, VPS-side.
-- **Bath & Body Works CA** — gifts.
+- **Bath & Body Works CA** — gifts. `blocked` (PerimeterX px-captcha on VPS; needs Mac CDP).
 
 **Specialty / gifts**
 - **Brilliant Earth** (brilliantearth.com) — fine jewelry (a real past purchase; gift direction).
-- **EyeBuyDirect** (eyebuydirect.com) — prescription eyewear.
-- **Etsy** — handmade/gifts (has a public API + JSON-LD).
+- **EyeBuyDirect** (eyebuydirect.com) — prescription eyewear. `blocked` (redirects to eyebuydirect.ca; PDP Akamai-walled to curl AND `web_extract`; category renders but PDPs return the Akamai shell). Needs Mac CDP.
+- **Sephora CA** (sephora.com/ca/en) — ✅ `partial` (see recipe). Prestige beauty (gift track). Product API Akamai-403 from VPS; `web_extract` renders name+list+sale price (image/INCI/stock need Mac CDP).
+- **Etsy** — handmade/gifts. `blocked` from VPS (DataDome captcha on `web_extract`, curl-403; the public API needs an OAuth app key). Would need Mac CDP or a registered API key.
+- **RONA** (rona.ca) — home improvement. `blocked` (homepage 200 but PDP DataDome-captcha on `web_extract`, PDP curl-403). Needs Mac CDP.
 
 ### Other good picks (not confirmed in YNAB, but fit the household)
 

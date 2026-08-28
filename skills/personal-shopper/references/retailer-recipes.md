@@ -1869,3 +1869,58 @@ variants:[{sku,size,second_range,colour,price,original_price,on_sale,qty,in_stoc
   not a bargain (the everywhere-rule) — check `any_in_stock` and `Quantity` before recommending.
 - `productFamilyList` (a "you may also need" carousel) also fires — ignore it; it's cross-sell, not
   the current product.
+
+## Sephora (CA) — rendered buy-box via web_extract (name + price only; PARTIAL). API Akamai-walled.
+
+Canada, prestige beauty/personal-care — a **gift-track** store (makeup, skincare, fragrance,
+haircare), confirmed household-relevant. Cosmetic, so the **natural-fibre gate is N/A**. Domain
+`www.sephora.com/ca/en`. Verified 2026-08-27.
+
+**Which rung worked: `web_extract` rendered DOM — rung 4, and only PARTIAL.** The clean data path
+(the product API) is walled from the VPS, and the render is thin:
+- Product API `GET /api/v3/catalog/products/<PID>?countryCode=CA&loc=en-CA` (and `/api/v2/…`) →
+  **Akamai `403 Access Denied`** from the VPS. `/api/catalog/products/<PID>` → `302`. No VPS-side fix
+  (it's a passive fingerprint wall; an exit node won't help — would need Mac CDP + same-origin fetch).
+- `curl` on the PDP homepage returns `200` but the PDP HTML has **no usable `application/ld+json`**
+  and no `__NEXT_DATA__` product block — the buy-box hydrates from the (walled) XHR.
+- **`web_extract` (Crawl4AI headless) renders the buy-box** and reliably yields **product name, list
+  price, and the sale/Auto-Replenish price + % off**. It does NOT capture the **image, full INCI
+  ingredient list, rating count as a clean number, or per-variant stock** — those load from a
+  separate XHR and are absent from the markdown. So: good enough to price a gift candidate and link
+  it; escalate to CDP/browser XHR-intercept if you need the image or ingredients.
+
+**Product URL shape:** `https://www.sephora.com/ca/en/product/<slug>-P<6-digit-id>`
+e.g. `.../product/ultra-repair-cream-intense-hydration-P381145`. The `P<digits>` id is the SKU
+family. Find candidates via `web_search "site:sephora.com/ca/en/product <brand> <keyword>"`.
+
+```bash
+# 1. Render the PDP (retry on Akamai — see failure modes):
+#    web_extract(urls=["https://www.sephora.com/ca/en/product/<slug>-P<id>"])
+#    -> returns markdown inline; long pages also save to ~/.hermes/cache/web/www.sephora.com-<hash>.md
+# 2. Parse it (also accepts stdin via "-"):
+python3 scripts/sephora_extract.py ~/.hermes/cache/web/www.sephora.com-XXXX.md
+#    -> {name, brand, list_price, sale_price, pct_off, on_sale, size, url, source}
+```
+
+**Key fields (verified 2026-08-27)**
+| What | Where in rendered markdown |
+|---|---|
+| Name | the product `# ` H1 that does NOT end in `\| Sephora` (first H1 is a `<title>` echo) |
+| Brand | best-effort: trailing segment after ` - ` in the `<title> \| Sephora` line |
+| List price | first bare `$NN.NN` in the buy-box (often glued: `$28.00or 4 payments…`) |
+| Sale price + %off | `get it for $NN.NN (N% off)` (Auto-Replenish) or `$NN.NN (Save N%) $LIST` |
+| Size | `Size: 2 oz/56.7 mL` |
+| Image / INCI / stock | **NOT in the render** — hydrates via walled XHR; needs CDP |
+
+**Failure modes**
+- **Akamai on `web_extract` is INTERMITTENT** (like Children's Place, unlike Carter's/Mark's): a call
+  can come back `"Blocked by anti-bot protection: Akamai block"` or a transient
+  `CRAWL_LIVECRAWL_TIMEOUT`/`CRAWL_UNKNOWN_ERROR` — **just retry the same URL**; a 2nd/3rd pass renders.
+  No exit node or Mac delegation needed for the name+price fields.
+- **web_extract mangles UTF-8** in the render: `®` → `Â®`, em/en-dashes → `â…`. The extractor strips
+  the stray `Â` and normalises the mangled dashes; do the same if parsing by hand.
+- **The first `# ` H1 is a `<title>` echo** (`<name> | Sephora`), not the product H1 — anchor name
+  extraction on the first H1 that does NOT end in `| Sephora`.
+- Product **API is Akamai-403 from the VPS on every version** — do not burn time on `/api/v3` or
+  `/api/v2`; they will not open VPS-side. Image + ingredients require Mac CDP (same-origin fetch of
+  the API from a loaded tab) — out of scope for a bounded VPS recon run.
