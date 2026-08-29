@@ -1,146 +1,128 @@
 #!/usr/bin/env python3
-"""
-decathlon_extract.py — Decathlon CA (decathlon.ca) product extractor.
+"""Decathlon.ca product extractor — CDP windowed Chrome on the Mac (rung 3).
 
-WHY THIS EXISTS
-  decathlon.ca is HARD Cloudflare-walled from the VPS: curl / requests / web_extract
-  all get "Just a moment..." (403). No public JSON API, no Shopify, no `.json`.
-  Must be run through a REAL windowed Chrome on the Mac over CDP (rung 3 of the
-  bot-wall-bypass ladder). NOT headless — headless UA gets flagged.
+WHY CDP: the VPS is HARD Cloudflare-walled ("Just a moment..." 403) on every
+transport — curl, requests, and all API guesses. `web_extract` (Crawl4AI) DOES
+render the PDP shell (name, brand, visible price, star rating, ID) but the
+critical fibre COMPOSITION lives inside a *collapsed* "Specifications" accordion
+that web_extract never expands, and it returns no image URL / per-size stock.
+So web_extract is only a partial first pass; the real recipe is Mac CDP, which
+can click the accordion open and read the spec table.
 
-HOW TO RUN (on Sumeet's Mac, over Tailscale ssh)
-  1. Launch throwaway windowed Chrome on its own profile (leaves live tabs alone):
-       nohup "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-         --remote-debugging-port=9333 "--remote-allow-origins=*" \
-         --user-data-dir=/tmp/scrape-profile --no-first-run --no-default-browser-check \
-         --window-size=1280,900 >/tmp/scrape-chrome.log 2>&1 &
-     (NB: quote --remote-allow-origins=* or zsh glob-expands it → 403 WS handshake.)
-  2. venv with websocket-client:  python3 -m venv /tmp/scrape-venv &&
-       /tmp/scrape-venv/bin/pip install websocket-client
-  3. base64-ship this file, then:
-       /tmp/scrape-venv/bin/python decathlon_extract.py <PDP-url> [<PDP-url> ...]
+HOW TO RUN (all on the Mac over Tailscale ssh sumeet@100.116.71.40):
+  1. Launch a throwaway debug Chrome (NOT headless — headless UA gets flagged):
+     nohup "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+       --remote-debugging-port=9333 "--remote-allow-origins=*" \
+       --user-data-dir=/tmp/scrape-profile --no-first-run \
+       --no-default-browser-check --window-size=1400,1000 \
+       >/tmp/scrape-chrome.log 2>&1 &
+     (quote --remote-allow-origins=* or zsh globs it; Chrome v151+ needs PUT on /json/new)
+  2. python3 -m venv /tmp/scrape-venv && /tmp/scrape-venv/bin/pip install websocket-client
+  3. base64-ship this file to /tmp/dec_cdp.py, then:
+     /tmp/scrape-venv/bin/python /tmp/dec_cdp.py <pdp_url> [<pdp_url> ...]
   4. Cleanup: pkill -f "remote-debugging-port=9333"; rm -rf /tmp/scrape-profile /tmp/scrape-venv
 
-PDP URL shape: https://www.decathlon.ca/en/p/<slug>/<productGroupID>/<variantcode>
-Find candidates: web_search "site:decathlon.ca <category> <keyword>"
+OUTPUT per URL: {name, brand, image, rating, visible_price, offers[],
+  composition_hits[] (e.g. "100.0% Cotton","97.0% Cotton","3.0% Elastane"),
+  specs{} (Main Material, Cut, Collar Type, Skill Level, ... + env-impact %s)}.
 
-OUTPUT (one JSON object per URL):
-  {url, name, brand, rating, review_count, image, currency,
-   composition (list of "Main fabric: 38.0% Cotton, 62.0% Polyester" lines),
-   natural_pct (from the Main/representative line), colors:[{color,price,availability,url,image}],
-   any_in_stock}
+NATURAL-FIBRE GATE: sum the natural fibres from composition_hits (cotton, wool,
+linen, silk, cashmere, lyocell/Tencel). Verified 2026-08-29 on two live PDPs:
+  Fitness T-Shirt Essentials 500 (Domyos)  -> "100.0% Cotton" main body -> PASS
+  Cotton Sweatshirt 500 Essentiel (Domyos) -> "41.0% Cotton, 59.0% Polyester" -> FAIL 70%
+  (Note Decathlon's "Cotton Sweatshirt"/"Main Material: Polyester" names lie about
+   the blend — always read the %; the mostly-synthetic athleisure is the trap.)
 
-DATA SOURCES (verified 2026-08-27):
-  - JSON-LD: ProductGroup (name/brand/rating) + one Product per COLOUR
-    (offers.availability, offers.priceSpecification.price CAD, image, color, url).
-  - Composition: rendered outerHTML, div.specifications__block whose <h4> == "Composition",
-    each <p class="specifications__item"> = one fabric line ("Main fabric: 38.0% Cotton, ...").
-    Simple items with no spec block fall back to the JSON-LD description ("...100% cotton").
-LIMITATION: live PER-SIZE stock is NOT in the first render (size buttons need a click).
-    Per-COLOUR availability IS reliable (JSON-LD). Treat per-size as verify-on-page.
+Product URL shape: https://www.decathlon.ca/en/p/<slug>/<modelId>/c...m<productId>
+  (also .../en/p/<productId>/<slug> works). Discover via web_search "site:decathlon.ca ...".
+Images: contents.mediadecathlon.com/.../picture.jpg?format=auto&f=650x0 — NOT
+  walled, returns image/jpeg from the VPS directly (verify bytes before emailing).
 """
-import json, sys, time, re, urllib.request, websocket
+import json, sys, time, urllib.request, websocket
 
 CDP = "http://127.0.0.1:9333"
-NATURAL = ("cotton", "wool", "linen", "silk", "cashmere", "hemp", "lyocell",
-           "tencel", "jute", "ramie", "merino", "alpaca", "mohair")
 
-def _new_tab(url="about:blank"):
-    req = urllib.request.Request(CDP + "/json/new?" + url, method="PUT")
-    return json.load(urllib.request.urlopen(req))
+def new_tab():
+    req = urllib.request.Request(CDP + "/json/new?about:blank", method="PUT")
+    return json.load(urllib.request.urlopen(req))["webSocketDebuggerUrl"]
 
-def _render(url, wait=13):
-    t = _new_tab("about:blank")
-    ws = websocket.create_connection(t["webSocketDebuggerUrl"], max_size=None)
-    i = [0]
-    def cmd(m, p=None):
-        i[0] += 1; mid = i[0]
-        ws.send(json.dumps({"id": mid, "method": m, "params": p or {}}))
-        while True:
-            x = json.loads(ws.recv())
-            if x.get("id") == mid:
-                return x
-    cmd("Page.enable"); cmd("Runtime.enable")
-    cmd("Page.navigate", {"url": url})
-    time.sleep(wait)
-    lds = cmd("Runtime.evaluate", {"expression":
-        "JSON.stringify([...document.querySelectorAll('script[type=\"application/ld+json\"]')].map(s=>s.textContent))",
-        "returnByValue": True})["result"]["result"]["value"]
-    html = cmd("Runtime.evaluate", {"expression": "document.documentElement.outerHTML",
-        "returnByValue": True})["result"]["result"]["value"]
-    ws.close()
-    return json.loads(lds), html
-
-def _composition_lines(html):
-    # find the specifications__block whose title is "Composition"
-    lines = []
-    for m in re.finditer(r'<div class="specifications__block">(.*?)</div>', html, re.S):
-        block = m.group(1)
-        if re.search(r'<h4[^>]*>\s*Composition\s*</h4>', block, re.I):
-            for pm in re.finditer(r'<p class="specifications__item[^"]*"[^>]*>([^<]*)</p>', block):
-                txt = pm.group(1).strip()
-                if txt:
-                    lines.append(txt)
-    return lines
-
-def _natural_pct(line):
-    # line like "Main fabric: 38.0% Cotton, 62.0% Polyester" or "100% cotton"
-    total_nat = 0.0
-    for pm in re.finditer(r'(\d+(?:\.\d+)?)\s*%\s*([A-Za-z]+)', line):
-        pct = float(pm.group(1)); fib = pm.group(2).lower()
-        if any(fib.startswith(n) for n in NATURAL):
-            total_nat += pct
-    return round(total_nat, 1)
-
-def extract(url):
-    lds, html = _render(url)
-    objs = []
-    for raw in lds:
-        try:
-            j = json.loads(raw)
-        except Exception:
-            continue
-        objs += j.get("@graph", [j]) if isinstance(j, dict) else j
-    pg = next((o for o in objs if o.get("@type") == "ProductGroup"), None)
-    prods = [o for o in objs if o.get("@type") == "Product"]
-    name = (pg or (prods[0] if prods else {})).get("name")
-    brand = (pg or {}).get("brand", {})
-    brand = brand.get("name") if isinstance(brand, dict) else brand
-    rating = (pg or {}).get("aggregateRating", {})
-    colors = []
-    for p in prods:
-        off = p.get("offers", {})
-        if isinstance(off, list):
-            off = off[0] if off else {}
-        price = (off.get("priceSpecification") or {}).get("price") or off.get("price")
-        colors.append({
-            "color": p.get("color"),
-            "price": price,
-            "availability": str(off.get("availability", "")).replace("https://schema.org/", ""),
-            "url": off.get("url"),
-            "image": p.get("image"),
-        })
-    comp = _composition_lines(html)
-    if not comp:
-        desc = (pg or (prods[0] if prods else {})).get("description", "")
-        m = re.search(r'\d+\s*%\s*[A-Za-z]+', desc)
-        if m:
-            comp = [desc[max(0, m.start()-10):m.end()+30].strip()]
-    natural_pct = _natural_pct(comp[0]) if comp else None
-    return {
-        "url": url,
-        "name": name,
-        "brand": brand,
-        "rating": rating.get("ratingValue"),
-        "review_count": rating.get("reviewCount"),
-        "image": colors[0]["image"] if colors else None,
-        "currency": "CAD",
-        "composition": comp,
-        "natural_pct": natural_pct,
-        "colors": colors,
-        "any_in_stock": any(c["availability"] == "InStock" for c in colors),
+JS_EXPAND = r"""
+(() => {
+  document.querySelectorAll('button,summary,[role=button]').forEach(b => {
+    const t = (b.textContent||'').trim().toLowerCase();
+    if (/specification|description|composition|material|usage|feature/.test(t)) {
+      try { b.click(); } catch(e){}
     }
+  });
+  return true;
+})()
+"""
+
+EXTRACT = r"""
+(() => {
+  const out = {};
+  const lds = [...document.querySelectorAll('script[type="application/ld+json"]')]
+    .map(s => { try { return JSON.parse(s.textContent); } catch(e){ return null; } }).filter(Boolean);
+  const flat = [];
+  lds.forEach(j => Array.isArray(j) ? flat.push(...j) : (j['@graph']?flat.push(...j['@graph']):flat.push(j)));
+  const prod = flat.find(j => (j['@type']||'').toString().includes('Product'));
+  if (prod) {
+    out.name = prod.name;
+    out.brand = prod.brand && (prod.brand.name || prod.brand);
+    out.image = Array.isArray(prod.image)?prod.image[0]:prod.image;
+    out.sku = prod.sku || prod.mpn;
+    const offs = Array.isArray(prod.offers)?prod.offers:[prod.offers].filter(Boolean);
+    out.offers = offs.map(o => ({price:o.price, cur:o.priceCurrency,
+      avail:String(o.availability||'').replace(/https?:\/\/schema.org\//,'')}));
+    out.rating = prod.aggregateRating && prod.aggregateRating.ratingValue;
+  }
+  if (!out.image) out.image = (document.querySelector('meta[property="og:image"]')||{}).content;
+  if (!out.image) {
+    const im = [...document.querySelectorAll('img')].map(x=>x.currentSrc||x.src)
+      .find(u=>/contents\.mediadecathlon\.com/i.test(u));
+    if (im) out.image = im.replace(/f=\d+x\d+/, 'f=650x0');
+  }
+  const pm = document.body.innerText.match(/\$\d+\.\d{2}/);
+  out.visible_price = pm && pm[0];
+  const body = document.body.innerText;
+  const compRe = /(\d{1,3}(?:\.\d+)?\s?%)\s*(cotton|polyester|elastane|wool|linen|nylon|viscose|spandex|acrylic|silk|lyocell|polyamide|modal|recycled polyester)/gi;
+  const comps = [...body.matchAll(compRe)].map(m => (m[1]+' '+m[2]).replace(/\s+/g,' ').trim());
+  out.composition_hits = [...new Set(comps)].slice(0,10);
+  const specs = {};
+  document.querySelectorAll('dl').forEach(dl => {
+    const dts = dl.querySelectorAll('dt'), dds = dl.querySelectorAll('dd');
+    for (let i=0;i<dts.length;i++){ specs[dts[i].innerText.trim()] = (dds[i]||{}).innerText; }
+  });
+  document.querySelectorAll('table tr').forEach(tr => {
+    const c = tr.querySelectorAll('th,td');
+    if (c.length===2) specs[c[0].innerText.trim()] = c[1].innerText.trim();
+  });
+  out.specs = specs;
+  return out;
+})()
+"""
+
+def run(url):
+    ws = websocket.create_connection(new_tab(), max_size=None)
+    mid = [0]
+    def cmd(method, params=None):
+        mid[0]+=1; i=mid[0]
+        ws.send(json.dumps({"id":i,"method":method,"params":params or {}}))
+        while True:
+            m=json.loads(ws.recv())
+            if m.get("id")==i: return m.get("result",{})
+    cmd("Page.enable"); cmd("Runtime.enable")
+    cmd("Page.navigate", {"url":url})
+    time.sleep(13)                       # render + let Cloudflare pass
+    cmd("Runtime.evaluate", {"expression":JS_EXPAND})
+    time.sleep(2.5)                      # accordions open
+    r = cmd("Runtime.evaluate", {"expression":EXTRACT, "returnByValue":True})
+    ws.close()
+    return r.get("result",{}).get("value")
 
 if __name__ == "__main__":
-    out = [extract(u) for u in sys.argv[1:]]
-    print(json.dumps(out, indent=2))
+    res=[]
+    for u in sys.argv[1:]:
+        try: res.append({"url":u, "data":run(u)})
+        except Exception as e: res.append({"url":u,"error":str(e)})
+    print(json.dumps(res, indent=2))

@@ -1992,3 +1992,60 @@ python3 scripts/brilliantearth_extract.py ~/.hermes/cache/web/www.brilliantearth
   PDP. Anchor the product URL on the **style base** too (extractor does this).
 - Bare `.com` gives USD; **only `/en-ca/` gives CAD**. Don't email a US price as if it were CAD.
 - `brand` is always "Brilliant Earth" (house) — label manually.
+
+## Decathlon (CA) — CDP Chrome on the Mac; composition hides behind a collapsed accordion
+
+Canada, value sports/outdoor (in-house brands Domyos = fitness, Quechua = hiking, Kalenji = run,
+Kipsta = team). Kid + adult coverage. Natural-fibre-relevant: the plain "Essentials"/"Essentiel"
+cotton tees & sweats — but **the naming lies about the blend**, so read the % every time (a product
+literally titled "Cotton Sweatshirt" with `Main Material: Polyester` came back 41% cotton / 59%
+polyester — a 70%-rule FAIL). Verified 2026-08-29.
+
+**Which rung worked: CDP windowed Chrome on the Mac — rung 3 (bot-wall bypass).**
+- `curl`/`requests` and *every* API guess (`/api/...`, `.json`, `apim`, `graphql`, `api.decathlon.com`)
+  → hard Cloudflare **403 "Just a moment..."** from the VPS. No VPS-side fix; exit node won't help
+  (fingerprint wall, not IP).
+- `web_extract` (Crawl4AI) **does** render the PDP shell — name, brand, visible `$NN.NN` price, star
+  rating + review count, `ID <productId>`, care instructions, "Get the bundle" cross-sells. **But it
+  is only PARTIAL**: the fibre **composition** sits inside a *collapsed* "Specifications" accordion
+  that web_extract never expands, and it returns no image URL and no per-size stock. So web_extract
+  alone fails the natural-fibre gate — you must open the accordion, which needs a real browser.
+- **Mac CDP is the recipe**: navigate, wait ~13 s (render + Cloudflare auto-clear), click every
+  button/summary whose text matches `specification|description|material|composition`, wait ~2.5 s,
+  then read the spec table + a body-text fibre regex. `www.decathlon.ca` loads clean over CDP; NO
+  interactive press-and-hold.
+
+**The data, once specs are expanded:**
+- **Composition**: not in JSON-LD; it's in the expanded "Specifications" block as plain-text
+  `100.0% Cotton` / `97.0% Cotton, 3.0% Elastane` lines. Regex the body for
+  `(\d{1,3}(?:\.\d+)?\s?%)\s*(cotton|polyester|elastane|wool|linen|...)`. **Guard the decimals** —
+  a `\d{1,3}%` regex reads `100.0%` as `0%`. Sum natural fibres (cotton/wool/linen/silk/lyocell).
+- **Price**: JSON-LD `offers` is usually **empty** (`offers: []`); use the visible `$NN.NN` on the
+  buy box instead. Rating comes through JSON-LD `aggregateRating.ratingValue` fine.
+- **Image**: JSON-LD `image` and `og:image` are both empty. Real photos are `<img>` src on
+  `contents.mediadecathlon.com/pNNNNNN/k$<hash>/picture.jpg?format=auto&f=320x0` — bump `f=320x0`
+  to `f=650x0` for the email thumb. This CDN is **NOT walled** (curl returns `image/jpeg` from the
+  VPS directly — safe to hotlink; verify bytes first).
+- **specs{}** also carries `Main Material`, `Cut`, `Collar Type`, `Skill Level`, `Frequency`, plus an
+  environmental-impact %-breakdown (`Raw material`, `Use`, ...) — the latter are NOT fibre content.
+
+**Tested extractor:** `scripts/decathlon_extract.py` (base64-ship to the Mac, run under the CDP
+venv). Verified 2026-08-29 on two live PDPs — Fitness T-Shirt Essentials 500 = 100% cotton main body
+(PASS), Cotton Sweatshirt 500 Essentiel = 41% cotton/59% poly (FAIL 70%). Name, brand (Domyos),
+price, rating, composition, and mediadecathlon image all matched the live pages.
+
+**Product URL shape:** `https://www.decathlon.ca/en/p/<slug>/<modelId>/c...m<productId>` (the trailing
+`m<productId>` = the `ID` shown on the PDP; `.../en/p/<productId>/<slug>` also resolves). Discover via
+`web_search "site:decathlon.ca <category> <keyword>"`.
+
+**Failure modes**
+- Hard Cloudflare 403 on every VPS transport incl. all API guesses — don't grind curl/exit-node.
+- `web_extract` gives price/name/rating but **NOT composition/image/stock** — treat it as a partial
+  first pass only; escalate to Mac CDP for the fibre gate.
+- Decimal-eating regex (`\d{1,3}%` → `0%` on `100.0%`) — allow `(?:\.\d+)?`.
+- Product names/`Main Material` are misleading ("Cotton Sweatshirt" that's mostly poly) — always
+  read the actual `%`. Domyos athleisure skews synthetic; the plain cotton "Essentials" tees are the
+  clean natural-fibre picks.
+- JSON-LD `offers` empty and `image` empty — use visible price + mediadecathlon `<img>` src.
+- **Per-size live STOCK not captured** — it hydrates via XHR after a size click; the render/JSON-LD
+  don't carry it. Verify size availability on the live page (or extend the script to click swatches).
