@@ -63,6 +63,8 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | RONA / Etsy / EyeBuyDirect.ca / Party City / Bath & Body Works CA / Michael Kors CA / Michaels CA | CA | Hard-walled from VPS: RONA & Etsy & EyeBuyDirect = DataDome/Akamai on PDP (`web_extract` → DataDome captcha / Akamai shell); Party City & B&BW = Akamai/PerimeterX; Michael Kors & Michaels = curl-403, no render path found. All would need Mac CDP. | blocked | note | 2026-08-27 |
 | Brilliant Earth | CA | Rendered-DOM via `web_extract` + `brilliantearth_extract.py` (title/CAD price/stock/metal/style/gemstone/chain/image). GIFT track fine jewelry — natural-fibre gate N/A. curl→Cloudflare-403 "Verifying"; NO JSON-LD/API. Renders clean FIRST pass. **Use `/en-ca/` for CAD**; distinguish finished piece (`ADD TO BAG`) from design-your-own setting (`Setting Only`) | done | yes | 2026-08-28 |
 | Decathlon CA | CA | CDP Chrome on Mac: nav→13s→click Specifications accordion→read spec table + fibre regex; `decathlon_extract.py`. VPS hard Cloudflare-403 on curl+all APIs; `web_extract` renders price/name/rating only (composition behind collapsed accordion, no image/stock). Value sports/outdoor (Domyos/Quechua); "Cotton" names lie about blend — read the % | done | yes | 2026-08-29 |
+| Everlane | US (ships CA) | Shopify `/products/<handle>.js` (price/stock/variants, CENTS **USD**) + PDP-HTML static `Materials:<ul><li>…</li></ul>` accordion (composition); `everlane_extract.py`. NO bot wall, pure `urllib` VPS-side. Top natural-fibre source (100% organic-cotton/cashmere/merino/linen). ⚠️ prices are USD not CAD; one handle per colourway | done | yes | 2026-08-29 |
+| Aritzia | CA | RE-TESTED 2026-08-29: still hard-walled — curl 403 AND `web_extract` browser backend 403 ("anti-bot protection: HTTP 403"). No new VPS angle; Mac-CDP only, as before | blocked | note | 2026-08-29 |
 
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
@@ -79,7 +81,7 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 - Old Navy CA — ✅ `done`. His confirmed kids' store.
 - Gap CA — ✅ `done`.
 - La Maison Simons — ✅ `done` (Mac delegation).
-- Aritzia — `blocked` (Cloudflare); worth a fresh Mac-CDP attempt.
+- Aritzia — `blocked` (Cloudflare); **re-tested 2026-08-29 with the new `web_extract` browser backend → still hard 403** (both curl and headless render). Mac-CDP only; don't re-probe from the VPS.
 - **Zara CA** (zara.com/ca) — ✅ `done` (see recipe). Bought at Square One. VPS Akamai-walled → Mac CDP; JSON-LD has it all.
 - **The Children's Place** (childrensplace.com/ca) — ✅ `done` (see recipe). Kids' workhorse clothes.
 - **Carter's / OshKosh CA** (cartersoshkosh.ca) — ✅ `done` (see recipe). Baby/toddler, mostly 100% cotton. VPS-walled → Mac CDP.
@@ -126,5 +128,6 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 - **Tilley** (tilley.com) — ✅ `done` (see recipe). Canadian natural-fibre travel/outdoor (100% cotton/linen hats + tees). Shopify, NO bot wall, VPS-side.
 - **MEC** (mec.ca) — ✅ `done` (see recipe). Outdoor co-op; merino/organic-cotton; Canadian. Headless Next.js over BigCommerce; curl→Cloudflare-403 → `web_extract` rendered-DOM (renders clean first pass). Live stock not in render.
 - **Kotn** (kotn.com) — ✅ `done` (see recipe). Canadian, Egyptian-cotton essentials; near-100%-cotton catalog, top natural-fibre source. Next.js front + headless Shopify; NO bot wall, VPS-side.
+- **Everlane** (everlane.com) — ✅ `done` (see recipe). US (ships CA); 100% organic-cotton/cashmere/merino/linen essentials — top natural-fibre source. Shopify, NO bot wall, VPS-side. ⚠️ prices in USD.
 - **Hudson's Bay** (thebay.com) — ❌ `n/a`: DEFUNCT (closed 2025); thebay.com redirects to canadiantire.ca. No catalog.
 - **Mountain Warehouse CA** (mountainwarehouse.com/ca) — ✅ `done` (see recipe). Value outdoor apparel; strong organic-cotton/merino natural-fibre lines. Next.js over BigCommerce; NO bot wall — all fields in the static HTML from a plain `urllib` GET. **Decathlon CA** — ✅ `done` (see recipe). Value sports/outdoor; VPS Cloudflare-walled → Mac CDP (composition hides behind a collapsed Specifications accordion; web_extract only partial).

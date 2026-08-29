@@ -2049,3 +2049,70 @@ price, rating, composition, and mediadecathlon image all matched the live pages.
 - JSON-LD `offers` empty and `image` empty — use visible price + mediadecathlon `<img>` src.
 - **Per-size live STOCK not captured** — it hydrates via XHR after a size click; the render/JSON-LD
   don't carry it. Verify size availability on the live page (or extend the script to click swatches).
+
+## Everlane — Shopify `.js` (price/stock/variants) + PDP-HTML Materials accordion. No bot wall. ⚠️ USD.
+
+US-based (ships to Canada); mid/premium essentials. **One of the strongest natural-fibre sources**
+found: deep 100% organic-cotton tee/knit lines, 100% cashmere/merino sweaters, linen, and denim —
+cotton/cashmere/wool/linen lines routinely clear a high natural-fibre gate. It's a **Shopify store**
+(`powered-by: Shopify`), so **no bot wall from the VPS**: plain `urllib`/`curl` work for both the
+`.js` endpoint and the PDP HTML. No exit node, no Mac delegation. Verified 2026-08-29.
+
+**Which rung worked: Shopify JSON (rung 2) + a small PDP-HTML fetch — all VPS-side.**
+- **`/products/<handle>.js`** is the money endpoint: `title`, `type`, `vendor`, `price`/
+  `compare_at_price` (in **CENTS, USD**), top-level `available`, and a `variants[]` grid each with
+  `title` (size, or `waist / inseam` for bottoms), `price`, `compare_at_price`, and a real
+  **`available`** boolean → **per-size stock directly**. `featured_image` is protocol-relative
+  (`//cdn.shopify.com/...` → prefix `https:`).
+- **Composition is NOT in the `.js`** (only a coarse `tags: ["fabric: cotton"]`). Exact percentages
+  live in the **PDP HTML**, in a *static* materials accordion:
+  `<div ... class="ProductAccordion-Materials--...">Materials:<ul><li>100% Organic Cotton</li></ul>`.
+  No click/JS needed — `curl` gets it. One or more `<li>` (e.g. `100% Cashmere (50% Recycled)`,
+  `94% Cotton, 6% Elastane`). Sum the natural `%` and gate.
+- **JSON-LD** on the PDP is a `ProductGroup` with per-variant `offers` (`price`, `priceCurrency`,
+  `availability`) — a fine cross-check, but the `.js` already carries everything and is simpler.
+
+```bash
+# price/stock/variants/image (cents, USD):
+curl -s -A "$UA" "https://www.everlane.com/products/<handle>.js"
+# exact composition (static HTML, no click):
+curl -s -A "$UA" -H 'Accept: text/html' "https://www.everlane.com/products/<handle>" \
+  | grep -oiE 'Materials:<ul>.*?</ul>'   # -> Materials:<ul><li>100% Organic Cotton</li></ul>
+```
+
+**Tested extractor:** `scripts/everlane_extract.py` (pure `urllib`, runs on the VPS). Verified
+2026-08-29 on three live products — 100% organic-cotton crew (natural_pct 100, 6/6 sizes in stock),
+100% cashmere crew (natural_pct 100, only **1/7** sizes buyable — per-size stock discriminates
+correctly), and a 94% cotton / 6% elastane performance chino (natural_pct 94, on sale $35 from $118).
+Output per URL: `{url, handle, title, type, vendor, price_usd, compare_at_usd, on_sale, available,
+composition, natural_pct, image, colors[], sizes[], variants:[{color,size,price_usd,compare_at_usd,
+available}], any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-08-29)
+| What | Where |
+|---|---|
+| Price / compare-at / stock / variants | `/products/<handle>.js` (prices in **cents, USD**; `variants[].available`) |
+| Composition (fibre %) | PDP HTML, `Materials:<ul><li>…</li></ul>` in a static `ProductAccordion-Materials` div |
+| Image | `.js` `featured_image` (protocol-relative `//cdn.shopify.com/...` → prefix `https:`) |
+| Catalog listing | `/products.json?limit=250&page=N` (full catalog, paginated) |
+| Product URL | `https://www.everlane.com/products/<handle>` |
+
+**Failure modes**
+- **⚠️ PRICES ARE USD, not CAD.** `Shopify.currency.active == "USD"` and JSON-LD `priceCurrency ==
+  "USD"` even though Cloudflare serves the CA edge (`country;desc="CA"`). Convert to CAD for Sumeet's
+  cart or label the price USD explicitly — do NOT drop a USD number into a CAD cart. This is the single
+  non-obvious trap here (same class as Tilley, whose JSON-LD prices were USD).
+- **`suggest.json` came back empty** for keyword queries — don't rely on it for discovery. Use
+  `web_search "site:everlane.com/products <keyword>"` (snippets carry the composition prose and the
+  `/products/<handle>` URL) or page `/products.json`.
+- **One handle per colourway.** Colour isn't a variant option here — each colour is a separate handle
+  (e.g. `...-crew-black`, `...-crew-white`). `variants[]` iterate SIZE only. To price a colour range,
+  fetch each colour's handle.
+- **Bottoms use a `waist / inseam` variant title** (`32 / 28`) and can have 40+ variants — dedup and
+  rely on per-variant `available`, not the top-level flag (a product can be `available:true` with only
+  3/44 sizes buyable).
+- **`elastane`/`spandex`/`polyester`/`nylon`/`viscose`/`modal` are SYNTHETIC** per the fibre rule.
+  Everlane's ReNew fleece, Performance/tech, and activewear lines are predominantly recycled
+  poly/nylon — read the Materials `%`, don't trust an "organic"/"cotton" product name. A 94% cotton /
+  6% elastane chino is natural_pct 94 (clears 70%); a ReNew fleece is ~0.
+- Recycled cotton/wool/cashmere still count as natural fibre (`100% Cashmere (50% Recycled)` = 100).
