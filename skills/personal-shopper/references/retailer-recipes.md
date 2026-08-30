@@ -2116,3 +2116,62 @@ available}], any_in_stock}`.
   poly/nylon — read the Materials `%`, don't trust an "organic"/"cotton" product name. A 94% cotton /
   6% elastane chino is natural_pct 94 (clears 70%); a ReNew fleece is ~0.
 - Recycled cotton/wool/cashmere still count as natural fibre (`100% Cashmere (50% Recycled)` = 100).
+
+## Quince (CA) — JSON-LD `ProductGroup` (price/stock/image) + `__NEXT_DATA__` `details` (fibre %). NO bot wall.
+
+Canada (`/ca/` gives CAD), DTC "affordable luxury". **One of the strongest natural-fibre
+sources found** — deep 100% organic-cotton, Mongolian cashmere, European linen, mulberry silk,
+merino/alpaca lines across women / men / kids / home (bedding, towels). Verified 2026-08-30.
+
+**Which rung worked: static HTML from a plain `urllib`/`curl` GET — no rung-3 needed.**
+`www.quince.com/ca/...` returns 200 to a plain UA GET (curl and `web_extract` both fine); the
+PDP embeds everything. NO Cloudflare/Akamai/PerimeterX wall from the VPS. Two blocks carry it:
+
+- **JSON-LD `@graph` → `ProductGroup.hasVariant[]`** — one entry **per colour × size** with
+  `offers.price`, `offers.priceCurrency` (**CAD on `/ca/`**), `offers.availability`
+  (`InStock`/`OutOfStock`), `image`, `sku`, `color`, `size`. This is price + **per-variant stock**
+  + image directly. (The JSON-LD is the SECOND ld+json block; the first is `BreadcrumbList`. The
+  Product block is nested under `@graph`, so a naïve "parse the first ld+json" grabs the crumbs —
+  iterate blocks and pick the one with `@graph`.)
+- **`__NEXT_DATA__` → `props.pageProps.pageData.context.pageDataJson.product`** — the **exact fibre
+  composition** lives in `product.details` (HTML `<ul><li>Made from 55% linen, 45% cotton…</li></ul>`).
+  The JSON-LD `material` and the loose `product.material` label are **marketing text only**
+  ("Organic Cotton", "Cotton/Modal") — do NOT gate on them; parse the `%` out of `details`.
+
+```bash
+UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120 Safari/537.36'
+curl -s -A "$UA" "https://www.quince.com/ca/women/<handle>" -o page.html
+python3 scripts/quince_extract.py page.html   # or pass the URL directly (urllib-fetches)
+# -> {name, material_label, composition, natural_pct, image, currency, price_min/max,
+#     colors[], sizes[], variants:[{color,size,price,availability,sku}], any_in_stock, rating}
+```
+
+**Product URL shape:** `https://www.quince.com/ca/<gender>/<handle>` e.g.
+`/ca/women/100-organic-cotton-sweater-tee`. Some handles sit under a sub-path
+(`/ca/women/tees/cotton-modal-crew-neck-tee`) — take the exact URL from a
+`web_search "site:quince.com/ca <keyword>"` result, don't hand-build (a wrong guess 404s).
+
+**Selectors / fields** (verified 2026-08-30)
+| What | Where |
+|---|---|
+| Per-variant price / stock / image / sku | JSON-LD `@graph` → `ProductGroup.hasVariant[].offers` (+ `.image`) |
+| Currency | `offers.priceCurrency` = `CAD` on `/ca/` (would be `USD` on the bare `/` US site) |
+| **Exact fibre composition** | `__NEXT_DATA__ …product.details` HTML `<li>…NN% fibre…</li>` |
+| Loose material label (do NOT gate on) | `…product.material` / JSON-LD `material` |
+| Rating / review count | JSON-LD variant `aggregateRating` |
+| Image host | `images.ctfassets.net/...` (Contentful CDN) |
+
+**Failure modes**
+- **The product NAME lies about fibre content.** "Cotton Modal Scoop Neck Tee" is **50% cotton /
+  50% modal** → natural_pct **50** (modal is semi-synthetic; count synthetic). "Lightweight Cotton
+  Cashmere … Tee" came back **65% cotton / 32% ecovero / 3% cashmere** → natural_pct **68**, which
+  FAILS a 70% rule despite "cotton cashmere" in the name. Branded viscose (LENZING **EcoVero**,
+  modal, Tencel/lyocell) is counted synthetic per the skill default — always read the `%` from
+  `details`, never the title or `material` label.
+- JSON-LD Product block is nested under `@graph` and is the 2nd ld+json script (1st = breadcrumbs).
+- Prices on the bare `/` (US) site are **USD**; always use the `/ca/` path for CAD.
+- Live stock IS in the render (JSON-LD `availability` per variant) — unlike the Next.js/BigCommerce
+  retailers (MEC/Mountain Warehouse) where stock hides in an XHR. All sizes InStock on the tees
+  tested; the field discriminates OutOfStock correctly per SFCC convention.
+- `web_extract` also renders it clean (rung-4 fallback), but the plain `urllib` GET is faster and
+  gives the raw JSON — no need to escalate.
