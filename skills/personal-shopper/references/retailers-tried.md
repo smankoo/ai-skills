@@ -66,6 +66,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Everlane | US (ships CA) | Shopify `/products/<handle>.js` (price/stock/variants, CENTS **USD**) + PDP-HTML static `Materials:<ul><li>…</li></ul>` accordion (composition); `everlane_extract.py`. NO bot wall, pure `urllib` VPS-side. Top natural-fibre source (100% organic-cotton/cashmere/merino/linen). ⚠️ prices are USD not CAD; one handle per colourway | done | yes | 2026-08-29 |
 | Aritzia | CA | RE-TESTED 2026-08-29: still hard-walled — curl 403 AND `web_extract` browser backend 403 ("anti-bot protection: HTTP 403"). No new VPS angle; Mac-CDP only, as before | blocked | note | 2026-08-29 |
 | Quince | CA (`/ca/`) | Static HTML from plain `urllib` GET: JSON-LD `@graph`→`ProductGroup.hasVariant[]` (per-colour×size price CAD + stock + image) + `__NEXT_DATA__` `product.details` exact fibre %; `quince_extract.py`. NO bot wall, VPS-side. Top natural-fibre source (100% organic-cotton/cashmere/linen/silk); NAMES lie about blends — read the % | done | yes | 2026-08-30 |
+| Province of Canada | CA | Shopify `/products/<handle>.js` (price cents + per-size `available`) + `.json` `body_html` prose composition; `provinceofcanada_extract.py`. NO bot wall, pure `urllib` VPS-side. Made-in-Canada organic/GOTS-cotton basics — strong natural-fibre source. `.js` currency is null → hard-code CAD | done | yes | 2026-08-30 |
 
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
@@ -124,6 +125,7 @@ immediate real-world value. Grouped by role; ones already cracked are marked.
 ### Other good picks (not confirmed in YNAB, but fit the household)
 
 - **Roots** (roots.com) — ✅ `done` (see recipe). Canadian, heavy organic-cotton fleece; kids + adults; natural-fibre-friendly. No bot wall, VPS-side.
+- **Province of Canada** (provinceofcanada.com) — ✅ `done` (see recipe). Canadian, made-in-Canada organic/GOTS-cotton basics (tees, fleece, denim shirts) — strong natural-fibre source. Shopify, NO bot wall, pure `urllib` VPS-side (`.js` price/stock + `.json` body_html composition).
 - **Frank And Oak** (frankandoak.com) — ✅ `done` (see recipe). Canadian, cotton/wool/linen/hemp focus, sustainability angle. Shopify, NO bot wall, VPS-side.
 - **Mark's** (marks.com) — ✅ `done` (see recipe). Workwear/casual, cotton basics (Denver Hayes/WindRiver). Canadian Tire/FGL stack; VPS Akamai-403 → Mac CDP Network-intercept.
 - **Tilley** (tilley.com) — ✅ `done` (see recipe). Canadian natural-fibre travel/outdoor (100% cotton/linen hats + tees). Shopify, NO bot wall, VPS-side.

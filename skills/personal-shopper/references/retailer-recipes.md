@@ -2175,3 +2175,63 @@ python3 scripts/quince_extract.py page.html   # or pass the URL directly (urllib
   tested; the field discriminates OutOfStock correctly per SFCC convention.
 - `web_extract` also renders it clean (rung-4 fallback), but the plain `urllib` GET is faster and
   gives the raw JSON — no need to escalate.
+
+## Province of Canada — Shopify `.js` (price/stock) + `.json` body_html (composition). No bot wall.
+
+Canada, DTC — **made-in-Canada basics, heavy on organic/GOTS cotton** (Monday Tee, fleece,
+denim shirts). A strong natural-fibre source: staple tees are 100% GOTS-certified organic cotton;
+fleece is typically 80% cotton / 20% polyester (passes a 70% gate). Standard Shopify store, **NO
+bot wall** from the VPS — plain `curl`/`urllib` work, no exit node, no Mac. Verified 2026-08-30.
+
+**Which rung worked: Shopify JSON (rung 2) — all VPS-side.**
+- **`/products/<handle>.js`** — the money endpoint: `price`/`compare_at_price` (in **CENTS**),
+  top-level `available`, `featured_image` (protocol-relative `//cdn.shopify.com/...` -> prefix
+  `https:`), and `variants[]` each with `option1`=size + a real **`available`** boolean ->
+  **per-size stock directly**. (NOTE: the `.js` `price_currency` field comes back `null`; the store
+  is Canadian and the JSON-LD offers say **CAD** — treat `.js` prices as CAD.)
+- **Composition is NOT in the `.js`.** It's in `.json` -> `product.body_html` as free prose, e.g.
+  `100% GOTS certified organic 200gsm cotton, knitted locally` or `80% cotton, 20% Polyester`.
+  Because the phrasing is loose (numbers like "200gsm", words like "GOTS" between the `%` and the
+  fibre), do NOT try one tight regex — scan each `NN%` and grab the first fibre keyword within
+  ~45 chars after it (that's what `provinceofcanada_extract.py:parse_composition` does).
+- **JSON-LD `ProductGroup`** is on the PDP HTML too (3rd ld+json block; 1st=Organization,
+  2nd=BreadcrumbList) with `hasVariant[].offers` (`price`, `priceCurrency: CAD`, `availability`) —
+  a good cross-check / the only place currency is explicitly CAD, but the `.js` + `.json` pair is
+  simpler and gives everything.
+
+```bash
+UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
+# price/stock/image/variants (cents), then composition:
+curl -s -A "$UA" "https://provinceofcanada.com/products/<handle>.js"   -o p.js
+curl -s -A "$UA" "https://provinceofcanada.com/products/<handle>.json" -o p.json  # body_html has fibre %
+# list handles for a section: /collections/<c>/products.json?limit=250  or /products.json?limit=250
+```
+
+**Tested extractor:** `scripts/provinceofcanada_extract.py` (pure `urllib`, runs on the VPS).
+Verified 2026-08-30 on four live products — Monday Tee (`100% Cotton`, $46, in stock), a Flag
+Fleece Hoodie (`80% Cotton, 20% Polyester`, natural_pct 80, $138), a CFL tee (`100% Cotton`, $70,
+only S in stock), a CFL hoodie (`80/20`, $160) — prices, per-size stock, and composition all
+matched the live pages. Output per URL: `{handle, url, title, price, compare_at_price, on_sale,
+currency, available, composition, natural_pct, image, sizes:[{size,available}], any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-08-30)
+| What | Where |
+|---|---|
+| Price / compare-at / per-size stock | `/products/<handle>.js` (prices in cents; `variants[].available`, `option1`=size) |
+| Composition (fibre %) | `/products/<handle>.json` -> `product.body_html` prose (`NN% <fibre>`) |
+| Currency (CAD) | PDP JSON-LD `ProductGroup.hasVariant[].offers.priceCurrency` (`.js` currency is null) |
+| Image | `.js` `featured_image` (protocol-relative -> prefix `https:`) |
+| Product URL | `https://provinceofcanada.com/products/<handle>` |
+
+**Failure modes**
+- `.js` `price_currency` / variant `price_currency` are **`null`** — don't infer USD from the empty
+  field; it's CAD (Canadian store; JSON-LD confirms). Hard-code CAD.
+- **Fibre content is loose prose, not a spec field.** A single `(\d+)%\s*(fibre)` regex misses
+  `100% GOTS certified organic 200gsm cotton` (the digits/words between `%` and `cotton` break the
+  match) and, worse, a naive `%` operator in the pattern string collides with Python string
+  formatting. Scan each `NN%` and look ahead ~45 chars for the fibre keyword instead.
+- The `.js` `body_html` key is sometimes ABSENT (seen on the CFL collab hoodie) — use `.json`'s
+  `product.body_html`, which is always present, for composition.
+- Duplicate/`-copy` handles exist for the same product across collections (e.g.
+  `...-hoodie-copy-copy`) — dedup by title/image if listing a collection.
+- Fleece / hoodies are 80/20 cotton-poly (pass 70%); check the `%` — a few blends dip lower.
