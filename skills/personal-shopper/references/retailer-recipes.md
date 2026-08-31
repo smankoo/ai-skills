@@ -2297,3 +2297,65 @@ available,sku}], any_in_stock}`. Image URLs verified to return `image/jpeg`.
   `tentree.com` is the US catalog (fine for finding handles, but hand the user the `.ca` link).
 - Handles are colour-specific for some products (`...-t-shirt-white`) — one handle per colourway,
   as with most Shopify stores.
+
+## Oak + Fort (CA) — Shopify `.js` (price/stock) + static PDP "Materials & Care" accordion. No bot wall.
+
+Canada, mid-market minimalist DTC (women's + men's + a little home). **Natural-fibre-friendly**:
+real 100%-linen and 100%-cotton lines, though its "Linen Blend"/"Cotton Blend" pieces cut in rayon
+— read the `%`. Domain **`oakandfort.com`** (the `.ca` domain 301s to `.com`; prices are CAD).
+**No bot wall from the VPS** — plain `urllib`/`curl` work, no exit node, no Mac delegation.
+Verified 2026-08-31.
+
+**Which rung worked: Shopify JSON (rung 2) + one static PDP-HTML fetch — all VPS-side.**
+It's a Shopify store, so the standard endpoints are open:
+- **`/products/<handle>.js`** is the money endpoint: `price`/`price_min`/`price_max` (in **CENTS**),
+  `compare_at_price` (original when on sale), top-level `available`, `vendor` ("Oak and Fort"),
+  `featured_image` (protocol-relative `//cdn.shopify.com/...`), and a `variants[]` grid each with
+  `option1`=colour / `option2`=size, `price`, `compare_at_price`, and a real **`available`** boolean
+  → **per-size/per-colour stock directly**. (`.js` gives `available`; `.json` does NOT — use `.js`.)
+- **Composition is NOT in the `.js`/`.json`** (the description is marketing prose; "Linen Blend"
+  never states the split). The exact fibre `%` lives in the PDP **HTML**, in the **"Materials & Care"
+  accordion**, in the *static* HTML (curl gets it, no click/JS needed): immediately after the
+  `id="filter-materials-care-heading"` header, e.g. `100% Linen` or `55% Linen, 45% Rayon`, followed
+  by care instructions on the same line. Anchor on that header id and take the leading `<NN>% Fibre`
+  pairs before the care text.
+
+```bash
+# price/stock/image/variants (cents):
+curl -s -A "$UA" "https://oakandfort.com/products/<handle>.js"
+# exact composition (static HTML, Materials & Care accordion):
+curl -s -A "$UA" -H 'Accept: text/html' "https://oakandfort.com/products/<handle>" \
+  | grep -oiE 'filter-materials-care-heading[\s\S]{0,200}'   # -> "...Materials & Care 55% Linen, 45% Rayon | Exclusive of trims Dry clean only..."
+```
+
+**Tested extractor:** `scripts/oakandfort_extract.py` (pure `urllib`, runs on the VPS).
+Verified 2026-08-31 on two live products:
+- `linen-button-up-shirt-wt-10427-w` → "100% Linen", natural_pct 100, $29.99 (compare $84), OOS.
+- `linen-blend-button-up-shirt-wt-14134-m` → "55% Linen, 45% Rayon", natural_pct **55**,
+  $29.99 (compare $98), 3/5 variants in stock.
+Output per URL: `{url, handle, title, vendor, type, price, compare_at_price, on_sale, available,
+composition, natural_pct, image, colors[], sizes[], variants:[{color,size,price,compare_at,
+available,sku}], any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-08-31)
+| What | Where |
+|---|---|
+| Price / compare-at / stock / variants | `/products/<handle>.js` (prices in CENTS; `variants[].available`) |
+| Composition (fibre %) | PDP HTML, right after `id="filter-materials-care-heading"` ("Materials & Care" accordion) |
+| Image | `.js` `featured_image` (protocol-relative `//cdn.shopify.com/...` → prefix `https:`) |
+| Product URL | `https://oakandfort.com/products/<handle>` |
+| Handle | tail after `/products/`; ends in the style code (e.g. `-wt-14134-m`) |
+
+**Failure modes**
+- **Names lie about blends.** "Linen Blend Shirt" is 55% linen / 45% **rayon** → natural_pct **55**
+  (rayon/viscose count synthetic per the skill rule), clears a 50% rule but fails 70%. Always read
+  the accordion `%`, never trust the title.
+- The Materials line runs straight into care text (`...45% Rayon | Exclusive of trims Dry clean
+  only.`) — cut on care keywords (`machine wash`, `dry clean`, `hang to`, `exclusive of`, etc.)
+  before parsing fibre pairs, or care words get mis-read as a fibre name.
+- Per-colour handles: one handle per colourway on some products; the `.js` `variants[]` still spans
+  all sizes for that colour. Top-level `available:false` can be true while some sibling colour is in
+  stock — rely on per-variant `available`.
+- `.ca` domain 301-redirects to `.com`; use `.com` (prices are CAD regardless).
+- Discovery: `web_search "site:oakandfort.com <keyword>"` returns `/products/<handle>` links and
+  the snippet often carries the composition.
