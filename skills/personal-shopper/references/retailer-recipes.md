@@ -2235,3 +2235,65 @@ currency, available, composition, natural_pct, image, sizes:[{size,available}], 
 - Duplicate/`-copy` handles exist for the same product across collections (e.g.
   `...-hoodie-copy-copy`) — dedup by title/image if listing a collection.
 - Fleece / hoodies are 80/20 cotton-poly (pass 70%); check the `%` — a few blends dip lower.
+
+## tentree (CA) — Shopify `.js` (price/stock) + PDP `fabric-composition="…"` attribute. No bot wall.
+
+Canada, sustainable-apparel DTC (men/women/kids + accessories). **Strong natural-fibre source**
+— organic cotton, hemp, and TENCEL/lyocell lines — but its "TreeBlend" tri-blend tees are ~45%
+recycled polyester, so the fibre gate genuinely matters here. Canadian delivery, prices in CAD.
+Domain **`tentree.ca`** (`www.` prefix). It's a Shopify store with **NO bot wall from the VPS** —
+plain `urllib`/`curl` work (no exit node, no Mac delegation). Verified 2026-08-30.
+
+**Which rung worked: Shopify JSON (rung 2) + one small PDP-HTML fetch — all VPS-side.**
+- **`/products/<handle>.js`** is the money endpoint: `price`/`compare_at_price` (in **CENTS**),
+  top-level `available`, `featured_image` (protocol-relative `//cdn.shopify.com/...`), and a
+  `variants[]` grid with `option1`=Color / `option2`=Size, each with `price`, `compare_at_price`,
+  a real **`available`** boolean (per-size stock), and `sku`. Confirmed it discriminates: the
+  100% organic-cotton relaxed tee returned all sizes `available:false` (genuinely OOS) while the
+  Juniper tee returned all sizes in stock.
+- **Composition is NOT reliable in the JSON.** The `.js`/`.json` `description`/`body_html` only
+  *sometimes* carries the fibre % (the TreeBlend Juniper spells "45% Recycled Polyester, 30%
+  TENCEL™ Lyocell, 25% Organic Cotton" in prose; the plain organic-cotton tee just says "organic
+  cotton" with no %). The **authoritative** composition is a single **`fabric-composition="…"`
+  HTML attribute** on the PDP (static HTML — `curl` gets it, no accordion/JS click needed). It can
+  contain HTML entities and an embedded `<a href='/pages/materials'>TreeBlend</a> :` prefix, so
+  entity-unescape, strip tags, and drop the `Name :` prefix before parsing the `%`s.
+
+```bash
+# price/stock/image/variants (cents):
+curl -s -A "$UA" "https://www.tentree.ca/products/<handle>.js"
+# authoritative composition (static HTML attribute):
+curl -s -A "$UA" -H 'Accept: text/html' "https://www.tentree.ca/products/<handle>" \
+  | grep -oE 'fabric-composition="[^"]*"'   # -> fabric-composition="100% Organic Cotton"
+```
+
+**Tested extractor:** `scripts/tentree_extract.py` (pure `urllib`, runs on the VPS).
+Verified 2026-08-30 on two live products:
+- `mens-organic-cotton-relaxed-t-shirt-white` → "100% Organic Cotton", natural_pct 100,
+  $50.00, all 5 sizes OOS (`any_in_stock:false`).
+- `mens-juniper-tshirt-meteorite-black-heather` → "45% Recycled Polyester, 30% TENCEL™ Lyocell,
+  25% Organic Cotton", natural_pct **55**, $45.00, all sizes in stock.
+Output per URL: `{url, handle, title, vendor, type, price, compare_at_price, on_sale, available,
+composition, natural_pct, image, colors[], sizes[], variants:[{color,size,price,compare_at,
+available,sku}], any_in_stock}`. Image URLs verified to return `image/jpeg`.
+
+**Selectors / endpoints** (verified 2026-08-30)
+| What | Where |
+|---|---|
+| Price / compare-at / stock / variants | `/products/<handle>.js` (cents; `variants[].available` per size) |
+| Composition (fibre %) | PDP HTML attribute `fabric-composition="…"` (entity-encoded; strip tags + `Name :` prefix) |
+| Image | `.js` `featured_image` (protocol-relative → prefix `https:`) |
+| Product URL | `https://www.tentree.ca/products/<handle>` |
+
+**Failure modes**
+- **TENCEL/lyocell counts as NATURAL** (plant-derived) per the skill rule, but **recycled
+  polyester does NOT** — so a "TreeBlend" tee at 45% recycled poly / 30% TENCEL / 25% cotton is
+  natural_pct **55** (fails a 70% gate), not 100. The name ("…Cotton T-Shirt") lies about the
+  blend — always read the `fabric-composition` %. Plain "Organic Cotton" tees are 100% cotton
+  → clean pass.
+- `.js`/`.json` `description` composition is inconsistent (present for blends, absent for solids)
+  — don't rely on it; the `fabric-composition` attribute is the single source of truth.
+- Prices are CAD but the Shopify feed doesn't stamp currency clearly — treat `tentree.ca` as CAD;
+  `tentree.com` is the US catalog (fine for finding handles, but hand the user the `.ca` link).
+- Handles are colour-specific for some products (`...-t-shirt-white`) — one handle per colourway,
+  as with most Shopify stores.
