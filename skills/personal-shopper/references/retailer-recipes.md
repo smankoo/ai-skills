@@ -2414,3 +2414,59 @@ natural_pct, image, sizes:[{size,price,available}], any_in_stock}`.
 - `description` in the `.js` is typically empty — do NOT rely on it for composition; go to the HTML.
 - Discovery: `web_search "site:peace-collective.com <keyword>"` returns `/products/<handle>` links;
   `products.json?limit=N` lists handles + tags for a quick catalogue scan.
+
+## Naked & Famous Denim — Shopify `.js` alone (price + stock + composition, all in one call). No bot wall.
+
+Canada (Montreal), premium — a **top natural-fibre source for men's denim & tees**. Raw selvedge
+jeans are almost always **100% cotton**; "stretch" cuts add ~1-2% elastane (still clears a 70% rule
+comfortably); heavyweight tees are 100% cotton. Shopify store, `nakedandfamousdenim.com` — **NO bot
+wall from the VPS** (plain `urllib`/`curl`, no exit node, no Mac). Verified 2026-09-01.
+
+**Which rung worked: Shopify JSON (rung 2) — and a single `.js` call is enough.** Unusually for a
+Shopify store, N&F embeds the full PDP `body_html` in the **`description` field of `/products/<handle>.js`**,
+and the fibre composition is an `<li>` bullet inside it (e.g. `98% Cotton / 2% Elastane`,
+`100% Cotton`). So `.js` gives price, per-size/per-colour stock, image, AND composition — no
+separate HTML fetch, no JSON-LD parse, no accordion click. (`.json` `product.body_html` carries the
+same bullet if you prefer it, but `.js` also has per-variant `available`, so `.js` is the one to use.)
+
+```bash
+# everything (price cents, per-size available, image, composition-in-description) in one GET:
+curl -sL -A "$UA" -H 'Accept: application/json' \
+  "https://www.nakedandfamousdenim.com/products/true-guy-11oz-stretch-selvedge.js" -o p.js
+# composition lives in the description HTML as an <li> with a %:
+python3 -c "import json,re;d=json.load(open('p.js'))['description'];print(re.findall(r'<li>([^<]*%[^<]*)</li>',d))"
+# -> ['98% Cotton \xa0/ \xa02% Elastane']
+```
+
+**Tested extractor:** `scripts/nakedandfamous_extract.py` (pure `urllib`, runs on the VPS).
+Verified 2026-09-01 on two live products:
+- `true-guy-11oz-stretch-selvedge` -> "98% Cotton / 2% Elastane", natural_pct 98, $190 CAD,
+  4/13 sizes in stock (27-28 OOS, 29-32 in).
+- `strong-tee-heavyweight-11oz-jersey` -> "100% Cotton", natural_pct 100, $89 CAD, per-colour x size
+  stock resolved correctly (e.g. White/XXL OOS, Natural/XXL in).
+Output per URL: `{handle, title, url, price, currency(CAD), compare_at, on_sale, available,
+composition, natural_pct, image, sizes:[{size,price,available}], any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-09-01)
+| What | Where |
+|---|---|
+| Price / compare-at / per-size stock / variants | `/products/<handle>.js` (prices in CENTS; `variants[].available`) |
+| Composition (fibre %) | `.js` `description` field -> `<li>NN% Cotton / NN% Elastane</li>` (also in `.json` `body_html`) |
+| Image | `.js` `featured_image` (protocol-relative `//cdn.shopify.com/...` -> prefix `https:`) |
+| Product URL | `https://www.nakedandfamousdenim.com/products/<handle>` |
+| Catalogue | `products.json?limit=250` -> handles, titles, `body_html`, `tags[]` |
+
+**Failure modes**
+- **`.js` has NO currency field** (`price_currency`/`currency` absent). The `.com` storefront bills
+  in CAD — hard-code `CAD`. (JSON-LD `offers.priceCurrency` on the PDP HTML reads `USD`, which is
+  WRONG for the CA-facing store — do NOT trust it; use the `.js` cents as CAD.)
+- **Raw-denim / tee pages sometimes state the fabric WITHOUT a `%`** (e.g. body_html says only
+  "16oz slubby Japanese selvedge denim"), so `composition` comes back `null` even though it's
+  effectively 100% cotton. Treat `null` as "read the prose / assume 100% cotton for raw selvedge",
+  not as a fibre-gate failure. The `%` bullet only appears when there's a blend (stretch = elastane).
+- **`&nbsp;` (`\xa0`) litters the fibre bullet** (`98% Cotton \xa0/ \xa02% Elastane`) — normalise
+  whitespace before parsing the `%`/fibre pairs (the extractor does).
+- **Elastane is synthetic** but a stretch selvedge at 98% cotton is natural_pct 98 — clears any
+  sane threshold. Watch only the rare heavy-stretch cuts; read the actual `%`.
+- Discovery: `web_search "site:nakedandfamousdenim.com <keyword>"` returns `/products/<handle>`
+  links; the US apex `nakedandfamousdenim.com` and `www.` both serve the same catalogue and CAD prices.
