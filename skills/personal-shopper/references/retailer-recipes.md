@@ -2359,3 +2359,58 @@ available,sku}], any_in_stock}`.
 - `.ca` domain 301-redirects to `.com`; use `.com` (prices are CAD regardless).
 - Discovery: `web_search "site:oakandfort.com <keyword>"` returns `/products/<handle>` links and
   the snippet often carries the composition.
+
+## Peace Collective (CA) — Shopify `.js` (price/stock) + PDP-HTML metafield bullet (composition). No bot wall.
+
+Canada (Toronto DTC); mid-market casual — heavyweight garment-dyed tees, crewnecks, hoodies, plus
+licensed NFL/NBA/collegiate styles. **Natural-fibre-friendly on the essentials line** (the
+"Heavyweight Garment Dyed T-Shirt" range is **100% cotton**), but the fleece/crewneck/licensed
+styles are typically **60% cotton / 40% polyester** — so READ THE %: the 60/40 fleece clears a 50%
+rule but fails 70%. **No bot wall from the VPS** — pure `urllib`, no exit node / no Mac delegation.
+Verified 2026-08-31.
+
+**Which rung worked: Shopify JSON (rung 2) + a small PDP-HTML fetch — all VPS-side.**
+- **`/products/<handle>.js`** is the money endpoint: `price`/`compare_at_price` (in **CENTS**),
+  top-level `available`, and a `variants[]` grid each with `title`=size, `price`, and a real
+  **`available`** boolean → per-size stock directly. `featured_image` is protocol-relative
+  (`//cdn.shopify.com/...` → prefix `https:`).
+- **Composition is NOT in the `.js`** (`description` is usually empty). It lives in the PDP **HTML**
+  as a **`multi_line_text_field` bullet**: `• 60% Cotton, 40% Polyester<br /> • Machine wash…` (or
+  `• 100% cotton`). It's in the *static* HTML — curl/urllib get it, no accordion click. The product
+  `tags[]` sometimes mirror it (`"100% Cotton"`) but are NOT reliable — licensed styles carry no
+  fibre tag — so the HTML bullet is authoritative; fall back to the tag only if the bullet is absent.
+
+```bash
+# price/stock/image/variants (cents) — MUST use the www. host:
+curl -sL -A "$UA" "https://www.peace-collective.com/products/<handle>.js"
+# composition — the fibre bullet in the static PDP HTML:
+curl -sL -A "$UA" -H 'Accept: text/html' "https://www.peace-collective.com/products/<handle>" \
+  | grep -oE 'multi_line_text_field">[^<]*'   # -> ...">• 60% Cotton, 40% Polyester
+```
+
+**Tested extractor:** `scripts/peacecollective_extract.py` (pure `urllib`, runs on the VPS).
+Verified 2026-08-31 on two live products:
+- `it-s-not-me-...-t-shirt-caramel` → "100% cotton", natural_pct 100, $59.00, 7/7 sizes in stock.
+- `seattle-seahawks-...-crewneck-black` → "60% Cotton, 40% Polyester", natural_pct 60, $106.00, in stock.
+Output per URL: `{url, title, price, compare_at_price, on_sale, available, composition,
+natural_pct, image, sizes:[{size,price,available}], any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-08-31)
+| What | Where |
+|---|---|
+| Price / compare-at / stock / variants | `/products/<handle>.js` (prices in CENTS; `variants[].available`) |
+| Composition (fibre %) | PDP HTML, `multi_line_text_field">• NN% Cotton, NN% Polyester` bullet |
+| Composition fallback | product `tags[]` in `.js`/`.json` (e.g. `"100% Cotton"`) — unreliable, licensed styles omit it |
+| Image | `.js` `featured_image` (protocol-relative `//cdn.shopify.com/...` → prefix `https:`) |
+| Product URL | `https://www.peace-collective.com/products/<handle>` |
+
+**Failure modes**
+- **Must use the `www.` host.** The apex `peace-collective.com` 301-redirects `.js`/`.json`/PDP to
+  `www.`; a urllib GET without redirect-follow returns the redirect stub (not JSON). Either hit
+  `www.` directly or let urllib follow the 30x (`urlopen` does by default; curl needs `-L`).
+- **Names/tags lie about blends.** A crewneck may read "vintage" with no fibre tag but be 60/40
+  cotton/poly → natural_pct 60. Always resolve the actual `%` from the HTML bullet; don't assume the
+  essentials-tee cotton rate applies to fleece.
+- `description` in the `.js` is typically empty — do NOT rely on it for composition; go to the HTML.
+- Discovery: `web_search "site:peace-collective.com <keyword>"` returns `/products/<handle>` links;
+  `products.json?limit=N` lists handles + tags for a quick catalogue scan.
