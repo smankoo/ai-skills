@@ -2470,3 +2470,68 @@ composition, natural_pct, image, sizes:[{size,price,available}], any_in_stock}`.
   sane threshold. Watch only the rare heavy-stretch cuts; read the actual `%`.
 - Discovery: `web_search "site:nakedandfamousdenim.com <keyword>"` returns `/products/<handle>`
   links; the US apex `nakedandfamousdenim.com` and `www.` both serve the same catalogue and CAD prices.
+
+## Icebreaker (CA) — Shopify `.js` (price/stock) + PDP `<strong>Fabric content</strong>` block. No bot wall.
+
+Canada (`na.icebreaker.com/en-ca`), mid/premium merino specialist — a **TOP natural-fibre source**:
+the core Tech Lite / 200 / 260 lines are **100% merino wool**, and even the Cool-Lite "Sphere"
+blends are 60% TENCEL Lyocell / 40% merino (both counted natural). Great for adult base layers,
+tees, and (per the skill's no-kids'-shoes-but-apparel-OK stance) merino kids' layers. **No bot wall
+from the VPS** — plain `curl`/`urllib` work; no exit node, no Mac delegation. Verified 2026-09-01.
+
+**Which rung worked: Shopify JSON (rung 2) + a small PDP-HTML fetch — all VPS-side.** It's a Shopify
+store with a **REQUIRED `/en-ca/` locale prefix**. The prefix is what makes prices come back CAD and
+what stops the endpoints 302-redirecting:
+- **`/en-ca/products/<handle>.js`** is the money endpoint: `price`/`compare_at_price` (in **CENTS**),
+  top-level `available`, and `variants[]` each with `option1`=Color / `option2`=Size and a real
+  **`available`** boolean → **per-size stock directly**. `featured_image` is protocol-relative.
+- **Composition is NOT reliable in the `.js`/`body_html`** — the prose only says e.g. "100% merino"
+  for pure-merino items and **OMITS the blend entirely** for Cool-Lite (body_html has no `%` at all).
+  The authoritative fibre content lives in the PDP **HTML** in a structured block:
+  **`<strong>Fabric content</strong><p>60% TENCEL™ Lyocell, 40% merino wool, exclusive of decoration</p>`**.
+  It's in the *static* HTML (curl gets it — no click/accordion needed). Strip the trailing
+  "exclusive of decoration".
+- **`/en-ca/collections/<handle>/products.json?limit=N`** lists handles + `body_html` for discovery.
+
+```bash
+# price/stock/image/variants (cents), CAD via /en-ca/:
+curl -s -A "$UA" "https://na.icebreaker.com/en-ca/products/<handle>.js"
+# authoritative composition (static HTML):
+curl -s -A "$UA" -H 'Accept: text/html' "https://na.icebreaker.com/en-ca/products/<handle>" \
+  | grep -oiE '<strong>\s*Fabric content\s*</strong>\s*<p>[^<]*</p>'
+  # -> <strong>Fabric content</strong><p>100% merino wool, exclusive of decoration</p>
+```
+
+**Tested extractor:** `scripts/icebreaker_extract.py` (pure `urllib`, runs on the VPS).
+Verified 2026-09-01 on two live products:
+- `merino-150-tech-lite-short-sleeve-t-shirt-ib0a56wl001` → "100% merino wool", natural_pct 100,
+  $105 CAD, 5/7 sizes in stock (XS + XXXL OOS).
+- `merino-blend-125-cool-lite-sphere-short-sleeve-t-shirt-ib0a56zm001` → "60% TENCEL™ Lyocell,
+  40% merino wool", natural_pct 100, $95 CAD, all 5 sizes in stock.
+Image URL confirmed `image/jpeg`; visible PDP price ($105.00) matched. Output per URL:
+`{url, handle, title, type, price, compare_at_price, on_sale, currency(CAD), available,
+composition, natural_pct, image, colors[], sizes[], variants:[{color,size,price,available}],
+any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-09-01)
+| What | Where |
+|---|---|
+| Price / compare-at / per-size stock / variants | `/en-ca/products/<handle>.js` (prices in CENTS; `variants[].available`) |
+| Composition (fibre %) | PDP HTML, `<strong>Fabric content</strong><p>…%…</p>` (static; NOT in `.js`/body_html) |
+| Image | `.js` `featured_image` (protocol-relative `//cdn.shopify.com/...` → prefix `https:`) |
+| Product URL | `https://na.icebreaker.com/en-ca/products/<handle>` |
+| Catalogue | `/en-ca/collections/<handle>/products.json?limit=250` → handles, `body_html`, tags |
+
+**Failure modes**
+- **The `/en-ca/` prefix is mandatory.** Without it, `/products/<handle>.js` **302-redirects** and
+  the storefront defaults to USD. Always keep `/en-ca/` on every URL (`.js`, PDP, collections).
+- **CURRENCY TRAP:** the PDP JSON-LD `offers.priceCurrency` is a stale template default of **"USD"** —
+  IGNORE it. The `.js` price on the `/en-ca/` path is already CAD (Tech Lite tee = C$105, matches the
+  live page). Hard-code `CAD`. (Same trap as Naked & Famous / Tilley.)
+- **Blend composition hides from the JSON.** `body_html`/`.js` `description` shows the `%` only for
+  pure-merino items; for the Cool-Lite blends it says nothing about fibre. MUST read the PDP
+  `<strong>Fabric content</strong>` block — do NOT gate on the `.js` description alone.
+- Cool-Lite "Sphere"/"Cool-Lite" tees are TENCEL Lyocell + merino (both natural here). But watch any
+  recycled-poly or Corespun (nylon core) variants that appear in outerwear/socks — read the actual `%`.
+- Discovery: `web_search "site:na.icebreaker.com/en-ca <keyword>"` returns `/en-ca/products/<handle>`
+  links directly (handles end in the style id, e.g. `-ib0a56wl001`).
