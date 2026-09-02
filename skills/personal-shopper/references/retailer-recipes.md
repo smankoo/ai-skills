@@ -2535,3 +2535,59 @@ any_in_stock}`.
   recycled-poly or Corespun (nylon core) variants that appear in outerwear/socks — read the actual `%`.
 - Discovery: `web_search "site:na.icebreaker.com/en-ca <keyword>"` returns `/en-ca/products/<handle>`
   links directly (handles end in the style id, e.g. `-ib0a56wl001`).
+
+## Patagonia (CA) — rendered-DOM via web_extract (composition YES, image/stock NO). VPS otherwise hard-walled.
+
+Canada, premium outdoor/casual — a **top natural-fibre source**: deep organic-cotton lines
+("Regenerative Organic Certified cotton", "Cotton in Conversion", "Organic Cotton") + hemp, plus
+adult AND kids. Domain **`patagonia.ca`**; product URL `/product/<slug>/<id>.html` (id is a 5-digit
+style no.). Runs on Salesforce Commerce Cloud (Demandware). Verified 2026-09-02.
+
+**Which rung worked: `web_extract` rendered-DOM (rung 4) — and only PARTIALLY.**
+From the VPS every *direct* transport is DEAD:
+- `curl`/`requests` on the PDP, category, and homepage → a fake **10-byte `"Not found"` 404**
+  (bot wall masquerading as 404, on `.ca` AND `.com`). No headers/UA got past it.
+- Demandware OCAPI `/s/<site>/dw/shop/v21_10/products/<id>` → 404 (site id not guessable;
+  `patagonia_ca`, `Sites-patagonia_ca-Site`, `patagonia` all 404).
+- No Shopify (`products.json` 404), no JSON-LD in the rendered markdown.
+- `web_extract` (Crawl4AI headless) renders the PDP and returns the fields below — **but it is
+  INTERMITTENT**: the SAME url alternates between success and `"Structural: minimal_text on small
+  page (161 bytes)"` / `"CRAWL_NOT_FOUND"`. Retry a few times; unlike a hard wall it does clear.
+
+**What web_extract's markdown gives (reliable):** title, price, **composition** (the critical
+natural-fibre field), style no., country of origin, colour NAMES, sale price.
+**What it does NOT give:** the **image URL** (`<img>` src is stripped) and **per-size stock**
+(size swatches hydrate from a separate XHR). For those two, fall back to Mac CDP (read `og:image`
++ click each size swatch) — see retail-bot-wall-bypass. Hence Patagonia is **`partial`** VPS-side:
+enough to gate on fabric + price, not enough to build a full thumbnail email without the Mac.
+
+**Parsing the markdown:** `scripts/patagonia_extract.py <saved-markdown-file>`. Verified 2026-09-02
+on two live products — `37878` Daily Pocket Tee (full price C$69, 100% cotton) and `42185` Daily Tee
+(on sale C$28.99 from C$59, 100% cotton) — title/price/sale/composition/style/colours all matched.
+
+**Key fields (verified 2026-09-02)**
+| What | Where in rendered markdown | Note |
+|---|---|---|
+| Title | `# Men's/Women's/Kids <name>` H1 (repeats — take the department-prefixed one) | promo H1s also exist; anchor on dept prefix |
+| Price (you pay) | buy-box `C$ NN` **WITH a space** | banner uses `C$NN` no-space (shipping promo) — DON'T match that |
+| Sale | buy-box shows TWO spaced prices `C$ 59 C$ 28.99` = orig, then sale | first = `compare_at`, second = `price` |
+| Composition | `## Materials & Care Instructions` → `### Body` / `### Trim` `NN% <fibre>` | authoritative; NAMES lie ("Better Sweater" = 100% recycled poly) |
+| Style no. | `Style No. <5-digit>` | == the id in the URL |
+| Country of origin | `### Country of Origin\n Made in <X>.` | |
+| Colours | names listed under `Select Color` up to `Model is…`/product H1 | names only, no swatch image |
+| Image / per-size stock | **NOT present** — Mac CDP only (`og:image` + swatch click) | this is why it's `partial` |
+
+**Natural-fibre gate:** cotton/hemp lines pass at ~100%. But Patagonia's tech/fleece core
+(Capilene base layers, Nano Puff/Down insulation shells, Better Sweater fleece, most "waterproof"
+shells) is **predominantly recycled polyester/nylon** and FAILS — the product name is no guide
+("Better Sweater" is 100% poly). Always read the Materials & Care `%`; bias the palette to the
+explicit cotton/hemp tee/shirt/sweatshirt lines before falling for a piece.
+
+**Failure modes**
+- VPS curl/API bot-wall returns a **decoy 10-byte 404** (not a normal 403) — don't mistake it for a
+  dead URL; the product exists, the VPS is just walled. Use web_extract (or Mac CDP).
+- web_extract is **flaky here** (Crawl4AI intermittent): retry the same URL 2–3× — it alternates
+  block/success. Not a hard wall; no exit node needed.
+- No JSON-LD and no Shopify — don't grep for `application/ld+json` or hit `.json`; both are dead.
+- Discovery: `web_search "site:patagonia.ca <keyword>"` returns `/product/<slug>/<id>.html` links
+  directly (and snippets often carry the composition prose).
