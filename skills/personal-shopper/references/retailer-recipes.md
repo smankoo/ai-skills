@@ -2653,3 +2653,81 @@ any_in_stock}`.
   carry no `%` — ignore them when summing.
 - Discovery: `web_search "site:unboundmerino.com <keyword>"` returns `/products/<handle>` links
   directly.
+
+## Banana Republic (CA) — Gap Canada platform; `web_extract` renders the PDP VPS-side (composition + stock DON'T render → partial)
+
+Canada, mid-market / elevated-everyday adult — **natural-fibre-friendly**: deep linen,
+Supima cotton, merino, wool-cashmere, corduroy lines (the "adults, department-store house
+brand" role). Confirmed in Sumeet's household context (Gap/Old Navy siblings already `done`).
+Banana Republic Canada runs on the **Gap Canada platform**, so the live catalog is at
+**`bananarepublic.gapcanada.ca/browse/product.do?pid=<pid>`** — the SAME `product.do` shape as
+`gapcanada.ca` / `oldnavy.gapcanada.ca`. Verified 2026-09-03.
+
+**Domain trap first.** There are TWO Banana Republic CA hosts:
+- `bananarepublic.gapcanada.ca` — the real, shoppable catalog (`/browse/product.do?pid=…`,
+  `/shop/<slug>-<code>` category pages). **Use this one.**
+- `www.bananarepublic.ca` — a marketing "FUI" front (`/products/<slug>.jsp`). `web_extract`
+  renders only hero copy + nav ("Modern classics… streets of Tokyo…"), NO products. The
+  category `.jsp` pages (e.g. `/products/pants.jsp`) *do* render a product list with names +
+  CA$ prices, but PDPs don't. Do NOT try to scrape PDPs off the `.ca` host — pivot to the
+  `gapcanada.ca` `product.do` PDP.
+
+**Which rung worked: `web_extract` (rendered DOM) — rung 4, VPS-side, first pass, NO bot wall.**
+Everything heavier is walled from the VPS: `curl`/`urllib` → Akamai `Access Denied` (403) on
+the PDP, `robots.txt`, AND the Gap-platform product-data API (`/resources/productData/v3/en_CA/
+product/<pid>` — 403 even with browser headers + Referer + `x-requested-with`). But
+`web_extract` (Crawl4AI headless) renders `product.do` clean on the FIRST call.
+
+**What the render gives (verified 2026-09-03 on two live PDPs, pid `8752090830003` &
+`8752090730002`, The Everyday Linen Shirt):** title, list price + sale price + "Now"/"Limited
+Time Offer" flag, star rating (`4.69 are filled, 94 Ratings`), the full hero image set
+(`.../webcontent/NNNN/NNN/NNN/cnNNNNNNNN.jpg`), and the offered size run (`## Size` → a
+run-together token `XXSXSSMLXLXXL`). Parse with `scripts/bananarepublic_extract.py`.
+
+**What the render does NOT give → this retailer is `partial` VPS-side:**
+- **Fabric composition** — in a collapsed "Fabric & Care" accordion whose body is not emitted
+  in the rendered markdown. CRITICAL for the natural-fibre gate, so composition is UNVERIFIED
+  from web_extract alone. Escalate: it's the Gap Canada platform, so the **Gap/Old Navy
+  loaded-tab `fetch('/browse/product.do?pid=…')` recipe** (browser MCP) returns the full PDP
+  HTML including the description/fabric block — or Mac CDP (click the accordion, read innerText).
+- **Per-size stock** — the size run is the *offered* list, not stock. Use the Gap-platform
+  `fds_selector__label--unavailable` per-size recipe (`window.__G`, see Gap/Old Navy section)
+  from a loaded `bananarepublic.gapcanada.ca` tab.
+
+```bash
+# 1. web_extract(urls=["https://bananarepublic.gapcanada.ca/browse/product.do?pid=<pid>"])
+#    -> save the returned `content` to <render.md>
+# 2. python3 scripts/bananarepublic_extract.py <render.md>
+#    -> {url, pid, title, price, sale_price, on_sale, rating, num_ratings, sizes[],
+#        image, images[], composition:null, note}
+```
+
+**Selectors** (verified 2026-09-03, from web_extract render)
+| What | Where in rendered markdown |
+|---|---|
+| Title | first `# <Title>` H1 that is not `… \| Banana Republic` (store/nav) |
+| List price | max of `CA$NN.NN` tokens on page |
+| Sale price | min `CA$NN.NN` when a `Now`/`Limited Time Offer`/`Extra N% off` flag is present |
+| Rating | `([\d.]+) are filled, ([\d,]+) Ratings` |
+| Sizes (offered) | `## Size` section, run-together token e.g. `XXSXSSMLXLXXL` — split greedily longest-first |
+| Image(s) | `(https://bananarepublic.gapcanada.ca/webcontent/…/cnNNNNNNNN.jpg)` — first = hero |
+| Composition | ❌ not in render (accordion) — Gap `__G` loaded-tab fetch or Mac CDP |
+| Per-size stock | ❌ not in render — Gap `--unavailable` label recipe |
+
+**Failure modes**
+- VPS Akamai-403 on curl/urllib for PDP + API + robots + **image hosts**
+  (`bananarepublic.gapcanada.ca/webcontent/…` and `www2.assets-gap.com/webcontent/…` both 403
+  to bare curl). So you can't `curl`-verify the image bytes VPS-side; in a real browser / email
+  client (browser-like headers) they load. If you need a byte-verified thumbnail, fetch it via
+  the browser MCP / Mac.
+- Wrong host: `www.bananarepublic.ca` PDPs render as marketing shell only — always use
+  `bananarepublic.gapcanada.ca/browse/product.do?pid=…`.
+- Category pages: `bananarepublic.gapcanada.ca/shop/<slug>-<code>` render on web_extract and
+  carry per-tile `product.do?pid=…` links + grid thumbnails on `www2.assets-gap.com` — good for
+  discovery (find pids), then render each PDP.
+- Discovery: `web_search "site:bananarepublic.gapcanada.ca <keyword>"` returns `/shop/…`
+  category links; `web_search "bananarepublic.ca <keyword>"` mixes in the marketing `.ca` host —
+  prefer the `gapcanada.ca` results.
+- BR blends heavily (linen-rayon, cotton-modal, "Vegan" faux-leather); since composition doesn't
+  render, treat every natural-fibre claim as UNVERIFIED until the Gap loaded-tab/Mac-CDP step
+  confirms the `%`. The name lies ("Linen-Blend Pant" = 55% linen / 45% rayon → fails 70%).
