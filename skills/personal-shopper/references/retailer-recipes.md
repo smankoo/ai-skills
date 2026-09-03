@@ -2591,3 +2591,65 @@ explicit cotton/hemp tee/shirt/sweatshirt lines before falling for a piece.
 - No JSON-LD and no Shopify — don't grep for `application/ld+json` or hit `.json`; both are dead.
 - Discovery: `web_search "site:patagonia.ca <keyword>"` returns `/product/<slug>/<id>.html` links
   directly (and snippets often carry the composition prose).
+
+## Unbound Merino — Shopify `.js?currency=CAD` + PDP-HTML `product-tab__details-list`. No bot wall.
+
+Canada-shipping DTC (`unboundmerino.com`), Shopify. **Merino-wool specialist — a top
+natural-fibre source**: 100% merino tees/base layers/sleep sets, merino/linen woven shirts,
+merino trench coats; adult men's + women's, travel/everyday. **NO bot wall from the VPS** — plain
+`urllib`/`curl` work, no exit node, no Mac delegation. Verified 2026-09-02.
+
+**Which rung worked: Shopify JSON (rung 2) + a small PDP-HTML fetch — all VPS-side.**
+- **`/products/<handle>.js?currency=CAD`** is the money endpoint: `price`/`compare_at_price`
+  (in **CENTS**), top-level `available`, and a `variants[]` grid each with `option1`=colour /
+  `option2`=size, `price`, and a real **`available`** boolean → per-colour/per-size stock directly.
+  WARNING: **the store DEFAULTS TO USD** (`Shopify.currency.active == "USD"`, `products.json` shows
+  `"currencyCode":"USD"`). You **MUST append `?currency=CAD`** to the `.js` call or every price
+  comes back in USD. Confirmed: same shirt is `19800` (USD) vs `28000` (CAD) on the same handle.
+- **Composition is NOT in the `.js`/`.json`** (description is marketing prose, no `%`). The exact
+  fibre content lives in the **static PDP HTML** as the first `<li>` under
+  `<ul class="product-tab__details-list">`, e.g. `<li>75% Merino Wool, 25% Linen</li>` or
+  `<li>100% Merino Wool, Jersey</li>`. It's in the raw HTML — `curl` gets it, no accordion click.
+
+```bash
+UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
+# price/stock/variants (CENTS, CAD) — note the ?currency=CAD:
+curl -s -A "$UA" "https://unboundmerino.com/products/<handle>.js?currency=CAD"
+# exact composition (static HTML, first fibre-% <li> under the details list):
+curl -s -A "$UA" -H 'Accept: text/html' "https://unboundmerino.com/products/<handle>" \
+  | tr '\n' ' ' | grep -oiE 'product-tab__details-list"\s*>\s*<li>[^<]*</li>' | head -1
+#   -> product-tab__details-list"> <li>75% Merino Wool, 25% Linen</li>
+```
+
+**Tested extractor:** `scripts/unboundmerino_extract.py` (pure `urllib`, runs on the VPS).
+Verified 2026-09-02 on three live products:
+- `womens-merino-linen-shirt` -> "75% Merino Wool, 25% Linen", natural_pct 100, CAD $280, in stock.
+- `mens-merino-linen-tropical-shirt` -> "75% Merino Wool, 25% Linen", natural_pct 100, CAD $266.
+- `mens-ultrafine-merino-sleep-crew` -> "100% Merino Wool, Jersey", natural_pct 100, CAD $125.
+Output per URL: `{url, handle, title, price_cad, compare_at_cad, on_sale, available,
+composition, natural_pct, image, colors[], sizes[], variants:[{color,size,price_cad,available}],
+any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-09-02)
+| What | Where |
+|---|---|
+| Price / compare-at / stock / variants | `/products/<handle>.js?currency=CAD` (prices in cents; `variants[].available`) |
+| Composition (fibre %) | PDP HTML, first `<li>` under `<ul class="product-tab__details-list">` |
+| Image | `.js` `featured_image` (protocol-relative `//cdn.shopify.com/...` -> prefix `https:`) |
+| Colour / size | `variants[].option1` (colour) / `option2` (size) |
+| Product URL | `https://unboundmerino.com/products/<handle>` |
+
+**Failure modes**
+- **`products.json` 302-redirects to `/`** (Shopify has it disabled here) — use
+  `/products/<handle>.js` / `.json` per product instead. `products.json?limit=N` on the bare host
+  path *does* work for catalog discovery, but the per-collection variant is blocked.
+- **USD-by-default trap** (see above): without `?currency=CAD` on the `.js`, prices are USD. The
+  PDP HTML also embeds `Shopify.currency.active == "USD"` — don't read price off the HTML; use the
+  `.js?currency=CAD`.
+- **Merino/linen and merino/nylon blends: read the %**: a 75/25 merino-linen shirt is natural_pct
+  **100** (linen is natural), but merino socks are typically ~40% nylon for durability -> they
+  FAIL a 70% natural-fibre gate. Always read the `<li>`.
+- Knit descriptors like `Jersey`/`Terry` trail the composition (`100% Merino Wool, Jersey`) and
+  carry no `%` — ignore them when summing.
+- Discovery: `web_search "site:unboundmerino.com <keyword>"` returns `/products/<handle>` links
+  directly.
