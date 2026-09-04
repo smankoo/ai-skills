@@ -2731,3 +2731,63 @@ run-together token `XXSXSSMLXLXXL`). Parse with `scripts/bananarepublic_extract.
 - BR blends heavily (linen-rayon, cotton-modal, "Vegan" faux-leather); since composition doesn't
   render, treat every natural-fibre claim as UNVERIFIED until the Gap loaded-tab/Mac-CDP step
   confirms the `%`. The name lies ("Linen-Blend Pant" = 55% linen / 45% rayon → fails 70%).
+
+## Hatley (CA) — Shopify `.js` (price/stock) + PDP-HTML `<strong>Materials</strong>` composition. No bot wall.
+
+Canada (Montreal brand). Family-wide, natural-fibre-friendly: kids' **100% cotton pajamas**,
+tees and playwear + adult tees/tops and sleepwear (plus the signature rain jackets — those are
+100% polyester, so they FAIL the fibre gate). Fits the household (kids + adults) and is a strong
+cotton source. **NO bot wall from the VPS** — plain `urllib`/`curl` work; no exit node, no Mac
+delegation. It's a **Shopify** store. Domain is **`hatley.com`** (`www.hatley.com` 301→apex).
+Verified 2026-09-03.
+
+**Which rung worked: Shopify JSON (rung 2) + a small PDP-HTML fetch — all VPS-side.**
+- **`/products/<handle>.js`** — money endpoint: `price`/`compare_at_price` (in **CENTS**),
+  top-level `available`, `vendor`/`type`, `featured_image`, and `variants[]` each with
+  `title`=size and a real **`available`** boolean → **per-size stock directly**. Prices are CAD
+  (Canadian store; no `?currency=` needed). Kids' PJs are heavily discounted ($22.50 from $45).
+- **Composition is NOT in the `.js`/`.json`.** It lives in the PDP **HTML** in a
+  **`<strong>Materials</strong><br>TEXT`** block (e.g. `95% Viscose From Bamboo, 5% Spandex`,
+  `100% Cotton`, `100% Polyester, 100% Pu Coating`). It's in the *static* HTML (curl gets it, no
+  accordion click). A sibling `<strong>Fabric &amp; Stretch</strong>` line is marketing prose
+  ("Silky soft bamboo-elastane blend"), NOT a fibre % — anchor on `Materials`, not `Fabric`.
+
+**Discovery:** `/search/suggest.json?q=<terms>&resources%5Btype%5D=product&resources%5Blimit%5D=N`
+→ `resources.results.products[]` with `handle` + `title`. (`web_search "hatley.com <keyword>"` also works.)
+
+```bash
+# price/stock/image/variants (cents), CAD:
+curl -s -A "$UA" "https://hatley.com/products/<handle>.js"
+# exact composition (static HTML — no click needed):
+curl -s -A "$UA" -H 'Accept: text/html' "https://hatley.com/products/<handle>" \
+  | grep -oiE '<strong>\s*Materials\s*</strong>\s*<br[^>]*>[^<]+'   # -> ...Materials</strong><br>100% Cotton
+```
+
+**Tested extractor:** `scripts/hatley_extract.py` (pure `urllib`, runs on the VPS).
+Verified 2026-09-03 on three live products:
+- `essential-crew-neck-tee-white` → "100% Cotton", natural_pct 100, $33.75 (from $45), 5/5 sizes in stock.
+- `boys-trucks-bamboo-pajama-set` → "95% Viscose From Bamboo, 5% Spandex", natural_pct **0** (bamboo=viscose=synthetic), $22.50 (from $45), 4/9 sizes in stock.
+- `girls-colour-reveal-butterflies-microfiber-rain-jacket` → "100% Polyester, 100% Pu Coating", natural_pct 0, $45 (from $75).
+Output per URL: `{url, handle, title, vendor, type, price, compare_at_price, on_sale,
+currency, available, composition, natural_pct, image, sizes:[{size,price,available}], any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-09-03)
+| What | Where |
+|---|---|
+| Price / compare-at / stock / variants | `/products/<handle>.js` (prices in CENTS; `variants[].available`; `title`=size) |
+| Composition (fibre %) | PDP HTML, `<strong>Materials</strong><br>TEXT` (static; e.g. `100% Cotton`) |
+| Image | `.js` `featured_image` (protocol-relative `//cdn.shopify.com/...` → prefix `https:`) |
+| Product URL | `https://hatley.com/products/<handle>` |
+| Discovery | `/search/suggest.json?q=<terms>&resources[type]=product&resources[limit]=N` |
+
+**Failure modes**
+- **"Bamboo" PJs are viscose (regenerated cellulose) → count as SYNTHETIC** per the fibre rule.
+  A "Bamboo Pajama Set" reads 95% Viscose From Bamboo → natural_pct **0**, not 95. The word
+  "bamboo" in the title lies; only the `Materials` % decides. Cotton PJs are the natural-fibre win.
+- **Rain jackets / raincoats are 100% Polyester + PU coating** → always fail a natural-fibre gate,
+  regardless of how iconic the brand is for them. Don't recommend for a fibre-gated run.
+- **Some products have NO structured `Materials` block** — licensed graphic tees and a few PJs
+  give only vague prose ("Crafted from cotton and polyester") with no `%`. The extractor returns
+  `composition=None`/`natural_pct=None`; treat as UNVERIFIED and exclude rather than guess.
+- Kids' sizes are `2Y`…`12Y` (years); adults `XS`…`XL`. Per-size stock varies a lot within a
+  product (mid sizes sell out first) — rely on `variants[].available`, not the top-level flag.
