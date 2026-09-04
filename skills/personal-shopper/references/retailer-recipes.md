@@ -2791,3 +2791,64 @@ currency, available, composition, natural_pct, image, sizes:[{size,price,availab
   `composition=None`/`natural_pct=None`; treat as UNVERIFIED and exclude rather than guess.
 - Kids' sizes are `2Y`…`12Y` (years); adults `XS`…`XL`. Per-size stock varies a lot within a
   product (mid sizes sell out first) — rely on `variants[].available`, not the top-level flag.
+
+## mini mioche (CA) — Shopify `.js` alone (price/stock + composition in prose). No bot wall.
+
+Canada (Toronto), premium DTC — **top natural-fibre source, whole-household**: essentially the
+entire catalog is **100% GOTS-certified organic cotton, made in Canada**, and it sizes newborn →
+baby → toddler → kids (1-14y) → tween → teen → **men + women** (same fabric, same factory as the
+kids line). For a natural-fibre-gated household this is one of the safest stores to shop: the gate
+is effectively always satisfied. Verified 2026-09-04.
+
+**Which rung worked: Shopify JSON (rung 2), pure `urllib`, VPS-side. NO bot wall** — no exit node,
+no Mac delegation, no CDP. Single-material brand, so composition is trivial but still surfaced so
+the rule is *shown* honoured.
+
+- **`/products/<handle>.js`** carries everything: `price`/`compare_at_price` (in **CENTS**),
+  top-level `available`, and a `variants[]` grid with `option1`=colour, `option2`=size, each with
+  `price`, `compare_at_price`, and a real **`available`** boolean → **per-colour/per-size live
+  stock** directly.
+- **Composition is in the `description` HTML prose** (not a `%`-table): e.g. "Crafted in 100%
+  GOTS-certified organic cotton, in Canada" / "100% GOTS-certified organic cotton jersey milled in
+  Canada". The extractor pulls the fibre sentence and, since it's a single-material brand, falls
+  back to `100% GOTS` → `natural_pct 100` when there's no explicit `NN%` fibre token.
+
+```bash
+# price/stock/variants (cents) + composition prose, all in ONE call, VPS-side:
+curl -s -A "$UA" "https://minimioche.com/products/adult-organic-cotton-tshirt.js"
+```
+
+**Tested extractor:** `scripts/minimioche_extract.py` (pure `urllib`, runs on the VPS).
+Verified 2026-09-04 on two live products:
+- `adult-organic-cotton-tshirt` (Cloud Adult Short Sleeve Tee) → 100% organic cotton, natural_pct
+  100, $52.00 CAD, 16 colours × 5 sizes, 55/80 variants in stock.
+- `short-sleeve-tee-organic` (Cloud kids' Short Sleeve Tee) → 100% organic cotton, natural_pct 100,
+  $20.40 CAD (compare $34.00, on sale), 23 colours × 8 age sizes, 150/250 in stock.
+Output per URL: `{handle, title, url, price, compare_at_price, on_sale, available, composition,
+natural_pct, image, colors[], sizes[], variants:[{color,size,price,compare_at,available}],
+any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-09-04)
+| What | Where |
+|---|---|
+| Price / compare-at / stock / variants | `/products/<handle>.js` (CENTS; `variants[].available`) |
+| Composition | `.js` `description` prose ("100% GOTS-certified organic cotton…") |
+| Image | `.js` `featured_image` (protocol-relative `//cdn.shopify.com/...` → prefix `https:`) |
+| Currency confirm | PDP JSON-LD `offers.priceCurrency` = **CAD** (price already CAD) |
+| Product URL | `https://minimioche.com/products/<handle>` |
+| Discovery | `web_search "site:minimioche.com <keyword>"` or `/collections/<slug>/products.json?limit=N` |
+
+**Failure modes**
+- **Prices are already CAD** — unlike Everlane / Naked & Famous / Unbound (which default to USD),
+  mini mioche is CAD-native. The `.js` has NO currency field and `?currency=CAD` is a no-op; the
+  PDP JSON-LD confirms CAD. Don't apply a USD→CAD correction here.
+- **JSON-LD `availability` reflects only the DEFAULT colour**, so a PDP can show `OutOfStock` in
+  the LD block while dozens of other colour/size variants are in stock. Trust `.js`
+  `variants[].available`, NOT the JSON-LD `offers.availability`.
+- **Kids' sizes are age ranges** (`1/2 years`, `3/4 years` … `15/16 years`), NOT cm — derive from
+  the child's measurement against mini mioche's own chart. Adult sizes are `XS`…`XL`.
+- Big products carry many variants (colour × size; e.g. 250) — dedup colours/sizes for display and
+  gate on per-variant `available`, not the top-level flag.
+- Composition parse: the marketing line "automatically save 15% when you buy 5+" contains a `%` —
+  the extractor filters lines with "buy"/"save" so that promo isn't mistaken for fibre content.
+  Multi-buy discount (5+ = 15% off) is worth surfacing when buying ×N.
