@@ -2852,3 +2852,75 @@ any_in_stock}`.
 - Composition parse: the marketing line "automatically save 15% when you buy 5+" contains a `%` —
   the extractor filters lines with "buy"/"save" so that promo isn't mistaken for fibre content.
   Multi-buy discount (5+ = 15% off) is worth surfacing when buying ×N.
+
+## Muttonhead / MTN.HEAD (CA) — Shopify `.js` ALONE (price + per-size stock + composition). No bot wall.
+
+Canada (Toronto), unisex + kids everyday apparel — sweatshirts, tees, sweatpants, hats, plus
+kids/baby. **Strong natural-fibre source**: the house line is heavily 100% (combed/organic) cotton
+(a whole `/collections/cotton` "100% Cotton" collection), and it also carries **Naked & Famous**
+selvedge denim (100% cotton raw, 95/5 cotton/elastane stretch) at CAD list. Made-in-Canada angle,
+fits the whole household (men/women/kids/baby). NO bot wall from the VPS — plain `urllib`. Verified
+2026-09-04.
+
+**Which rung worked: Shopify `/products/<handle>.js` ALONE (rung 2).** A single `.js` fetch carries
+everything the skill needs: `price`/`compare_at_price` (in **CENTS**), top-level `available`,
+per-size `variants[].available` (live stock) + `inventory_quantity`, `featured_image`, AND the fibre
+composition (embedded in the `description` HTML). No PDP-HTML second fetch, no JSON-LD, no API.
+
+**Domain rebrand:** the old `muttonheadstore.com` host **301-redirects to `www.mtnhead.com`**
+(and the `.js` path specifically redirects — a bare `curl` without `-L` returns `301 size:0`). Use
+`www.mtnhead.com` directly, or follow redirects (`urllib` follows by default; `curl -L`).
+
+**Currency:** the `.js` has NO currency field, but the PDP `.json` (`offers.price_currency`) and the
+live page footer both say **CAD** — prices are CAD-native (no USD-to-CAD correction, unlike
+Everlane/Naked&Famous/Unbound direct).
+
+```bash
+# one call has price(cents) + per-size stock + image + composition-in-description:
+curl -sL -A "$UA" "https://www.mtnhead.com/products/<handle>.js"
+```
+
+**Composition parsing — fibre whitelist, NOT a tidy accordion.** Muttonhead puts fibre content in
+the `description` *prose*, mixed with marketing sentences that also contain stray percentages
+("10% of the sales of this item will be donated", "5% stretch for increased comfort"). A naive
+`\d+%` grab pulls that noise. The extractor anchors on a **known-fibre whitelist**: accept
+`NN% <word>` only when `<word>` is a textile fibre (cotton/wool/linen/silk/cashmere/hemp/lyocell
+vs polyester/nylon/spandex/elastane/rayon/viscose), and trims the phrase to the fibre word plus
+one leading modifier ("100% cotton crewneck is designed" -> "100% cotton"). rayon/viscose counted
+synthetic per the skill rule. "cotton equivalent" (selvedge marketing) -> cotton.
+
+**Tested extractor:** `scripts/muttonhead_extract.py` (pure `urllib`, runs on the VPS). Verified
+2026-09-04 on four live products:
+- `work-shirt-trippy-ombre-ivory` (N&F) -> 100% Cotton, natural_pct 100, $397, all 6 sizes in stock.
+- `cabin-crew-oatmeal-outsiders-club-embroidery` (house) -> 100% cotton, natural_pct 100, $152.
+- `easy-guy-black-power-stretch` (N&F) -> 95% Cotton / 5% Elastane, natural_pct 95, $207, sizes 28/29/40/42 OOS.
+- `ringer-tee-heather-grey-blue-jay-embroidery` (house) -> 50% polyester / 37% combed cotton /
+  13% rayon, natural_pct **37** (FAILS a 70% gate — read the %; a house "ringer tee" can be a
+  poly-cotton-rayon tri-blend even when the plain tees are 100% cotton), $58, Small/XL OOS.
+Output per URL: `{url, title, vendor, type, price, compare_at_price, on_sale, currency, available,
+composition, natural_pct, image, sizes[], variants:[{name,price,available,inv_qty}], any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-09-04)
+| What | Where |
+|---|---|
+| Price / compare-at / stock / variants | `/products/<handle>.js` (prices in cents; `variants[].available` + `inventory_quantity`) |
+| Composition (fibre %) | `.js` `description` prose — fibre-whitelist regex (see above) |
+| Image | `.js` `featured_image` (protocol-relative `//cdn.shopify.com/...` -> prefix `https:`) |
+| Currency | CAD (not in `.js`; confirmed via `.json` `offers.price_currency` + page footer) |
+| Vendor split | `.js` `vendor`: `Muttonhead` = house line; `Naked and Famous` = the N&F denim it resells |
+| Product URL | `https://www.mtnhead.com/products/<handle>` |
+| Handles / discovery | `/products.json?limit=N&page=P` (paginated catalogue) or `web_search "site:mtnhead.com <keyword>"` |
+
+**Failure modes**
+- **`muttonheadstore.com` -> `www.mtnhead.com` 301** and the `.js` path itself redirects; without
+  `-L` (curl) you get `301 size:0` and an empty body. `urllib` follows automatically.
+- **Composition is prose, not an accordion** — must use the fibre whitelist or you ingest
+  "10% donated"/"5% stretch" marketing percentages. See parsing note above.
+- **"cotton"-named house tees can still be tri-blends** — the Ringer Tee is 50% poly / 37% cotton /
+  13% rayon (natural_pct 37) despite the plain Classic/Cabin tees being 100% cotton. Always read the
+  actual `%`; don't assume the whole house line clears the gate.
+- **`.js` variant `sku` is often `null`** (house line) — use size `public_title` + `variant id` as
+  the key, not sku. `inventory_quantity` is exposed and reliable (0 == OOS).
+- Naked & Famous items here **duplicate** the `nakedandfamous_extract.py` catalogue — same product,
+  but Muttonhead lists them in CAD directly (N&F's own store defaults to USD). Prefer whichever
+  gives the cleaner CAD price for the household.
