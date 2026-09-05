@@ -2924,3 +2924,66 @@ composition, natural_pct, image, sizes[], variants:[{name,price,available,inv_qt
 - Naked & Famous items here **duplicate** the `nakedandfamous_extract.py` catalogue — same product,
   but Muttonhead lists them in CAD directly (N&F's own store defaults to USD). Prefer whichever
   gives the cleaner CAD price for the household.
+
+## Pact / wearpact.com — undocumented public JSON API (`api2.wearpact.io`). No bot wall.
+
+US (Boulder, CO) organic-cotton DTC brand — ships to Canada. GOTS-certified organic cotton in
+Fair Trade factories across **women / men / kids / baby / home** — a **top natural-fibre source**
+(deep 100%-organic-cotton catalog). No Canadian storefront; prices are **USD** and convert at
+checkout via global-e. Verified 2026-09-05.
+
+**Which rung worked: a clean undocumented public JSON API — rung 1 (no headers, no bot wall, pure
+`urllib` from the VPS).** The `wearpact.com` PDP is a jQuery SSR shell whose price/stock/fabric all
+hydrate client-side; its empty `application/ld+json` block and the static HTML carry **no** price.
+The site bundle (`static.wearpact.io/build/ui/bundle.<ver>.js`) hard-codes the API base
+`https://api2.wearpact.io`. The `wearpact.com/product/*` paths 302-redirect to `/`; you must hit
+`api2.wearpact.io` directly (it needs no Origin/Referer/auth header at all).
+
+**The money endpoint** — one call returns everything, one record **per size** of the requested colour:
+
+```bash
+# <styleCode> = the LAST path segment of any PDP URL, e.g.
+#   /women/apparel/all%20tops/soft-slub%20essential%20crewneck%20tee/wa1-w63-src  ->  wa1-w63-src
+curl -s -H 'Accept: application/json' \
+  'https://api2.wearpact.io/product/search?sku=wa1-w63-src'          # [&country=CA] [&isClearance=true]
+# -> {total, records:[ {title,color,size,fabricContent,fiberContentDetailList,
+#     baseSkuPriceRange{msrp,sale},priceList,inventoryList.E-COMMERCE.quantityAvailable,
+#     imageList[],status,isClearance,gotsCertified,fairTradeCertified,countryOfManufacture,url}, ...]}
+```
+
+**Tested extractor:** `scripts/pact_extract.py` (pure `urllib`, runs on the VPS). Verified
+2026-09-05 on two live styles: `wa1-w63-src` (women's, 100% Organic Cotton, clearance, $13/$34
+USD) and `wa1-mln-blk` (men's, 95% Organic Cotton/5% Elastane, current, $25/$28 USD) — title,
+per-size price + `quantityAvailable`, composition, and image URL all matched the live site; image
+URLs return `image/jpeg`. Output per style: `{style,found,title,color,gender,category,url,
+composition,fibers[],natural_pct,currency,sale_price,msrp,on_sale,status,is_clearance,
+is_final_sale,gots_certified,fair_trade,made_in,image,sizes:[{size,sizeCode,qty_available,
+in_stock,externalId}],any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-09-05)
+| What | Where |
+|---|---|
+| Everything (per-size) | `GET api2.wearpact.io/product/search?sku=<styleCode>` — no headers needed |
+| Composition (fibre %) | record `fabricContent` / `fiberContentDetailList[]` (e.g. `["95% Organic Cotton","5% Elastane"]`) |
+| Price / MSRP | `baseSkuPriceRange.sale.rate.min` + `.msrp.rate.min` (dollars); also `priceList["WEB PRICE"].rate` |
+| Per-size stock | `inventoryList["E-COMMERCE"].quantityAvailable` (0 == OOS) — one record per size |
+| Image | `imageList[]` where not `isThumbnail`/`isSwatch` (`static.wearpact.com/img/product/...`; `_thumb` variant for grids) |
+| Product URL | record `url` -> prefix `https://wearpact.com` |
+| Style code | last segment of the PDP URL (`wa1-w63-src`); `baseSku` is the colour-agnostic `WA1-W63` |
+| Discovery | `GET api2.wearpact.io/product/page?path=/<gender>/apparel/<cat>` returns a `product-grid` block whose nested records carry full PDP URLs (regex the last-segment style codes) |
+
+**Failure modes**
+- **`wearpact.com/products/<style>.json` returns 200 but is the HTML shell**, and
+  `wearpact.com/product/page|search` **302-redirect to `/`**. Don't scrape wearpact.com for data —
+  go straight to `api2.wearpact.io`. The empty `<script application/ld+json>[]</script>` on the PDP
+  is a red herring (hydrated client-side); there's no usable JSON-LD.
+- **Prices are ALWAYS USD.** `&country=CA` only *filters which sizes* show for Canada (it dropped an
+  OOS size in testing) — it does **not** convert currency. Label the cart USD; CA conversion happens
+  at global-e checkout. Same trap as Everlane/Naked&Famous.
+- **`?styleCode=<code>` returned `total:0`** in testing — use `?sku=<styleCode>` (the URL's last
+  segment works as the `sku` value even though it's really the style-colour code).
+- **Elastane is the common gate-breaker, not poly.** Movement/leggings/"Cool Stretch" lines are
+  95% organic cotton / 5% elastane (natural_pct 95 — still clears a 70% gate); some sweaters blend
+  recycled poly/modal. Read `fiberContentDetailList`, don't trust the "organic cotton" in the name.
+- One `imageList` is the requested colourway only; a `baseSku` has separate style codes per colour
+  (e.g. `wa1-mln-blk`, `wa1-mln-wht`) — query each colour's code for its own image/stock.
