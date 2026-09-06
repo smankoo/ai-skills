@@ -2987,3 +2987,63 @@ in_stock,externalId}],any_in_stock}`.
   recycled poly/modal. Read `fiberContentDetailList`, don't trust the "organic cotton" in the name.
 - One `imageList` is the requested colourway only; a `baseSku` has separate style codes per colour
   (e.g. `wa1-mln-blk`, `wa1-mln-wht`) — query each colour's code for its own image/stock.
+
+## Kit and Ace (CA) — Shopify `.js` (CAD price/stock) + PDP "Fabric • Care" accordion (composition). No bot wall.
+
+Canada, premium DTC (Vancouver). **Natural-fibre-friendly**: cotton-cashmere and merino/silk/cashmere
+knits, cotton-modal tees, wool blends — men's + women's. **No bot wall from the VPS** — plain
+`urllib`/`curl` work (no exit node, no Mac delegation). Domain `www.kitandace.com`; it's a Shopify
+store defaulting to **CAD** (`Shopify.country = "CA"`, `product:price:currency = CAD`). Verified 2026-09-05.
+
+**Which rung worked: Shopify JSON (rung 2) + a small static PDP-HTML fetch — all VPS-side.**
+- **Discovery**: `/search/suggest.json?q=<terms>&resources[type]=product&resources[limit]=10` →
+  `resources.results.products[]` with `handle`, `title`, `price` (DOLLARS here, note — unlike `.js`).
+- **`/products/<handle>.js`** = the money endpoint: `price`/`compare_at_price` in **CENTS**, top-level
+  `available`, `featured_image` (protocol-relative `//cdn.shopify.com/...` → prefix `https:`), and
+  `variants[]` each with `option1`=colour / `option2`=size + a real **`available`** boolean →
+  **per-size/per-colour stock directly**.
+- **Composition is NOT in the JSON.** It lives only in the *static* PDP HTML, in the "Fabric • Care"
+  accordion: the first `<div class="accordion_details"><p …>NN% Cotton, NN% Cashmere…</p>`. It's in
+  the raw HTML (curl gets it — no click/JS needed). Grab the first `<p>` under `accordion_details`
+  that contains a `%`.
+
+```bash
+# price/stock/image (cents), CAD:
+curl -s -A "$UA" "https://www.kitandace.com/products/<handle>.js"
+# exact composition (static HTML — no accordion click needed):
+curl -s -A "$UA" -H 'Accept: text/html' "https://www.kitandace.com/products/<handle>" \
+  | grep -oE '<div class="accordion_details">[[:space:]]*<p[^>]*>[^<]*%[^<]*</p>'
+```
+
+**Tested extractor:** `scripts/kitandace_extract.py` (pure `urllib`, runs on the VPS). Verified
+2026-09-05 on three live products:
+- `8372351336644-cotton-cashmere-crewneck` → "87% Cotton, 10% Cashmere, 2% Nylon, 1% Spandex",
+  natural_pct 97, $99.00 (compare $150), 3/6 sizes in stock.
+- `8378999079108-silk-cashmere-cardigan-sweater` → "68% Merino Wool 19% Silk 10% Cashmere 2% Nylon
+  1% Spandex", natural_pct 97, $135.00 (compare $180), 4/6 in stock.
+- `8373739225284-cotton-cashmere-sweater` → same 97% comp, $112.50, all 4 sizes in stock.
+Output per URL: `{handle, url, title, price, compare_at_price, on_sale, currency, available,
+composition, natural_pct, image, colors[], sizes[], variants:[{color,size,price,available}],
+any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-09-05)
+| What | Where |
+|---|---|
+| Price / compare-at / stock / variants / image | `/products/<handle>.js` (prices in CENTS; `variants[].available`) |
+| Composition (fibre %) | PDP HTML, first `<div class="accordion_details"><p>…%…</p>` (the "Fabric • Care" accordion) |
+| Discovery | `/search/suggest.json?q=<terms>&resources[type]=product&resources[limit]=10` (its `price` is in DOLLARS) |
+| Product URL | `https://www.kitandace.com/products/<handle>` |
+| Handle | tail after `/products/`; starts with a numeric id then a slug (e.g. `8372351336644-cotton-cashmere-crewneck`) |
+
+**Failure modes**
+- **`.js` `currency` is `null` and `?currency=USD` is IGNORED** (returns the same cents). Don't try to
+  switch currency via the param. The store is CA-default so treat the cents as **CAD** — confirmed by
+  `product:price:currency` meta and `Shopify.country = "CA"` in the PDP HTML. (Different trap from
+  Everlane/Naked&Famous, whose `.js` is USD.)
+- **`suggest.json` prices are in DOLLARS, but `.js` prices are in CENTS.** Don't mix them — divide
+  the `.js` value by 100, use `suggest.json` only for discovery/handles.
+- **JSON-LD is not usable for price** — there's no `priceCurrency` in the PDP JSON-LD; use the `.js`
+  + the `product:price:*` og meta instead.
+- **A cotton-cashmere/merino knit still carries ~2% Nylon + 1% Spandex** — natural_pct lands ~97, so
+  it clears a 70% gate comfortably, but read the `%` (some "Tech Tricot" / four-way-stretch styles are
+  predominantly synthetic — the store's own `PrimaryFabric::` tags flag those). Don't trust the name.
