@@ -120,6 +120,73 @@ instead of `ca`: `.../ST3/WesternCommon/imagesgoods/<id>/item/goods_<NN>_<id>_3x
 - `x-fr-client-version` drifts over time; if calls start failing, refresh both header values from a
   live network capture.
 
+## DUER (duer.com) — Shopify `.js` (price/stock) + PDP-HTML metafield UL (composition). No bot wall.
+
+Canada, Vancouver performance-apparel DTC (`duer.com`, `/en-ca/` storefront). Whole-household,
+**natural-fibre-friendly**: cotton/lyocell "performance" denim, chinos, tees, woven shirts, plus
+women's and a little kids/youth. ⚠️ the fibre gate bites here — many "denim" styles blend in ~28%
+COOLMAX polyester so they land right AT ~70% cotton; the chino line runs 68% cotton / 30% lyocell
+(98% natural). **Always read the actual %.** **No bot wall from the VPS** — plain `urllib`/`curl`
+work, no exit node, no Mac. Verified 2026-09-06.
+
+**Which rung worked: Shopify JSON (rung 2) + a small PDP-HTML fetch — all VPS-side.**
+- Domain is **`duer.com`** with an `/en-ca/` storefront; `duer.ca` 301-redirects to it. There is
+  no `shopdu.er` vanity host.
+- **`/products/<handle>.js`** is the money endpoint: `price`/`price_min`/`compare_at_price` (in
+  **CENTS**), top-level `available`, and `variants[]` each with `option1`=colour / `option2`=size,
+  `price`, `available` boolean → **per-size stock directly**, plus `featured_image` (protocol-
+  relative `//cdn.shopify.com/...`). The `.js` has **NO `currency` field** — the `/en-ca/` store
+  default is CAD; treat cents as CAD. (Do NOT trust JSON-LD price — it's USD/stale, same trap as
+  the other Shopify recipes here.)
+- **Composition is NOT in the JSON.** It lives in the PDP **static HTML** (curl gets it, no click),
+  inside a `<div class="metafield-rich_text_field"><ul>…</ul></div>` — but there are *several* such
+  divs (fit bullets, wash care). Pick the **first `<ul>` whose `<li>`s start with a fibre `%`**
+  (`<li>68% Cotton</li>`). The parser regexes `<li>\s*(\d{1,3})\s*%\s*([^<]+?)</li>` and keeps the
+  block that yields matches.
+
+```bash
+# price/stock/image (cents, CAD):
+curl -s -A "$UA" "https://duer.com/products/<handle>.js"
+# composition (MUST be the /en-ca/ PDP as text/html):
+curl -s -A "$UA" -H 'Accept: text/html' "https://duer.com/en-ca/products/<handle>" \
+  | grep -oE '<div class="metafield-rich_text_field"><ul>.*?</ul>'   # take the one with <li>NN% ...
+# discover handles from a collection feed (no bot wall):
+curl -s -A "$UA" "https://duer.com/collections/mens-stretch-jeans/products.json?limit=20"  # -> products[].handle
+```
+
+**Tested extractor:** `scripts/duer_extract.py` (pure `urllib`, runs on the VPS). Verified
+2026-09-06 on two live products:
+- `mens-live-lite-athletic-taper-chino-desert-tan` → `68% Cotton, 30% Lyocell, 2% Elastane`,
+  natural_pct **98**, $129.00, in stock.
+- `mens-performance-denim-athletic-taper-heritage-rinse` → `40% Conventional Cotton, 30% Organic
+  Cotton, 28% COOLMAX® All Season EcoMade Polyester, 2% Lycra EcoMade Spandex`, natural_pct **70**
+  (exactly at a 70% gate), $129.00, 27/30 variants in stock.
+Output per URL: `{handle, url, title, price, compare_at_price, on_sale, available, image,
+composition, natural_pct, colors[], sizes[], variants:[{option1,option2,price,available,sku}],
+any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-09-06)
+| What | Where |
+|---|---|
+| Price / compare-at / stock / variants | `/products/<handle>.js` (prices in **cents**, CAD; `variants[].available`) |
+| Composition (fibre %) | PDP HTML, first `<div class="metafield-rich_text_field"><ul>` whose `<li>`s start with `NN%` |
+| Image | `.js` `featured_image` (protocol-relative → prefix `https:`) |
+| Product URL | `https://duer.com/en-ca/products/<handle>` |
+| Handle | tail after `/products/`; discover via `/collections/<c>/products.json` |
+
+**Failure modes**
+- `.js`/`.json` have **no currency field**; the store defaults to CAD on `/en-ca/`. JSON-LD price
+  is **USD** — do not use it (same trap as Naked & Famous / Icebreaker).
+- The PDP has **multiple `metafield-rich_text_field` ULs** — fit description bullets render *before*
+  the fibre block, so grabbing the first UL blindly gives fit copy, not composition. Anchor on the
+  `<li>NN% Fibre</li>` shape.
+- **COOLMAX / "EcoMade Polyester" is synthetic** even when a style is called "denim"; the Performance
+  Denim line is ~70% cotton max (28% Coolmax + 2% Lycra). "Lyocell/Tencel" IS natural (plant-derived).
+  So Performance Denim sits right at a 70% gate, the Live Lite chinos (cotton/lyocell) clear it
+  comfortably — read the %, don't trust the "denim"/"cotton" in the title.
+- Guessed handles 404 (`performance-denim-slim.js` → 404); handles are colour-specific
+  (`...-heritage-rinse`, `...-desert-tan`). Pull real handles from a collection `products.json`.
+
 ## Herschel — Shopify storefront JSON (kids backpacks etc.)
 
 Global; DTC brand. It's a Shopify store, so the standard Shopify JSON endpoints work with **no bot
