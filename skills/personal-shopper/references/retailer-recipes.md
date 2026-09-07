@@ -120,6 +120,79 @@ instead of `ca`: `.../ST3/WesternCommon/imagesgoods/<id>/item/goods_<NN>_<id>_3x
 - `x-fr-client-version` drifts over time; if calls start failing, refresh both header values from a
   live network capture.
 
+## Encircled (encircled.ca) — Shopify `.js` (price/stock) + PDP-HTML "The Fabric" metafield (composition). No bot wall.
+
+Canada (Toronto), sustainable **women's** slow-fashion DTC — TENCEL Modal / organic-cotton /
+linen basics (versatile travel/capsule pieces). **NATURAL-FIBRE TRAP:** the marketing name hides
+the blend. The "TENCEL Modal **Scuba**" styles (e.g. The Comfy line) are only ~**52% TENCEL + 42%
+polyester + 6% spandex** → **FAIL a 70% gate** despite the "TENCEL" in the copy; the jersey / woven
+/ gauze lines are 93–100% TENCEL/organic-cotton (pass). **Always read the actual %.** **No bot wall
+from the VPS** — plain `urllib`/`curl` work, no exit node, no Mac. Verified 2026-09-06.
+
+**Which rung worked: Shopify JSON (rung 2) + a small PDP-HTML fetch — all VPS-side.**
+- Host is **`www.encircled.ca`**; apex `encircled.ca` 301-redirects to it.
+- **`/products/<handle>.js`** is the money endpoint: `price`/`compare_at_price` (in **CENTS**),
+  top-level `available`, `variants[]` each with `option1`=Colour / `option2`=Size + `available`
+  boolean → **per-size stock directly**, plus `featured_image` (protocol-relative `//cdn.shopify…`).
+  The `.js` has **NO `currency` field** — the store default is CAD; treat cents as CAD. (Do NOT
+  trust JSON-LD price — same USD/stale trap as the other Shopify recipes here.)
+- **Composition is NOT in the JSON.** It lives in the PDP **static HTML** (curl gets it, no click),
+  inside a `<div class="metafield-rich_text_field">` under a **"🌿 The Fabric"** heading. Two shapes,
+  sometimes **both on one product (per colourway)**:
+    - leading %:  `<li>52% TENCEL Modal, 42% Polyester, 6% Spandex</li>` (comma-separated, ONE `<li>`)
+    - prose:      `<li>Made from 100% Organic Cotton Double Gauze fabric</li>`
+  The parser scans **every** `metafield-rich_text_field` block, keeps those containing `NN% <fibre>`
+  tokens (fibre-whitelist filter — drops noise like `95% of water`, `295gsm`), and reports the
+  **worst-case (minimum) natural %** across colourways so a mixed product can't sneak past the gate.
+
+```bash
+# price/stock/image (cents, CAD):
+curl -s -A "$UA" "https://www.encircled.ca/products/<handle>.js"
+# composition (PDP as text/html — grab the block under "The Fabric"):
+curl -s -A "$UA" -H 'Accept: text/html' "https://www.encircled.ca/products/<handle>" \
+  | grep -oE '<div class="metafield-rich_text_field">.*?</div>'   # keep the one with <li>NN% Fibre
+# discover handles (no bot wall):
+curl -s -A "$UA" "https://www.encircled.ca/products.json?limit=250"          # -> products[].handle
+curl -s -A "$UA" "https://www.encircled.ca/collections/<c>/products.json"
+```
+
+**Tested extractor:** `scripts/encircled_extract.py` (pure `urllib`, runs on the VPS). Verified
+2026-09-06 on three live products:
+- `the-comfy-barrel-pant` → `52% TENCEL Modal, 42% Polyester, 6% Spandex`, natural **52** (FAILS a
+  70% gate — the "TENCEL Modal Scuba" trap), $182.40 (was $228), all 12 variants in stock.
+- `the-dressy-balloon-pant` → `93% TENCEL™ Modal, 7% Spandex`, natural **93**, $174.40 (was $218),
+  in stock.
+- `the-airy-gauze-relaxed-button-up-shirt` → `100% (Organic) Cotton Double Gauze`, natural **100**,
+  $190.00; per-size stock discriminates (several M/L·XL/XXL colourways `available:false`).
+Output per URL: `{handle, url, title, price, compare_at_price, on_sale, available, currency,
+image, compositions:[{fibres[],note}], natural_pct_worst, colours[], sizes[],
+variants:[{colour,size,price,available,sku}], any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-09-06)
+| What | Where |
+|---|---|
+| Price / compare-at / stock / variants | `/products/<handle>.js` (prices in **cents**, CAD; `variants[].available`, opt1=Colour opt2=Size) |
+| Composition (fibre %) | PDP HTML, `<div class="metafield-rich_text_field">` under "🌿 The Fabric"; `<li>NN% Fibre…` |
+| Image | `.js` `featured_image` (protocol-relative → prefix `https:`) |
+| Product URL | `https://www.encircled.ca/products/<handle>` |
+| Handle | tail after `/products/`; discover via `/products.json` or `/collections/<c>/products.json` |
+
+**Failure modes**
+- `.js`/`.json` have **no currency field**; store default is CAD. JSON-LD price is USD/stale — do
+  not use it (same trap as Naked & Famous / Icebreaker / DUER).
+- The PDP has **several `metafield-rich_text_field` divs** (fit copy, care, sizing) rendering around
+  the fibre block — grabbing the first blindly gives prose, not composition. Filter to blocks whose
+  text contains a `NN% <fibre>` token.
+- The fibre `<li>` is a **single comma-joined string** ("52% TENCEL Modal, 42% Polyester, 6%
+  Spandex"), NOT one `<li>` per fibre like DUER — so split on the `NN%` boundaries, don't assume
+  per-`<li>`. Regex noise (`95% of water`, `295gsm`) is dropped by the fibre-whitelist.
+- **A product can carry two compositions** (different fabric per colourway). Report the minimum
+  natural % so the gate is conservative; the per-block `note`/`fibres` tell you which colours pass.
+- **"TENCEL Modal Scuba" ≠ natural.** Scuba-knit styles blend in ~42% polyester → ~52% natural,
+  below a 70% gate. TENCEL/Lyocell/Modal ARE plant-derived (natural); polyester/spandex are not.
+- Guessed handles 404 (`the-comfy-dress-shirt-2-0` was a `sample-sale-` handle). Pull real handles
+  from `products.json`.
+
 ## DUER (duer.com) — Shopify `.js` (price/stock) + PDP-HTML metafield UL (composition). No bot wall.
 
 Canada, Vancouver performance-apparel DTC (`duer.com`, `/en-ca/` storefront). Whole-household,
