@@ -120,6 +120,68 @@ instead of `ca`: `.../ST3/WesternCommon/imagesgoods/<id>/item/goods_<NN>_<id>_3x
 - `x-fr-client-version` drifts over time; if calls start failing, refresh both header values from a
   live network capture.
 
+## Little & Lively (littleandlively.com) — single Shopify `.js` (price/stock/image + composition in `description`). No bot wall. WHOLE STORE FAILS a 70% gate.
+
+Canada (made in BC), kids + baby + women/men "bamboo" apparel DTC. **NATURAL-FIBRE
+TRAP AT THE STORE LEVEL:** despite the eco/"bamboo" branding, the *entire* catalog
+(verified 2026-09-07, 100/100 products on the first `products.json` page) is one
+fabric — **66% Rayon from Bamboo, 28% Cotton, 6% Spandex**. "Rayon from Bamboo" is
+viscose = **semi-synthetic** (count as synthetic per the viscose rule), so
+natural_pct = **28%** (cotton only) → **every piece FAILS a 70% gate.** Read the %
+and exclude; the "bamboo"/sustainable copy is not a fibre pass. **No bot wall from
+the VPS** — plain `urllib`/`curl`, no exit node, no Mac. Verified 2026-09-07.
+
+**Which rung worked: Shopify JSON (rung 2) — a SINGLE `.js` call has everything.**
+- Host is **`littleandlively.com`** (apex serves directly, 200; the `www.` host
+  301-redirects to apex — opposite of most Shopify recipes here). `.ca` is not it.
+- **`/products/<handle>.js`** carries it all: `price`/`compare_at_price` (**CENTS**),
+  top-level `available`, `variants[]` each with `option1`=Size + `available` boolean
+  → **per-size stock directly**, `featured_image` (protocol-relative `//cdn.shopify…`),
+  AND — unusually — the **fibre composition is inside the `.js` `description` HTML**
+  as an `<li>Fabric - 66% Rayon from Bamboo, 28% Cotton, 6% Spandex</li>`. No separate
+  PDP-HTML fetch needed (contrast Encircled/DUER/Icebreaker where composition lives
+  only in the PDP). The `.js` has **NO `currency` field** — store default is CAD;
+  treat cents as CAD. (JSON-LD price untrusted as usual.)
+
+```bash
+# everything in one call (price cents CAD, per-size stock, image, composition):
+curl -s -A "$UA" "https://littleandlively.com/products/<handle>.js"   # -> .description has "Fabric - ..."
+# discover handles (no bot wall):
+curl -s -A "$UA" "https://littleandlively.com/products.json?limit=250"        # -> products[].handle
+curl -s -A "$UA" "https://littleandlively.com/collections/<c>/products.json"
+```
+
+**Tested extractor:** `scripts/littleandlively_extract.py` (pure `urllib`, runs on
+the VPS). Verified 2026-09-07 on two live products:
+- `youth-bamboo-daphne-dress-autumn-floral` → `66% Rayon from Bamboo, 28% Cotton, 6%
+  Spandex`, natural **28** (FAILS 70% gate), $65.99, all 5 youth sizes in stock.
+- `mens-bamboo-polo-shirt-navy` → same fabric, natural **28**, $69.00, all 7 sizes
+  (XS–3XL) in stock; image is `image/jpeg`.
+Output per URL: `{handle, url, title, price, compare_at_price, on_sale, available,
+currency, image, composition, natural_pct, sizes[], variants:[{size,price,available,
+sku}], any_in_stock}`.
+
+**Selectors / endpoints** (verified 2026-09-07)
+| What | Where |
+|---|---|
+| Price / compare-at / stock / variants | `/products/<handle>.js` (prices in **cents**, CAD; `variants[].available`, opt1=Size) |
+| Composition (fibre %) | **inside the `.js`** — `description` HTML, `<li>Fabric - NN% …</li>` |
+| Image | `.js` `featured_image` (protocol-relative → prefix `https:`) |
+| Product URL | `https://littleandlively.com/products/<handle>` |
+| Handle | tail after `/products/`; discover via `/products.json` or `/collections/<c>/products.json` |
+
+**Failure modes**
+- **This store cannot clear a 70% natural-fibre gate — it's a single-fabric catalog
+  at 28% cotton.** Don't spend a run building a cart from it under a fibre rule; it's
+  useful only to *document* that "bamboo" ≠ natural. If a firm ever wants softness over
+  fibre purity it's fine, but flag it every time.
+- `.js` has **no currency field**; store default is CAD. Don't trust JSON-LD price.
+- Direction of the `www.` redirect is **reversed** vs most Shopify stores here: use the
+  **apex** `littleandlively.com`; `www.littleandlively.com` 301s back to apex.
+- "Rayon from Bamboo" / "Bamboo Viscose" is **semi-synthetic** — the parser deliberately
+  does NOT count `bamboo`/`rayon` toward natural %, even though the fibre word "bamboo"
+  sounds plant-based. Same for modal/viscose. Only cotton/wool/linen/silk/etc. count.
+
 ## Encircled (encircled.ca) — Shopify `.js` (price/stock) + PDP-HTML "The Fabric" metafield (composition). No bot wall.
 
 Canada (Toronto), sustainable **women's** slow-fashion DTC — TENCEL Modal / organic-cotton /
