@@ -3325,3 +3325,50 @@ any_in_stock}`.
 - **A cotton-cashmere/merino knit still carries ~2% Nylon + 1% Spandex** — natural_pct lands ~97, so
   it clears a 70% gate comfortably, but read the `%` (some "Tech Tricot" / four-way-stretch styles are
   predominantly synthetic — the store's own `PrimaryFabric::` tags flag those). Don't trust the name.
+
+## Stanfield's (CA) — Shopify `.js` ALONE (price/stock CAD + composition in description). No bot wall.
+
+Canada (Truro, Nova Scotia; est. 1856) — heritage underwear/base-layer brand: **100% merino
+base layers** (men + women), 95% combed-cotton FLEX underwear multipacks, cotton tees,
+Heritage fleece. Domain **`stanfields.com`**. Strong natural-fibre source, but read the %:
+DRYFX / AIR "performance" lines are synthetic, Heritage fleece is 65/35 cotton-poly, and
+"Modal Cotton" pieces are 48% TENCEL / 48% cotton / 4% spandex. Verified 2026-09-08.
+
+**Which rung worked: plain `urllib` GET (below rung 1) — NO bot wall, no render, no CDP.**
+Everything comes from a **single call** per product:
+
+```python
+import json, re, urllib.request
+h = "mens-pure-merino-base-layer-top"
+d = json.loads(urllib.request.urlopen(
+    urllib.request.Request(f"https://www.stanfields.com/products/{h}.js",
+                           headers={"User-Agent": "Mozilla/5.0"}), timeout=25).read())
+d["price"] / 100          # 120.0 — CENTS, CAD
+[(v["title"], v["available"]) for v in d["variants"]]   # per size/colour stock
+d["featured_image"]       # protocol-relative //cdn.shopify.com/... — prepend https:
+text = re.sub(r"<[^>]+>", " ", d["description"])
+re.findall(r"\d{1,3}\s*%\s*[A-Za-z][A-Za-z\- ]{2,30}", text)  # ['100% Merino Wool']
+```
+
+| Field | Where | Verified |
+|---|---|---|
+| name / price / compare_at | `.js` `title` / `price` (cents) / `compare_at_price` | 2026-09-08 |
+| currency | CAD — single-currency store (`Shopify.currency={"active":"CAD"}` on PDP; JSON-LD `priceCurrency: CAD`) | 2026-09-08 |
+| per-size stock | `.js` `variants[].available` (option1=size, option2=colour) | 2026-09-08 |
+| image | `.js` `featured_image` (protocol-relative; add `https:`) — CDN returns `image/png` clean | 2026-09-08 |
+| composition | `NN% Fibre` runs inside `.js` `description` HTML | 2026-09-08 |
+| handle discovery | `/products.json?limit=250` — open, full catalog | 2026-09-08 |
+
+Tested extractor: `scripts/stanfields_extract.py` (no deps, runs on the VPS; accepts
+handles or full PDP URLs).
+
+**Failure modes / notes**
+- Some handles contain a literal `™` character (e.g. `womens-strong-free™-logo-t-shirt`) —
+  URL-encode or pass through as-is with urllib (it percent-encodes); don't strip it or the
+  handle 404s.
+- `description` HTML sometimes carries pasted Google-Sheets markup (`data-sheets-*`); strip
+  ALL tags before the fibre regex or you match attribute junk.
+- Composition regex must stop before care text ("Machine wash…") — anchor on the next `%`,
+  comma, or `Care/Wash/Machine`.
+- PDP itself is also un-walled (curl 200) if JSON-LD is ever needed; but the `.js` alone is
+  sufficient — prefer it.
