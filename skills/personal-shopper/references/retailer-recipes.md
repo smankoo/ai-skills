@@ -120,6 +120,82 @@ instead of `ca`: `.../ST3/WesternCommon/imagesgoods/<id>/item/goods_<NN>_<id>_3x
 - `x-fr-client-version` drifts over time; if calls start failing, refresh both header values from a
   live network capture.
 
+## Boden (us.boden.com) — headless Shopify `.js` (price/stock/image) + PDP-HTML "Composition" bullets. No bot wall. ⚠️ PRICES ARE USD; discover handles from the SITEMAP not products.json.
+
+UK heritage brand, US storefront (`us.boden.com`) that **ships to Canada** — whole household
+(women, men, boys, girls, baby). Strong natural-fibre lines: cotton cords/shirts/tees, merino &
+lambswool knits, linen, velvet. But it also carries plenty of recycled-polyester dresses/knits
+that FAIL a fibre gate — **always read the Composition, not the fabric word in the title.** **No
+bot wall from the VPS** — plain `urllib`/`curl`, no exit node, no Mac. Verified 2026-09-07.
+
+**Which rung worked: Shopify JSON (rung 2) + a small PDP-HTML fetch — all VPS-side.**
+- Host is **`us.boden.com`** (the US Shopify storefront). `www.boden.com`/`global.boden.com` are
+  separate stores in GBP/local currency; there is **no `ca.boden.com`** (DNS fails). us.boden.com
+  is **USD-locked**: `cart.js` currency = `USD`, PDP `"currencyCode":"USD"`, and **`?currency=CAD`
+  is IGNORED** (still returns USD cents). Boden ships to Canada and converts at Global-e checkout —
+  so report prices as **USD** and say so, like Everlane / Pact.
+- **`/products/<handle>.js`** carries price (`price`/`compare_at_price` in **CENTS, USD**),
+  top-level `available`, `variants[]` each with `available` boolean → **per-size stock directly**,
+  and `featured_image` (protocol-relative `//cdn.shopify…`). The `.js` `currency` field is **null**
+  — hard-code USD. Composition is **NOT** in the `.js`.
+- **Composition lives in the PDP static HTML** (curl gets it, no click): under an
+  `<h3 …>Composition</h3>` immediately followed by `<ul class="product-bullet-groups__list">` with
+  one `<li>` per fabric part, e.g. `<li>Main: 100% cotton</li><li>Rib: 75% cotton, 20% polyester,
+  5% elastane</li>`. Parse **every** part and gate on the **worst-case (minimum) natural %** so a
+  mixed garment can't pass on its "Main" line alone.
+
+```bash
+# price/stock/image (cents, USD):
+curl -s -A "$UA" "https://us.boden.com/products/<handle>.js"
+# composition (PDP as text/html — the <ul> right after the Composition <h3>):
+curl -s -A "$UA" "https://us.boden.com/products/<handle>" \
+  | grep -oE 'Composition</h3>\s*<ul[^>]*>.*?</ul>'      # <li>Main: 100% cotton</li> ...
+# discover LIVE handles — MUST use the sitemap, NOT products.json (see failure modes):
+curl -s -A "$UA" "https://us.boden.com/sitemap.xml"                       # -> sitemap_products_N.xml?from=..&to=..
+curl -s -A "$UA" "https://us.boden.com/sitemap_products_36.xml?from=<lo>&to=<hi>"   # -> <loc>.../products/<handle></loc>
+```
+
+**Tested extractor:** `scripts/boden_extract.py` (pure `urllib`, runs on the VPS). Verified
+2026-09-07 on two live products:
+- `boys-cosy-mid-weight-t-shirt-blue-aura-sweet-cherry-b3091bbl` → `Main: 100% cotton` / `Rib: 75%
+  cotton, 20% polyester, 5% elastane`, natural_pct_worst **75** (PASSES a 70% gate), $39.00 USD,
+  all 12 kid sizes (2-3y–13-14y) in stock, real `image/jpeg`.
+- `women-drape-jersey-crepe-maxi-dress-black-d1806blk` → `Main: 94% recycled polyester, 6%
+  elastane` / lining `100% recycled polyester`, natural_pct_worst **0** (FAILS the gate despite
+  "crepe" styling), $199.00 USD, per-size stock discriminates (several P/R fits `available:false`).
+Output per URL: `{handle, url, title, price_usd, compare_at_usd, on_sale, currency, available,
+image, sizes[], variants:[{size,price_usd,available,sku}], any_in_stock, composition[],
+natural_pct_worst, composition_detail[]}`.
+
+**Selectors / endpoints** (verified 2026-09-07)
+| What | Where |
+|---|---|
+| Price / compare-at / stock / variants | `/products/<handle>.js` (prices in **cents**, **USD**; `variants[].available`) |
+| Composition (fibre %) | PDP HTML, `<ul class="product-bullet-groups__list">` right after `<h3>Composition</h3>`; one `<li>` per part |
+| Image | `.js` `featured_image` (protocol-relative → prefix `https:`) |
+| Product URL | `https://us.boden.com/products/<handle>` |
+| Handle | tail after `/products/`; discover via the **sitemap** (see below), NOT products.json |
+
+**Failure modes**
+- **`/products.json` lists STALE handles that 404 on the storefront.** The public products.json
+  feed returned handles like `women-...-r1026grn` and `women-the-new-sienna-cotton-shirt-...` whose
+  `/products/<handle>`, `.js`, and `.json` all 404 (soft-404: HTML body returns 200-sized page but
+  `.js`/`.json` give real 404, and the PDP canonical is `/404`). Discover **live** handles from
+  `sitemap.xml` → `sitemap_products_N.xml` instead — those load clean.
+- **`sitemap_products_N.xml` needs the `?from=..&to=..` query params** copied verbatim from the
+  parent `sitemap.xml`; a bare `sitemap_products_N.xml` returns HTTP 400.
+- **Prices are USD, not CAD.** No CA storefront exists; `?currency=CAD` is ignored. Same USD trap as
+  Everlane / Pact — say "USD" in the cart and note Global-e converts at checkout.
+- The `.js` `currency` field is **null** — don't read currency from it; it's USD by store default.
+- **The fabric word in the title lies.** "Crepe"/"velvet"/"cord" dresses are frequently 94–100%
+  recycled polyester; only the Composition bullets tell the truth. Recycled polyester is still
+  synthetic → 0 natural.
+- Composition has **multiple parts** (Main / Rib / Lining / Trim). Gate on the **minimum** across
+  parts, not the Main line, so a cotton shell with a poly lining doesn't sneak through.
+- Size dimension: dresses/trousers encode fit (Petite/Regular/Long) as a separate variant axis, so
+  the same numeric size appears 2–3× in `variants[]` (one per length). `sizes[]` dedupes the number;
+  if length matters, read it from the SKU suffix (`…4P`/`…4R`/`…4L`).
+
 ## Little & Lively (littleandlively.com) — single Shopify `.js` (price/stock/image + composition in `description`). No bot wall. WHOLE STORE FAILS a 70% gate.
 
 Canada (made in BC), kids + baby + women/men "bamboo" apparel DTC. **NATURAL-FIBRE
