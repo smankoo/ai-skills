@@ -3372,3 +3372,59 @@ handles or full PDP URLs).
   comma, or `Care/Wash/Machine`.
 - PDP itself is also un-walled (curl 200) if JSON-LD is ever needed; but the `.js` alone is
   sufficient — prefer it.
+
+## RW&CO (CA) — Shopify `.js` (price/stock CENTS CAD) + PDP-HTML "Materials" accordion (composition). No bot wall.
+
+Canada (Montréal; a **Reitmans (Canada) Limited** banner, same family as Reitmans) — polished
+workwear/smart-casual for **women AND men**: suits, blazers, dress pants, dress shirts,
+knits, dresses, accessories. Domain **`www.rw-co.com`** (Shopify since ~2025; the old
+rw-co.com custom stack is gone). Mixed fibre story: real 100% cotton/linen/merino pieces
+exist, but many "Wool-Blend" suit separates are poly-majority (e.g. 57% poly / 19% viscose /
+18% wool) — **read the %, the name lies**. Verified 2026-09-09.
+
+**Which rung worked: plain `urllib` GET — NO bot wall, no render, no CDP.**
+Two calls per product:
+
+```python
+import json, re, urllib.request
+UA = {"User-Agent": "Mozilla/5.0"}
+h = "knit-cotton-cardigan-with-elbow-patches-496861"
+
+# 1. price / per-variant stock / image
+d = json.loads(urllib.request.urlopen(urllib.request.Request(
+    f"https://www.rw-co.com/products/{h}.js", headers=UA), timeout=30).read())
+d["price"] / 100                                # 49.95 — CENTS, CAD (no currency field; CA-only store)
+[(v["title"], v["available"]) for v in d["variants"]]   # option1=colour, option2=size
+d["featured_image"]                             # protocol-relative //cdn.shopify.com/... — prepend https:
+
+# 2. composition — static "Materials" accordion in the PDP HTML (~1.3 MB page)
+html = urllib.request.urlopen(urllib.request.Request(
+    f"https://www.rw-co.com/products/{h}", headers=UA), timeout=30).read().decode()
+i = html.find("Materials"); j = html.find("</summary>", i)
+txt = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html[j:j+3000])).strip()
+txt.split("Care Instructions")[0].strip()       # '100% Cotton'
+```
+
+| Field | Where | Verified |
+|---|---|---|
+| name / vendor / price / compare_at | `.js` `title` / `vendor` ("R.W. & Co.") / `price` (cents) / `compare_at_price` | 2026-09-09 |
+| currency | CAD — CA-only store, `.js` has no currency field; hard-code CAD | 2026-09-09 |
+| per-variant stock | `.js` `variants[].available` (colour / size) | 2026-09-09 |
+| image | `.js` `featured_image` (protocol-relative; add `https:`) | 2026-09-09 |
+| composition | PDP HTML static `pvt-accordion` — text after the `</summary>` following "Materials", ends at "Care Instructions" | 2026-09-09 |
+| handle discovery | `/products.json?limit=250` — open, full catalog; also `/search/suggest.json` | 2026-09-09 |
+
+Tested extractor: `scripts/rwco_extract.py` (no deps, runs on the VPS; computes
+`natural_fibre_pct` with viscose/rayon counted synthetic).
+
+**Failure modes / notes**
+- Composition is **NOT in `.js`** — `description` only teases ("contains 18% wool") — and the
+  PDP JSON-LD blocks are **Organization/navigation only, no Product block**. The Materials
+  accordion is the only complete source; it IS static server-rendered HTML (no XHR needed —
+  `web_extract` unnecessary, plain GET suffices).
+- The word "Materials" can appear more than once; loop occurrences until the extracted text
+  contains a `NN%` run (see extractor).
+- robots.txt carries Shopify's agent policy: scraping product data for a human-reviewed cart
+  is within the personal-shopper pattern (no automated checkout — checkouts stay human).
+- Deep-discount clearance behaves as everywhere: most variants `available: false` — check the
+  exact size, per the global rule.
