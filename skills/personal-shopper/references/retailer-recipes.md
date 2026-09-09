@@ -3428,3 +3428,55 @@ Tested extractor: `scripts/rwco_extract.py` (no deps, runs on the VPS; computes
   is within the personal-shopper pattern (no automated checkout — checkouts stay human).
 - Deep-discount clearance behaves as everywhere: most variants `available: false` — check the
   exact size, per the global rule.
+
+## Canadian Tire (CA) — CDP Network-intercept of the app's own product XHR (same Nucleus stack as Mark's / Sport Chek)
+
+Canada, general merchandise (home, seasonal, sports, auto, kitchen) — the household's Triangle
+store; YNAB-confirmed. Domain `www.canadiantire.ca` (`/en/pdp/<slug>-<id>p.html`). Same
+**Canadian Tire / FGL "Nucleus"** platform as Mark's and Sport Chek — the whole recipe is
+Mark's with two substitutions: `baseStoreId=CTR` and product ids ending in **`p`** (Mark's
+uses `f`). Verified 2026-09-09.
+
+**Which rung worked: CDP windowed Chrome on the Mac — rung 3, NETWORK INTERCEPTION, not fetch replay.**
+From the VPS everything is Akamai hard-403 (curl on root/PDP/API); `web_extract` renders only
+the page shell — the PDP hydrates from XHR. The render leaks the APIM `subscription-key`, but
+replaying the API with it still 403s the VPS and 401/400s a page-context fetch (same as Mark's).
+Only `Network.enable` + `Network.getResponseBody` interception gets the real 200 bodies.
+
+**The two money XHRs the PDP fires (both same-origin `www.canadiantire.ca`):**
+- `GET /api/v1/product/api/v2/product/productFamily/<id>?baseStoreId=CTR&lang=en_CA&storeId=<n>&light=true`
+  → `name`, `brand.label`, `images[].url`, `skus[]` (with `specifications[]` + `optionIds[]`;
+  fabric specs exist for apparel-type items, empty for general merch).
+- `GET /api/v1/product/api/v2/product/sku/PriceAvailability?lang=en_CA&storeId=<n>&cache=true&pCode=<id>&isLoyaltyUser=false`
+  → `skus[]` each: `currentPrice.value`, `originalPrice.value`, `isOnSale`,
+  `fulfillment.availability.Corporate.Quantity` (live DC stock).
+
+Join on sku `code`. `<id>` = tail of the PDP URL, regex `-([0-9]+p)\.html`. `storeId` is set by
+the site from geo (e.g. 143) — irrelevant to Corporate quantity. A third useful call,
+`content.syndigo.com/page/<uuid>/<id>.json`, carries rich marketing copy (not needed for carts).
+
+**Tested extractor:** `scripts/canadiantire_extract.py` (base64-ship to the Mac; same CDP venv +
+windowed-Chrome launch as `marks`/`sportchek`). Verified 2026-09-09 on two live PDPs:
+- `1422111p` Thermos 354-mL bottle → $19.99, 2 colour skus, both `Corporate.Quantity 0` (OOS —
+  matches the live page's unavailable state).
+- `0528033p` NOMA 20-ft battery string lights → **$9.43 on sale from $13.99, qty 744, in stock**.
+Image URL verified `image/jpeg` 430 KB, no hotlink block.
+
+**Selectors / endpoints** (verified 2026-09-09)
+| What | Where |
+|---|---|
+| Name / brand / images / skus | `productFamily/<id>?baseStoreId=CTR` → `name`, `brand.label`, `images[].url`, `skus[]` |
+| Price / sale / live stock | `PriceAvailability?pCode=<id>` → `currentPrice.value`, `originalPrice.value`, `isOnSale`, `fulfillment.availability.Corporate.Quantity` |
+| Colour of a sku | `optionIds[]` `COLOUR_MULTY_CD_<Colour>` (note the extra `MULTY_CD_` vs Mark's plain `COLOUR_`) |
+| Product id | tail of PDP URL: `-([0-9]+p)\.html` |
+| Find candidates | `web_search "site:canadiantire.ca/en/pdp <brand> <keyword>"` (snippets carry the PDP URL) |
+
+**Failure modes**
+- VPS Akamai hard-403 on every transport, not intermittent — go straight to Mac CDP.
+- Do **not** replay the XHR with `fetch()` even with the leaked `subscription-key` — the app
+  injects an extra header; interception is the only reliable rung (identical to Mark's).
+- `optionIds` colour values are double-prefixed (`COLOUR_MULTY_CD_Pink`) — strip both prefixes
+  for display.
+- A `productFamilyList` cross-sell XHR also fires — the extractor filters it out (`"List" not in url`).
+- Sale price + huge qty (NOMA lights) is a genuine clearance-in-stock; sale price + qty 0
+  (Thermos) is the everywhere-rule sold-out clearance — always gate on `Quantity`.
