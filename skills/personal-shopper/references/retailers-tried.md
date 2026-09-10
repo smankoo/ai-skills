@@ -25,7 +25,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Gap CA | CA | `/browse/product.do` HTML, per-size `--unavailable` label | done | yes | 2026-08-04 |
 | Old Navy CA | CA | Same Gap platform; constructor.io search; `pdp-dimension-instock` | done | yes | 2026-08-08 |
 | Joe Fresh | CA | PDP SSR embeds `sizes[]` with `disabled:false` | done | yes | 2026-08-08 |
-| H&M CA | CA | Cloudflare (same class as Simons) — Mac delegation only | blocked | note | 2026-08-08 |
+| H&M CA | CA | RE-CRACKED VPS-side: Rendered-DOM via `web_extract` + `hm_extract.py` (title/price CAD/**composition**/art-no/colour/image). NO JSON-LD/API (all JSON services curl-403). ⚠️ Akamai rate-limits crawler: ONE PDP per call, space ≥5–10 min; per-size stock not in render (walled XHR → Mac CDP) | partial | yes | 2026-09-09 |
 | Aritzia | CA | Cloudflare (same class as Simons) — Mac delegation only | blocked | note | 2026-08-08 |
 | Costco.ca | CA | Press-and-Hold interactive challenge; deep product URLs sometimes clear | blocked | note | 2026-08-12 |
 | Wayfair.ca | CA | Press-and-Hold; CDP windowed Chrome on Mac works for product pages | partial | note | 2026-08-12 |

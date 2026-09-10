@@ -3480,3 +3480,49 @@ Image URL verified `image/jpeg` 430 KB, no hotlink block.
 - A `productFamilyList` cross-sell XHR also fires — the extractor filters it out (`"List" not in url`).
 - Sale price + huge qty (NOMA lights) is a genuine clearance-in-stock; sale price + qty 0
   (Thermos) is the everywhere-rule sold-out clearance — always gate on `Quantity`.
+
+## H&M CA — web_extract renders the PDP clean, but ONE page at a time (Akamai rate-limits the crawler)
+
+Canada, fast-fashion value; whole household (women/men/kids/baby/home). Previously logged as
+`blocked` (2026-08-08, pre-browser-backend); RE-CRACKED 2026-09-09 VPS-side with `web_extract`.
+
+**Method (rung 4 — rendered DOM):** the PDP markdown from `web_extract` carries everything except
+per-size stock: title, price CAD, **full fibre composition** ("### Composition" bullet under
+Materials — e.g. `Cotton 97%, Elastane 3%`), Art. No., colour ("Description:"), fit, concept
+(BASICS), description, and the `image.hm.com` hero image. Parse with
+`scripts/hm_extract.py <render.md>` (tested on 2 live PDPs 2026-09-09; prices matched live pages).
+
+- PDP URL shape: `https://www2.hm.com/en_ca/productpage.<10-digit>.html`
+  (first 7 digits = article, last 3 = colourway). Find candidates via
+  `web_search "site:www2.hm.com en_ca productpage <keywords>"`.
+- Composition order is **fibre THEN percent** (`Cotton 97%`), reversed vs most sites.
+  Multi-part garments list `Shell:`/`Lining:` parts.
+
+```bash
+# 1) web_extract(urls=["https://www2.hm.com/en_ca/productpage.1232901003.html"])  # ONE url only
+# 2) save markdown -> render.md
+python3 scripts/hm_extract.py render.md
+# -> {"title":"Fitted Cotton T-shirt","price":14.99,"composition":"Cotton 97%, Elastane 3%",
+#     "natural_pct":97.0,"passes_70_gate":true,"art_no":"1232901003","image":"https://image.hm.com/..."}
+```
+
+**Selectors / fields** (verified 2026-09-09)
+| What | Where in render |
+|---|---|
+| Title | first `# <h1>` line |
+| Price (CAD) | first standalone `$NN.NN` line |
+| Composition | bullet after `### Composition` |
+| Art. No. / colour / fit | `Art. No.:` / `Description:` / `Fit:` lines |
+| Image | `https://image.hm.com/assets/hm/...jpg?imwidth=2160` |
+
+**Failure modes**
+- **Akamai rate-limits the crawler hard.** First cold render works; a second request within
+  ~1–2 min returns "Akamai block (Reference #)", and the block persists — 90 s and 240 s waits
+  were still blocked; ~7 min later it rendered clean again. NEVER batch two H&M URLs in one
+  `web_extract` call (the 2nd always trips it). Space H&M fetches ≥5–10 min apart and cache
+  the markdown immediately.
+- Plain curl is 403 on everything: PDPs, `hmwebservices/service/product/ca/availability/<art7>.json`,
+  `/en_ca/getAvailability?variants=` — the old JSON service endpoints are dead ends from the VPS.
+- No JSON-LD, no Shopify layer. Per-size stock loads from a walled XHR after size click →
+  unknown in the render; "Add to bag" present only proves the default variant is orderable.
+  Verify sizes via Mac CDP before recommending a specific size.
