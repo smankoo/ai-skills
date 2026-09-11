@@ -3526,3 +3526,57 @@ python3 scripts/hm_extract.py render.md
 - No JSON-LD, no Shopify layer. Per-size stock loads from a walled XHR after size click →
   unknown in the render; "Add to bag" present only proves the default variant is orderable.
   Verify sizes via Mac CDP before recommending a specific size.
+
+## L.L.Bean Canada (llbean.ca) — SFCC `Product-Variation` JSON controller: price + LIVE NUMERIC STOCK, pure urllib, no bot wall
+
+Canada, mid-market heritage outdoor/casual — whole household (men/women/kids), heavy 100%-cotton
+flannel/chamois/tees and 100%-merino/ragg-wool knits: a strong natural-fibre source. Salesforce
+Commerce Cloud (Demandware), site id `Sites-llbeancanada-Site`. **NO bot wall** — plain `urllib`/curl
+from the VPS gets both the PDP HTML and the storefront JSON. Verified 2026-09-11.
+
+**The gold path is the storefront's own variation controller** — one GET returns everything as JSON:
+
+```python
+# Ran and worked, 2026-09-11 (pids 42272, 124345, 1000292475):
+import json, urllib.request
+u = ("https://www.llbean.ca/on/demandware.store/Sites-llbeancanada-Site/default/"
+     "Product-Variation?pid=42272&quantity=1")
+p = json.load(urllib.request.urlopen(urllib.request.Request(
+        u, headers={"User-Agent": "Mozilla/5.0"})))["product"]
+p["productName"]                       # "Men's Scotch Plaid Flannel Shirt, Traditional Fit"
+p["price"]["sales"]                    # {"value": 99.95, "currency": "CAD", ...}
+p["availability"]                      # {"messages": ["In Stock"], "stockLevel": 1761, ...}  ← LIVE units
+p["variationAttributes"]               # color / customcut (Regular|Tall|Petite|Plus) / size,
+                                       #   each value: displayValue, selectable (false = sold out), url
+p["images"]["large"][0]["url"]         # https://cdni.llbean.net/is/image/wim/…  (200 image/jpeg, no hotlink block)
+p["longDescription"]                   # prose incl. composition, e.g. "…Portuguese flannel in 100% cotton"
+```
+
+**Endpoints/selectors** (verified 2026-09-11)
+| What | Where |
+|---|---|
+| PDP URL / pid | `https://www.llbean.ca/llb/shop/<pid>.html` — pid is the number in the path |
+| Everything (JSON) | `GET /on/demandware.store/Sites-llbeancanada-Site/default/Product-Variation?pid=<pid>&quantity=1` |
+| Per-variant live stock | Same endpoint with full `dwvar_…` selection → `availability.stockLevel` (integer units) |
+| Sold-out variant | `variationAttributes[].values[].selectable == false` |
+| Composition (fallback) | PDP HTML "Fabric &amp; Care" collapsible → `<li class="list-element">` items (static, no click needed) |
+| JSON-LD (fallback) | PDP has ONE `application/ld+json` `Product` block: name/sku/image[]/offers CAD price+availability (no composition, no per-size) |
+| Image CDN | `cdni.llbean.net/is/image/wim/<imageset>_<colorid>_41` |
+
+**Failure modes**
+- **Do NOT construct `dwvar_<pid>_…` params from the display pid.** The dwvar prefix uses an
+  *internal master pid* that often differs (display `1000292475` → `dwvar_5799541_color`). Guessing
+  it → HTTP 500. Instead follow the ready-made `url` on each `variationAttributes[].values[]` entry,
+  selecting one attribute per hop (color → customcut → size).
+- `stockLevel` only populates once a FULL variant (color+cut+size) is selected; a partial selection
+  returns `stockLevel: null` with `messages:["In Stock"]` — that's product-level, not size-level.
+- On some products even a full selection returns `stockLevel: null` while `available: true`
+  (seen on 1000292475) — treat `available` + per-value `selectable` as the stock truth then.
+- `readyToOrder: false` on the bare-pid call is normal (nothing selected yet), not an error.
+- Composition regex on `longDescription` can grab marketing prose ("100% responsibly sourced Merino
+  wool is incredibly soft…") — trim to the fibre phrase, or read the Fabric & Care `<li>`s.
+- Prices are CAD throughout (`price.sales.currency: "CAD"`).
+
+Tested extractor: `scripts/llbean_extract.py <pid|PDP-url> [size=M] [color=…]` — auto-selects the
+first selectable variant, emits one JSON line per product (name/price/stock_level/composition/
+image/colors/cuts/sizes with per-value selectable flags).
