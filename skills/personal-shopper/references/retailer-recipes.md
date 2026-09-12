@@ -3580,3 +3580,61 @@ p["longDescription"]                   # prose incl. composition, e.g. "…Portu
 Tested extractor: `scripts/llbean_extract.py <pid|PDP-url> [size=M] [color=…]` — auto-selects the
 first selectable variant, emits one JSON line per product (name/price/stock_level/composition/
 image/colors/cuts/sizes with per-value selectable flags).
+
+## Eddie Bauer (CA) — Shopify `.js` (price/stock/image, CAD on `/en-ca/`) + PDP "materials" accordion (composition). No bot wall.
+
+Outdoor/casual heritage brand, adult men + women (flannels, chamois, down, jeans, sleepwear).
+**Strong natural-fibre pockets**: Eddie's Favorite flannels, tees and knit button-ups are 100%
+cotton; but the technical lines (parkas, fleece, rain) are 100% polyester — read the %.
+**NO bot wall from the VPS** — plain `urllib`/`curl`, no exit node, no Mac. Verified 2026-09-11.
+
+**Domain trap**: `eddiebauer.ca` 301s to **`www.eddiebauer.com/en-ca`** — the `/en-ca/` prefix
+IS the CAD storefront (shop `4gqgby-g9.myshopify.com`). PDP HTML confirms
+`Shopify.currency.active == "CAD"` on `/en-ca/`, so the `.js` cents are CAD as-is (no
+`?currency=` needed, unlike Unbound Merino).
+
+**Which rung worked: Shopify JSON (rung 2) + static PDP HTML — all VPS-side.**
+- **`/en-ca/products/<handle>.js`**: `title`, `price`/`compare_at_price` (**CENTS, CAD**),
+  `featured_image`, and `variants[]` each with a 3-part `title` (`Colour / Fit / Size` — note the
+  middle **Fit** axis: Regular/Tall) and a real `available` boolean → per-variant stock.
+- **Composition is NOT in `.js`** (description is prose; sometimes mentions "100% cotton" in
+  passing but not reliably). Authoritative fibre content is in the **static PDP HTML** inside a
+  collapsed-but-present "materials" accordion:
+  `<div id="acc-…-materials" class="accordion__content">…<ul><li>100% cotton</li>…`.
+  The first `<li>`s are fibre lines; care instructions follow in later `<li>`s — filter with a
+  fibre-% regex.
+- **Discovery**: `/en-ca/products.json?limit=250&page=N` is open (no auth) — full catalog with
+  handles + `body_html`. Handles carry style codes (`…-eb001543m`, `m`=men/`w`=women).
+
+```bash
+UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+# price/stock/image (cents, CAD):
+curl -s -A "$UA" "https://www.eddiebauer.com/en-ca/products/<handle>.js"
+# composition (static HTML, "materials" accordion):
+curl -s -A "$UA" "https://www.eddiebauer.com/en-ca/products/<handle>" \
+  | tr '\n' ' ' | grep -oE 'id="acc-[^"]*-materials".{0,800}' | grep -oE '<li>[^<]*%[^<]*</li>'
+# catalog discovery:
+curl -s -A "$UA" "https://www.eddiebauer.com/en-ca/products.json?limit=250&page=1"
+```
+
+**Tested extractor:** `scripts/eddiebauer_extract.py <handle> […]` (pure `urllib`, VPS-side).
+Verified 2026-09-11 on three live products:
+- `ls-eddie-bauers-favorite-flannel-classic-eb001543m` → "100% cotton", CAD $145, 198/198 variants in stock.
+- `boundary-pass-down-parka-eb000654m` → "100% polyester" shell (fails fibre gate), CAD $410.
+- `mens-ss-baja-no-pocket-shirt-11602185` → "100% cotton", **$63 was $120** (compare_at works), 5/6 sizes (XXXL OOS caught).
+
+**Selectors / endpoints** (verified 2026-09-11)
+| What | Where |
+|---|---|
+| Price / compare-at / stock / image | `/en-ca/products/<handle>.js` (cents, CAD; `variants[].available`) |
+| Composition | PDP HTML: `div[id$="-materials"] .accordion__body ul li` (fibre-% lines) |
+| Variant axes | `variants[].title` = `Colour / Fit / Size` (Fit = Regular/Tall) |
+| Catalog discovery | `/en-ca/products.json?limit=250&page=N` |
+| PDP JSON-LD | `ProductGroup` with per-variant `hasVariant[].offers` also present (alt path) |
+
+**Failure modes**
+- Old-style collection URLs (`/en-ca/collections/mens-flannel-shirts`) can 404 — discover via
+  `products.json` or `web_search site:eddiebauer.com/en-ca` instead of guessing collection slugs.
+- Down outerwear lists shell fibre only (`100% polyester`) — down fill % isn't in the accordion;
+  the technical lines fail a 70% natural-fibre gate regardless.
+- Bare `.com` paths (no `/en-ca/`) serve the US/USD storefront — always keep the prefix.
