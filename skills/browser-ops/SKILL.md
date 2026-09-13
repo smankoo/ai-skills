@@ -52,6 +52,9 @@ Fill via `fill_input(selector, value)` in the same browser_exec call the secret 
 
 - **Harness daemon can hang** on CAPTCHA iframes (raw `cdp('Input.dispatchMouseEvent')` timed out & wedged it). Symptoms: every browser_exec call times out. Fix: `pgrep -af browser_harness.daemon` → kill it → rm `~/.config/browser-harness/runtime/bu-default.{pid,sock}` → next browser_exec respawns it. Chrome itself survives.
 - Use the harness `click_at_xy` helper, NOT raw Input.dispatchMouseEvent CDP calls.
+- After a daemon restart it may bind to the WRONG TAB (not your working one) — often fastest to `goto_url()` and re-run your scripted fills rather than fight tab focus. Keep fills scripted/idempotent so replay is cheap.
+- Angular/SPA forms: set values via the native setter (`Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el, v)`) then dispatch `input` + `change`. Searchable dropdowns (`.list-filter input`, eVisionCare portals): type a prefix, wait, click the matching `li`. Plain `.value=` does NOT register with the framework.
+- eVisionCare patient portals (mypatientsportal.com, used by many ON optometrists): new-patient path = Select Location → NEXT → 2-page registration (page 2 optional) → dashboard → Book Appointment → doctor+reason selects → 'Go' is an ANCHOR not button → week calendar with slot anchors → Book Now confirms. Registration alone creates a patient record — only click 'Book Now' when told to actually book.
 - systemd + xvfb-run: quoting breaks in ExecStart; that's why the launcher is a bash script.
 - Stale `SingletonLock` in the profile prevents Chrome start after crash — launcher rm's it.
 - If `browser_exec` says "chrome-not-running": `systemctl --user restart hermes-browser`, wait ~8s, retry.
