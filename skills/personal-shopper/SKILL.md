@@ -192,6 +192,10 @@ list than any style preference:
   occasion section only.
 - Hybrid office adult → the real gap is the *transitional layer* for ~15 °C: too warm for a coat,
   too cool for shirtsleeves. Overshirts.
+- Adult smart-casual tops → do not interpret “office” as four woven button-ups plus sweaters. Unless
+  the user explicitly wants tailored shirting, build a practical mix: 1–2 collared shirts, polished
+  plain/knit T-shirts, smart sweatshirt or quarter-zip, fine-gauge crewneck/polo, and an overshirt or
+  cardigan. Test every top against both an office trouser and weekend denim.
 - Parent doing school runs then dinner → "elevated everyday": washable, no ironing, but genuinely
   put-together. Test: *wearable to a park and then straight to dinner without changing.*
 
