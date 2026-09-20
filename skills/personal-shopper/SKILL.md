@@ -183,6 +183,10 @@ list than any style preference:
   back zippers. Even the jeans must be pull-on.
 - Daycare → staff change him fast, several times a day; soft, stretchy, industrial-wash, nothing
   precious. **No neck drawstrings** (strangulation hazard, banned at licensed centres).
+- Toddler everyday tops → soft crewneck long-sleeve tees and sweatshirts/hoodies. Do not fill this
+  slot with button-ups, polos, collared sweaters, or other pieces that technically pass fabric and
+  stock checks but are impractical for ordinary toddler play. Keep dress shirts to a specific
+  occasion section only.
 - Hybrid office adult → the real gap is the *transitional layer* for ~15 °C: too warm for a coat,
   too cool for shirtsleeves. Overshirts.
 - Parent doing school runs then dinner → "elevated everyday": washable, no ironing, but genuinely

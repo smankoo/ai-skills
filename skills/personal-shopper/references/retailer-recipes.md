@@ -498,6 +498,26 @@ An empty `want` array means the size isn't offered at all — treat as OOS.
 
 Product URL: `https://<origin>/browse/product.do?pid=<pid>&vid=1`
 
+### Akamai fallback: real windowed Chrome on a residential Mac (verified 2026-09-20)
+
+If the VPS/browser path returns Gap Inc. Akamai access denials or incomplete shells, do not stop or
+relabel the retailer as unverifiable. Use the `retail-bot-wall-bypass` Mac-CDP rung immediately:
+launch a throwaway, **windowed** Chrome profile on the residential Mac, navigate directly to each
+PDP, and inspect the rendered buy box. Gap labels toddler size 2T as `2 YRS`; Old Navy labels it
+`2T`. Confirm that exact label is enabled (not `fds_selector__label--unavailable`), then extract the
+current price, selected colour, `Fabric & care` composition, and `og:image`/rendered product image.
+
+In a 2026-09-20 run this checked 55 live Gap/Old Navy PDPs and yielded 20 products whose requested
+size was enabled and whose fabric passed the natural-fibre gate. Product image URLs on
+`content.gapinc.com` were fetchable from the Mac/browser context but returned HTTP 403 to bare VPS
+`urllib`; therefore a VPS hotlink failure alone is not evidence that the email thumbnail is broken.
+Verify those images in the same rendered residential-browser context, and check that every product
+maps to a distinct URL/image rather than re-fetching them anonymously from the VPS.
+
+**Failure mode:** syntactically successful shell output can be hidden by tool-output truncation. Have
+the Mac run write structured JSON to a scratch file, copy that file back, and validate counts and
+required fields programmatically before building the cart.
+
 ### Category IDs (verified working)
 
 Browse with `/browse/category.do?cid=<id>`. Many guessed IDs return empty grids or the wrong
