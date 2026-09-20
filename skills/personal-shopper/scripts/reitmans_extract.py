@@ -97,8 +97,11 @@ def _natural_pct(composition):
     if not composition:
         return None
     total = 0
-    for pct, fibre in re.findall(r'(\d{1,3})%\s*([A-Za-z]+)', composition):
-        if fibre.lower() in NATURAL:
+    # Capture the full fibre phrase (for example, "Organic Cotton" or
+    # "TENCEL™ Lyocell") rather than only the first word after the percent.
+    for pct, fibre in re.findall(r'(\d{1,3})%\s*([^,.;]+)', composition):
+        phrase = fibre.lower()
+        if any(re.search(rf'\b{re.escape(name)}\b', phrase) for name in NATURAL):
             total += int(pct)
     return total
 

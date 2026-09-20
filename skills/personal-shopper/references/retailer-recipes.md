@@ -463,6 +463,21 @@ Accept only `avail === "InStock"`. Product paths look like
 Colours are *not* in the JSON-LD reliably — infer from the product name and tell the user to
 glance at the photo before adding to cart.
 
+### Live rendered browser now exposes exact colour and size inventory (verified 2026-09-20)
+
+A normal windowed Chrome session can now load deep Simons category and PDP URLs directly from the
+VPS. On the rendered PDP, combine JSON-LD (`name`, brand, CAD price, `InStock`, image) with the page's
+`availabilityData` to capture the selected colour plus per-size numeric stock. The composition is in
+the rendered `Composition` block. This is stronger than the older same-origin-fetch fallback because
+it verifies exact colour, each enabled size, and scarcity rather than product-level availability only.
+
+- Women's house brands: `Contemporaine` is the polished office-first line; `Twik` skews younger.
+- Men's house brand: `Le 31`; fit copy matters. Reject `modern fit` when the user asked for a roomy or
+  non-slim silhouette, even if fibre and stock pass.
+- `imagescdn.simons.ca/images/<product-colour>-A1_2/<slug>.jpg?...` image URLs returned live JPEGs.
+- If direct navigation regresses to a bounce/block, retain the same-origin `fetch()` method above as
+  fallback rather than declaring Simons unavailable.
+
 ## Gap / Old Navy — per-size stock
 
 Both share the Gap Canada platform, so one recipe covers both. A size is **out of stock** when
@@ -1280,6 +1295,11 @@ composition, natural_pct, image, sizes:[{size,price,available}], any_in_stock}`.
 | Discovery / catalog | `/products.json?limit=250` (handle, title, tags, body_html) |
 
 **Failure modes**
+- **Catalog can be gender-incomplete even while the header advertises both departments.** Re-verified
+  2026-09-20: `/products.json?limit=250` returned 106 products, all handles beginning `mens-`, all
+  gender tags `mens`, and zero women's products. The header's Women link resolved to `/`, and guessed
+  women's collection JSON endpoints returned empty arrays. Audit the live catalog before promising a
+  women's list; do not relabel men's products as women's or resurrect stale indexed URLs.
 - **`/search/suggest.json` is DISABLED** (returns empty), as is `/collections/all/products.json`
   filtered oddly — but the top-level **`/products.json?limit=250`** works and lists everything.
   For discovery use that or `web_search "site:frankandoak.com <keyword>"`.
