@@ -41,8 +41,11 @@ this skill is shareable precisely because it's empty of any one household.
 user accumulates durable rules about what they will and won't buy (fabric/material constraints,
 brands to avoid, sustainability or fit requirements, email-format expectations like item
 thumbnails). These live in persistent memory, not in this file, and they are non-negotiable filters
-— violating one is a failed run even if everything else is perfect. Before profiling anyone, query
-persistent memory and gather every rule that could touch this task:
+— violating one is a failed run even if everything else is perfect. **Keep adult and children's
+store preferences separate:** a retailer rule learned from a kids' run must not silently become the
+adult routing rule. For adults, start with retailers the household has actually used or explicitly
+said it prefers; introduce unfamiliar brands only to fill a real gap, and label them as new. Before
+profiling anyone, query persistent memory and gather every rule that could touch this task:
 
 ```
 mem0_search("clothing fabric material preferences")   # also: gifts, shopping, brands, retailers
