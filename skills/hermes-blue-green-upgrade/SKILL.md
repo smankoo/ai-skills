@@ -128,6 +128,32 @@ deliberate rollback, re-point `last_good` at blue or `rollback` will no-op.
   (`~/.hermes/crawl4ai-venv`, cryptography 50) and the plugin shells out to it —
   this is unchanged by any upgrade. Don't try to retire the isolated venv.
 
+## Disk hygiene — prune orphaned release trees (do this after every cutover)
+Each staged release is a **full ~2 GB code tree + venv**. They live forever
+under `~/.hermes/releases/<tag>/` (plus the original `hermes-agent/` blue tree)
+unless pruned, so after a few upgrades `~/.hermes` balloons — three 2 GB copies
+was the top disk hog on the VPS (found 2026-08-28: `releases/` + `hermes-agent`
+were ~6.4 GB of an 8.1 GB `.hermes`). Only **two** trees are ever needed:
+- **LIVE** — whatever `readlink ~/.hermes/hermes-current` resolves to.
+- **ROLLBACK** — the path in `~/.hermes/bluegreen/last_good`.
+
+Everything else in `releases/` (and `hermes-agent` itself once it is neither
+live nor the rollback target) is an orphan and is safe to `rm -rf`. Safe prune:
+```
+LIVE=$(readlink -f ~/.hermes/hermes-current)
+ROLLBACK=$(readlink -f "$(cat ~/.hermes/bluegreen/last_good)")
+for d in ~/.hermes/releases/*/ ~/.hermes/hermes-agent; do
+  p=$(readlink -f "$d")
+  [ "$p" = "$LIVE" ] || [ "$p" = "$ROLLBACK" ] || echo "ORPHAN: $d"
+done
+```
+Verify the two anchors print correctly, eyeball the ORPHAN list, then delete
+those dirs. **Never** delete the live or rollback tree. Note: after a
+successful cutover `last_good` points at green (the new live), so the OLD blue
+becomes the rollback and the pre-previous release is the orphan to reap — i.e.
+keep the current + one-back, drop everything older. Fold this prune into the
+end of the cutover flow (step 4) so it self-cleans and never accumulates again.
+
 ## Extending the acceptance suite
 `upgrade_acceptance.py` is additive: **every regression we ever eat gets a new
 probe**, so we never eat it twice. Each probe returns (name, passed, detail);

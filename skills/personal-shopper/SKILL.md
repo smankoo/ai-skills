@@ -156,6 +156,26 @@ output so the user can check it:
 Bias **up** when a child is near the top of a band: clothes bought in September are worn
 through June. Say so explicitly ("4T would be tight by Christmas").
 
+**Hats are sized by head circumference, not by clothing size — and kids' hat bands lie.** A child's
+clothing size tells you nothing about which hat fits. Two traps, both hit in a real run: (a) retailers
+split one hat into separate **"Toddler" and "Kid" products with non-overlapping age bands** — a "Kid"
+size S can start at 6 years while the same-named "Toddler" L is 4-5 years, so picking the wrong
+product overshoots by years; and (b) a bare `S/M/L` on the variant is meaningless — always find the
+size chart's **age + head-circumference rows** (often in `__NEXT_DATA__` as `sizeGuide`/`sizeChart`,
+or in the product `description` prose) and quote the cm range in the output. If no head measurement is
+on file, say so explicitly, size from the age band, and tell the user how to measure (tape around the
+widest part, just above the ears and across the brow) before they order the expensive one. Stretchy
+knit is forgiving enough to order blind; fitted or premium-fibre hats are not.
+
+**A whole product category can fail a material gate at the user's preferred stores.** Winter
+accessories are the usual offender: toques, mittens and fleece are overwhelmingly acrylic or
+polyester, so the household's default kids' chains may have *nothing* that clears a natural-fibre
+rule. When that happens, don't quietly return a thin list or silently substitute — verify the
+rejection with real compositions, **name the rejected items and their fibre content in the output**
+(it proves the stores were checked, not skipped), and route to the specialist natural-fibre stores in
+`retailers-tried.md`. A repeated "no X found that meets the rule" gap across runs is a signal to widen
+retailers, not to re-search the same two chains.
+
 **Never order shoes.** Foot length can't be inferred from height, a wrong size affects how a
 young child walks, and lasts vary by brand. Instead emit a measure-first instruction plus a
 cm→size table for the expected range:
