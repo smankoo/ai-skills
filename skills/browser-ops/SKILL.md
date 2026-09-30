@@ -23,6 +23,10 @@ The VPS runs a **dedicated automation Chrome** — real windowed Google Chrome u
 | Logged-in flows on Sumeet's accounts (real cookies/sessions) | Angus via open-browser-control MCP (browser_* tools; `browser_request_user` hands control to Sumeet for MFA) |
 | IP-reputation-only blocks | VPS + tailscale exit node (see retail-bot-wall-bypass skill) |
 
+## Fast page decisions (jev skill)
+
+Before spending big-model turns reading a page, ask Jev (≈0.2s, ≈$0.00003): `jev.page_from(js, goal)` returns the page kind (content / login_wall / captcha / bot_block / cookie_or_modal / error / paywall) plus whether the goal is already answered, and `jev.links_from(js, goal)` ranks up to 200 visible links in one call. Branch on `kind` into the sections below. See the `jev` skill.
+
 ## CAPTCHA solving (vision, no paid API — Sumeet's explicit preference)
 
 Proven flow (reCAPTCHA v2 image challenge solved end-to-end 2026-09-13, token issued):

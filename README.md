@@ -69,6 +69,14 @@ curl -fsSL https://raw.githubusercontent.com/smankoo/ai-skills/main/bootstrap.sh
   - Carries **no email addresses**: send-from, send-to, and verification-inbox
     addresses are asked for and used only for the run
 
+- `skills/jev`
+  - Fast, cheap, calibrated decisions via TypeSafe Jev on OpenRouter's Decisions API
+    (~0.2s, ~$0.00003/call): yes/no, choice, and score questions with probabilities
+  - `jev` CLI and importable library: `ask`, `rank` (score many candidates in one call),
+    `page` (content / login / captcha / bot-wall / error detection), `gate` (should a
+    cron report interrupt the user?)
+  - Browser helpers for picking the next link and knowing when a page has the answer
+
 - `skills/book-car-service`
   - Books a service appointment through a dealership's online scheduler
   - Knows to drive a Keyloop "SWA" (or similar) booking widget's own URL directly when
