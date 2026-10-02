@@ -139,6 +139,20 @@ def section(sec: dict, cur: str) -> tuple[str, float]:
             f"{shown}</td></tr>"
         )
 
+    if rows and sec.get("optional"):
+        # Options/alternates: rendered like any section but kept OUT of the cart total, so a
+        # "here are more choices" email doesn't report a meaningless sum of every alternative.
+        span = ' colspan="3"' if any(i.get("image") for i in sec.get("items", [])) else ' colspan="2"'
+        rows.append(
+            f'<tr><td{span} style="padding:9px 0 0;border-top:2px solid {RULE};color:{MUTED};'
+            f'font-size:12px;letter-spacing:1.2px;text-transform:uppercase;font-weight:600;">'
+            f'Options &mdash; not included in the total</td></tr>'
+        )
+        html.append(
+            '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+            f'style="margin:8px 0 4px;">{"".join(rows)}</table>'
+        )
+        return "".join(html), subtotal
     if rows:
         # Span the thumbnail column too, when any row in this section has one.
         span = ' colspan="2"' if any(i.get("image") for i in sec.get("items", [])) else ""
@@ -176,8 +190,9 @@ def build(cart: dict, template: str) -> tuple[str, float, int]:
         elif kind == "section":
             body, subtotal = section(sec, cur)
             chunks.append(body)
-            total += subtotal
-            items += sum(int(i.get("qty", 1) or 1) for i in sec.get("items", []))
+            if not sec.get("optional"):
+                total += subtotal
+                items += sum(int(i.get("qty", 1) or 1) for i in sec.get("items", []))
         else:
             raise ValueError(f"unknown section type {kind!r}")
 

@@ -478,6 +478,18 @@ it verifies exact colour, each enabled size, and scarcity rather than product-le
 - If direct navigation regresses to a bounce/block, retain the same-origin `fetch()` method above as
   fallback rather than declaring Simons unavailable.
 
+### Changes seen 2026-10-02 (supersede the above where they conflict)
+- **Same-origin `fetch()` of a PDP now returns 403** — the fallback is dead; use rendered navigation.
+- `window.availabilityData` is now `{}`. Stock lives in an inline `<script>` whose text starts with `{`
+  and contains `stockLevel`, keyed `{colourId: {size: [{label, stockLevel, rawSalePrice, rawListPrice}]}}`.
+- Composition: `.compositionAndCare-composition` (collapsed; `body.innerText` can miss it).
+- Colour names: `button.swatch` — `rel` = colour id, `title` = name. Per-colour image: swap the colour
+  number in `/images/<id1>-<id2>-<cid>-A1_2/<slug>.jpg`. Image CDN 403s to curl — verify with `new Image()`.
+- Category grids ~99 tiles; paginate `?page=2`. Women's wool coats: `/en/women-clothing/coats-jackets/wool-felt--6688`.
+- Browser connection drops after ~25 PDPs in one call — batch <25, save after each.
+- Gate reality (women's, Oct 2026): Contemporaine dress pants/crepe pants, wool blazers and felt coats are
+  30–63% wool/rest polyester → fail a 70% gate. Passing trousers are fine cords/cotton twill only.
+
 ## Gap / Old Navy — per-size stock
 
 Both share the Gap Canada platform, so one recipe covers both. A size is **out of stock** when
@@ -1379,6 +1391,11 @@ adds ISBN/publisher/author/rating from the PDP). Verified 2026-08-20 on three li
 - Fibre composition is N/A (books/gifts) — the natural-fibre gate doesn't apply here; this is a gift-track store.
 
 ## ALDO (CA) — JSON-LD `ProductGroup` + Materials accordion, from the rendered PDP HTML. NO bot wall.
+
+> **2026-10-02:** Shopify `/en-ca/products/<handle>.js` works (CAD cents, per-size `available`, `featured_image`);
+> `/en-ca/products.json?limit=250&page=N` paginates ~3,500 products; filter tags `w-cas-boots`, `w-loafer`,
+> `w-workwear`, `w-work-bags`. Warmth claims ("Water Resistant", "Warm Lined", "Cold-Rated", never a °C) are
+> only in the static PDP "Product Features" block. ALDO bags are all synthetic/textile.
 
 Canada, mid-market footwear + accessories (bags, jewelry, sunglasses). Confirmed in Sumeet's YNAB
 history. **Adult footwear only** — the skill's hard rule is NEVER order kids' shoes (fit needs
@@ -2436,6 +2453,12 @@ available}], any_in_stock}`.
 - Recycled cotton/wool/cashmere still count as natural fibre (`100% Cashmere (50% Recycled)` = 100).
 
 ## Quince (CA) — JSON-LD `ProductGroup` (price/stock/image) + `__NEXT_DATA__` `details` (fibre %). NO bot wall.
+
+> **2026-10-02 — composition moved:** `__NEXT_DATA__ …pageDataJson.product` is gone. Fibre text is now in the
+> server-rendered `div.productDetailsAndCareV2_textContentParagraph… ul li` and in JSON `"htmlData":{"title":"DETAILS","text":…}`.
+> JSON-LD `@graph` ProductGroup still gives CAD price/stock/image on `/ca/` URLs. Collections: `/ca/shop/women/<collection>`
+> (sweaters, cashmere, silk, pants, dresses, jackets…); handles are quoted `women/...` strings in the HTML, not hrefs.
+> Extractor bug: `_composition_from_details` reads only the word after `%`, so "100% Grade-A Mongolian cashmere" scores 0 — needs a few-word window.
 
 Canada (`/ca/` gives CAD), DTC "affordable luxury". **One of the strongest natural-fibre
 sources found** — deep 100% organic-cotton, Mongolian cashmere, European linen, mulberry silk,
@@ -3569,6 +3592,10 @@ python3 scripts/hm_extract.py render.md
 
 ## L.L.Bean Canada (llbean.ca) — SFCC `Product-Variation` JSON controller: price + LIVE NUMERIC STOCK, pure urllib, no bot wall
 
+> **2026-10-02:** `available:true` also covers PREORDERS — count a size live only if `stockLevel>0` and message "In Stock".
+> Discovery: `/search?q=<terms>` static HTML has `data-pid`. `cdni.llbean.net` images 403 to urllib after ~10 hits
+> (and sometimes from the start) but load fine in a browser `new Image()` — validate thumbnails there.
+
 Canada, mid-market heritage outdoor/casual — whole household (men/women/kids), heavy 100%-cotton
 flannel/chamois/tees and 100%-merino/ragg-wool knits: a strong natural-fibre source. Salesforce
 Commerce Cloud (Demandware), site id `Sites-llbeancanada-Site`. **NO bot wall** — plain `urllib`/curl
@@ -3620,6 +3647,16 @@ p["longDescription"]                   # prose incl. composition, e.g. "…Portu
 Tested extractor: `scripts/llbean_extract.py <pid|PDP-url> [size=M] [color=…]` — auto-selects the
 first selectable variant, emits one JSON line per product (name/price/stock_level/composition/
 image/colors/cuts/sizes with per-value selectable flags).
+
+## SoftMoc (CA) — JSON grid service + POST item-detail (per-size sold-out codes). No bot wall. (verified 2026-10-02)
+
+Canadian footwear chain (Blundstone, Sorel, etc.). Not Shopify (`/ca/products.json` 404).
+- Grid: `GET /ca/jsonservices/json_itemgridandfilters_1.aspx?queryString=/womens/winter-boots&pageType=genderdepartmentshoeshop&filtersBaseJson=[{"FilterType":"F","Value":"wos"}]&filtersJson=[{"FilterType":"D","Value":"70"}]&collectionsId=0&promopageId=0&salePage=0&storeId=0&getPageInfo=1`
+  → `results[].ColoredItems[]` (`ItemID`, `ItemURL`, `SalePrice`, `RegularPrice`, `SizeToWebSize`).
+- Detail: `POST /ca/getitemdetail_serverload.aspx` form `itemid=<ItemID>&syslang=E&country=ca&culturename=en-ca&itemDetail_Shoes=Shoes&storeid=0`
+  → JSON: `Sizes`/`WebSizes` (UK↔women's mapping text) with parallel `SizeUnavailableCodes` (`''` = live,
+  `SOLD_OUT`/`UNAVAILABLE`), `OnLinePrice` (`"$299.99 "`), `FeatureBenefits`, `Thumbnail_X` (`//www.softmoc.com/items/images/<id>_XXX.jpg`, curl-OK).
+- Walls hit the same day: Browns, Blundstone.ca, ca.ecco.com (429); Naturalizer.ca, Clarks.ca (Cloudflare); Sorel (403).
 
 ## Eddie Bauer (CA) — Shopify `.js` (price/stock/image, CAD on `/en-ca/`) + PDP "materials" accordion (composition). No bot wall.
 

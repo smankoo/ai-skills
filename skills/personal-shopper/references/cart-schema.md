@@ -62,6 +62,7 @@ context line and nothing more — no addresses, no record numbers, no health inf
 | `expect_total` | no | Guard rail. Build fails if the computed total differs by >$0.01 |
 | `sizebox` | no | Array of `[label, html_value]` pairs |
 | `sections[].type` | yes | `note` \| `section` \| `prose` |
+| `sections[].optional` | no | `true` = an "options / alternates" section: rendered with thumbnails but **excluded from the total and item count**. Use when the user wants "more options" alongside a buyable core cart |
 | `items[].qty` | no | Defaults to 1. `>1` renders a `×N` badge and multiplies into the subtotal |
 | `items[].price` | yes | **Number.** A per-unit price; `qty × price` goes into the subtotal |
 | `items[].meta` | no | Small grey line under the name — store, colour, fit. May contain HTML |

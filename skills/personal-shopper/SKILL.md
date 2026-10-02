@@ -414,6 +414,23 @@ python3 scripts/send_email.py \
 `build_emails.py` prints each computed total and cross-checks it against an optional
 `expect_total` in the JSON, so a mismatch fails loudly instead of shipping.
 
+**When the user asks for "more options", build a core cart plus options sections.** Put a complete,
+buyable core cart in the normal sections (the total is that cart's real price), then add
+`"optional": true` sections of verified alternatives per category. The builder leaves those out of the
+total, so the headline number stays a real price. Check the core total against the budget **with sales
+tax** (13% HST in Ontario) and name the one or two swaps that bring it under.
+
+**A big-budget "whole wardrobe" includes the commute.** When the brief includes coat, footwear and bag,
+those 3–4 items take roughly 40% of the budget and get the most wear. Choose them first, then fill in
+the clothing. For a natural-fibre gate, expect the tailored-trouser, blazer and wool-coat slots to fail
+at mid-market stores: most "wool-blend" suiting is 30–60% wool and the rest polyester. Search those slots at
+specialist or premium retailers, or say plainly that the gap exists.
+
+**Use Jev for quick yes/no checks when it's available.** Jev is a fast, cheap decision model (see the
+`jev` skill). Run `jev.page_from` / `jev.links_from` while browsing to classify the page and pick links.
+Before building the email, run one batched `noul` call over every candidate ("office-appropriate for
+the season?") and send the low scorers back for review. It costs about 0.4 s for 70 items.
+
 **If the email presents alternatives rather than one list** — three outfit options, or five gift
 directions, pick one — the builder still sums *everything*, so the grand total is arithmetic, not a
 price. Don't fight this: set `expect_total` to that real sum so the guard rail keeps working, lean
