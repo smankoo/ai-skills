@@ -85,6 +85,24 @@ proceeding, especially on calendar grids.
 3. **Report back**: date/time, package + price, advisor, and the reasoning used to
    pick the service package.
 
+## Keyloop SWA field notes (verified 2026-10-03, v2.5.4)
+
+- **Cloudflare on the dealer wrapper page.** The `service-appointment` page can sit behind a Turnstile
+  "Verify you are human" checkbox. One real click on the checkbox (screenshot → vision → `click_at_xy`)
+  clears it. After that, read the iframe `src` (e.g. `https://<sub>.sdswebapp.com:<port>/SWAV2/1?code=HY&dealerId=<id>&locale=en`)
+  and go there directly. The SWA host itself had no wall.
+- **Typing text.** `Input.insertText` APPENDS to whatever's already in the field, and select-all doesn't
+  reliably clear it. Clear the field first with End plus Backspace repeated, then type, and read `.value` back to check.
+  An email lookup that finds nothing just shows nothing, with no error, so fall back to phone lookup or "New Customer".
+- **Vehicle step (new customer):** MUI selects `mui-component-select-{year,model,trim}`, then type into `#odometer` and `#vin`.
+- **Telling open slots from booked ones.** Every slot is an enabled `<button>`, so the disabled attribute is useless.
+  Read the background colour instead: open = `rgb(34, 116, 172)` with white text, booked = `rgb(230, 247, 255)`.
+  Group slots into day columns by their button x-position. Open slots differ a lot by transport mode
+  (Drop off has far more than Waiter), so collect slots for each mode before offering times.
+- **Advisor dropdown.** "First available advisor" can disappear from the list after the first pick, leaving
+  a named advisor selected. Tell the user which advisor is selected, rather than claiming it's "first available".
+- **Week navigation:** the last `<button>` near the "Week of …" label is the next-week arrow.
+
 ## Gotchas
 
 - A vehicle's "preferred dealer" on file may differ from where the user actually wants
