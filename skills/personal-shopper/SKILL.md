@@ -182,6 +182,8 @@ rejection with real compositions, **name the rejected items and their fibre cont
 `retailers-tried.md`. A repeated "no X found that meets the rule" gap across runs is a signal to widen
 retailers, not to re-search the same two chains.
 
+**Adult footwear: width is a gate.** If the user's records or memory say someone needs a wide (or narrow) width, check that the exact model is offered *and in stock* in that width and size on the live page before recommending it. Never assume a standard-width shoe will do. Many boot brands offer no wide width at all.
+
 **Never order shoes.** Foot length can't be inferred from height, a wrong size affects how a
 young child walks, and lasts vary by brand. Instead emit a measure-first instruction plus a
 cm→size table for the expected range:

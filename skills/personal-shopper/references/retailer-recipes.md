@@ -3670,6 +3670,21 @@ Canadian footwear chain (Blundstone, Sorel, etc.). Not Shopify (`/ca/products.js
   `performance.getEntriesByType('resource')` for `json_itemgridandfilters_1.aspx`. The detail POST also works for
   men's/unisex ids (e.g. Blundstone `1306`); `WebSizes` gives the UK ↔ women's/men's mapping.
 
+
+## Shoe WIDTH availability — where to check (verified 2026-10-04, Canada)
+
+When a person needs wide shoes, width is a gate just like size. Check it on the live page for the exact model, width and size.
+- **SoftMoc:** the `getitemdetail_serverload.aspx` sizes carry no width at all. A sweep of all 185 men's boots found no wide widths. Treat
+  SoftMoc as standard-width only.
+- **Browns Shoes:** Shopify. `/collections/mens-boots/products.json?limit=250` showed 274 products, each with a `Size` option
+  only (no width option). Standard-width only.
+- **Skechers CA** (skechers.ca, rendered PDP): grid tiles say "Also in Wide". On the PDP, width buttons are `.button-select-width`
+  (Medium / Wide / Extra Wide); a width that's unavailable carries `c-product-attributes__item__selector--unselectable`. Click the width,
+  wait about 4 s, then read sizes from `.button-select-size` (unavailable = `unselectable`). Images:
+  `https://images.skechers.com/image;width=400,format=auto/<style>_<colour>_HERO_LG`. Materials are under "Design Details".
+- Brands that usually come in wide: ASICS (Wide/Extra Wide), New Balance (2E/4E), Skechers, Clarks (some), Rockport, Ecco (a few).
+  Fashion boot brands (Blundstone, Dr. Martens, Timberland Premium) usually don't.
+
 ## Eddie Bauer (CA) — Shopify `.js` (price/stock/image, CAD on `/en-ca/`) + PDP "materials" accordion (composition). No bot wall.
 
 Outdoor/casual heritage brand, adult men + women (flannels, chamois, down, jeans, sleepwear).
