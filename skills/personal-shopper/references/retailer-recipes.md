@@ -3682,6 +3682,12 @@ When a person needs wide shoes, width is a gate just like size. Check it on the 
   (Medium / Wide / Extra Wide); a width that's unavailable carries `c-product-attributes__item__selector--unselectable`. Click the width,
   wait about 4 s, then read sizes from `.button-select-size` (unavailable = `unselectable`). Images:
   `https://images.skechers.com/image;width=400,format=auto/<style>_<colour>_HERO_LG`. Materials are under "Design Details".
+- **Thursday Boot Co.** (Shopify, VPS-OK): `/products.json` variants are titled `Wide / 10.5` or `Wide (EE) / 10`. Price `/products/<h>.js?currency=CAD`.
+  Wide models with slim soles that pass an office look check: Cavalier, President (CAD $285, Oct 2026). Captain StormKing and Legend have lug soles.
+- **Rockport CA** (Shopify, VPS-OK): variants `10 / W`, `10 / 2E`, `10 / 4E`. Mostly lug/comfort soles (Dunham line).
+- **Clarks CA** (clarks.com/en-ca, rendered): wide filter `?fit.en-CA%5B0%5D=Wide` on category URLs. On the PDP, click the `Wide` button and then read
+  the size buttons. JSON-LD gives a CAD price. Images: `https://cdn.media.amplience.net/i/clarks/<id>_GW_1`. Jaxen line = slim sole, office-passable.
+- New Balance CA is walled (Akamai error page) even in the rendered browser.
 - Brands that usually come in wide: ASICS (Wide/Extra Wide), New Balance (2E/4E), Skechers, Clarks (some), Rockport, Ecco (a few).
   Fashion boot brands (Blundstone, Dr. Martens, Timberland Premium) usually don't.
 
