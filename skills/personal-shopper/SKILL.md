@@ -37,6 +37,12 @@ Any number or store below is an illustrative default, not a fact about whoever i
 treat every one as overridable and check it against the actual user. Keep it this way when editing:
 this skill is shareable precisely because it's empty of any one household.
 
+**In-person mall trips are this skill too.** "I'm headed to <mall>, make a list" is a wardrobe run with a store
+filter: confirm which retailers are actually in that mall (its directory pages; try `/store/<slug>` for each
+candidate), then verify items online exactly as usual (fibre, price, stock) and build and send the cart email so it can
+be used on a phone in the store. Say plainly that online stock doesn't guarantee that store's stock. A ballpark list
+without verified fibre content is a failed run.
+
 **Look up the user's standing shopping preferences before you shop — every run, step zero.** The
 user accumulates durable rules about what they will and won't buy (fabric/material constraints,
 brands to avoid, sustainability or fit requirements, email-format expectations like item

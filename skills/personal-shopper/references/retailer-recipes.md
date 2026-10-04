@@ -487,6 +487,12 @@ it verifies exact colour, each enabled size, and scarcity rather than product-le
   number in `/images/<id1>-<id2>-<cid>-A1_2/<slug>.jpg`. Image CDN 403s to curl — verify with `new Image()`.
 - Category grids ~99 tiles; paginate `?page=2`. Women's wool coats: `/en/women-clothing/coats-jackets/wool-felt--6688`.
 - Browser connection drops after ~25 PDPs in one call — batch <25, save after each.
+- **Men's (verified 2026-10-04):** pants grid `/en/men-clothing/pants--6755`. Coats `--6731` actually returns blazers and
+  `--6739` returns coats, so the category IDs aren't reliable. Read the page title before trusting a grid. Gate reality: Le 31 cords and
+  5-pocket twill pass (97–100% cotton); "flannel" pants and the Minimalist pant are 50–69% polyester. Outerwear that passes:
+  recycled-wool tweed overcoat (95% wool), corduroy-collar workwear jacket (100% cotton shell). Herringbone felt jackets are 70% polyester.
+- The `stock` object `pdp()` returns is `{colourId:{size, alternative_images, mpuStatus}}`: product/colour metadata, **not** per-size
+  counts. Use JSON-LD `InStock` plus the swatch list. The connection dropped after ~7 PDPs this run; start a fresh session after a drop.
 - Gate reality (women's, Oct 2026): Contemporaine dress pants/crepe pants, wool blazers and felt coats are
   30–63% wool/rest polyester → fail a 70% gate. Passing trousers are fine cords/cotton twill only.
 
@@ -3657,6 +3663,12 @@ Canadian footwear chain (Blundstone, Sorel, etc.). Not Shopify (`/ca/products.js
   → JSON: `Sizes`/`WebSizes` (UK↔women's mapping text) with parallel `SizeUnavailableCodes` (`''` = live,
   `SOLD_OUT`/`UNAVAILABLE`), `OnLinePrice` (`"$299.99 "`), `FeatureBenefits`, `Thumbnail_X` (`//www.softmoc.com/items/images/<id>_XXX.jpg`, curl-OK).
 - Walls hit the same day: Browns, Blundstone.ca, ca.ecco.com (429); Naturalizer.ca, Clarks.ca (Cloudflare); Sorel (403).
+
+- **Grid endpoint for a brand page (verified 2026-10-04):** the params above return 0 for brand/men's pages.
+  For a vendor page use what the page itself requests: `queryString=/v/<brand>&pageType=brandshoeshop&filtersBaseJson=[{"FilterType":"V","Value":"<4-letter vendor code, e.g. blun>"}]`.
+  To discover params for any SoftMoc page, load it in a browser and read
+  `performance.getEntriesByType('resource')` for `json_itemgridandfilters_1.aspx`. The detail POST also works for
+  men's/unisex ids (e.g. Blundstone `1306`); `WebSizes` gives the UK ↔ women's/men's mapping.
 
 ## Eddie Bauer (CA) — Shopify `.js` (price/stock/image, CAD on `/en-ca/`) + PDP "materials" accordion (composition). No bot wall.
 
