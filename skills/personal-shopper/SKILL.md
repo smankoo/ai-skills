@@ -182,7 +182,7 @@ rejection with real compositions, **name the rejected items and their fibre cont
 `retailers-tried.md`. A repeated "no X found that meets the rule" gap across runs is a signal to widen
 retailers, not to re-search the same two chains.
 
-**Adult footwear: width is a gate.** If the user's records or memory say someone needs a wide (or narrow) width, check that the exact model is offered *and in stock* in that width and size on the live page before recommending it. Never assume a standard-width shoe will do. Many boot brands offer no wide width at all.
+**Adult footwear: width and look are both gates.** Check the photo as well as the specs: for an office slot, reject visible logos, branded sole text (e.g. "Goodyear" sidewalls), chunky sneaker or lug soles and contrast stitching. Use `vision_analyze` on the profile image before recommending. Width: If the user's records or memory say someone needs a wide (or narrow) width, check that the exact model is offered *and in stock* in that width and size on the live page before recommending it. Never assume a standard-width shoe will do. Many boot brands offer no wide width at all.
 
 **Never order shoes.** Foot length can't be inferred from height, a wrong size affects how a
 young child walks, and lasts vary by brand. Instead emit a measure-first instruction plus a
