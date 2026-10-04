@@ -465,6 +465,12 @@ Email conventions, all enforced by the shared shell in `assets/email-template.ht
   on the rendered category grid; going back for them afterwards means re-navigating every page.
   See the image section of `references/cart-schema.md`, including the two pre-send checks
   (every URL returns `image/*`; the images are distinct from one another).
+- **Thumbnails are embedded, not hot-linked (since 2026-10-04).** `send_email.py` downloads every `<img>`,
+  shrinks it to a ~240px JPEG and attaches it as a CID inline part (multipart/related). Remote images failed widely
+  on the user's iPhone: Apple Mail Privacy Protection proxies them, some retailer CDNs block the proxy, and the
+  originals are 100–600 KB each. A 24-image cart comes to ~390 KB. A thumbnail that can't be fetched stays remote, so
+  the email still sends. Use `--remote-images` only to debug. Verify by checking the delivered message size (hundreds of
+  KB, not ~50 KB) or its MIME tree.
 - Banner at the top holding the facts that shaped the list: the size derivation for a child, or
   for a gift the occasion, budget band, the angle you found, and the deadline.
 - Callout blocks: info (green) for design notes, warn (amber) for measure-feet-first, delivery
