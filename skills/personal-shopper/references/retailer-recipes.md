@@ -3748,3 +3748,10 @@ Verified 2026-09-11 on three live products:
 - Down outerwear lists shell fibre only (`100% polyester`) — down fill % isn't in the accordion;
   the technical lines fail a 70% natural-fibre gate regardless.
 - Bare `.com` paths (no `/en-ca/`) serve the US/USD storefront — always keep the prefix.
+
+
+## Baby-gear stores on Shopify (littlecanadian.ca, snugglebugz.ca), verified 2026-10-05
+- `https://<store>/products/<handle>.js` returns price in cents, `compare_at_price`, and variants with `available`. No bot wall.
+- `/search?q=<term>&view=json` isn't reliable; use `/products.json?limit=250&page=N` and filter titles instead.
+- The product description HTML usually lists **unladen weight** and per-seat limits. Parse it rather than trusting review sites.
+- Accessories (canopy, weather cover) are separate products. Search the brand name plus the accessory and add them to the comparison price.

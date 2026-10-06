@@ -46,9 +46,14 @@ won't work -- driving the widget's own URL directly is usually the fix.
    jump straight to their vehicle on file, skipping name/address entry until a final
    review step.
 2. **Vehicle + odometer**: selecting the vehicle usually opens a modal asking for the
-   current odometer reading. Use the latest reading available (ask the user, or read
-   it from their vehicle app/records) -- don't leave a default/placeholder value in
-   place.
+   current odometer reading. Use the latest reading available from the user's records
+   (vehicle app, last service invoice, Pebbleway/notes), extrapolating by typical
+   km/month if it's stale. Don't leave a default/placeholder value in place.
+
+   **Low-stakes details are the agent's call, not the user's.** Odometer, which
+   maintenance package, which advisor, and transport mode: mine the records, DECIDE, and
+   state the choice in the confirmation summary. Don't stop to ask. Only the date/time
+   slot and anything that costs extra beyond the due service need the user's OK.
 3. **Service package selection**: dealers often rotate a small set of maintenance
    packages by distance interval (e.g. every 6,000 km/miles), not a strictly repeating
    single package. If the manufacturer's maintenance schedule isn't obviously

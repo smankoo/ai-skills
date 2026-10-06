@@ -274,6 +274,14 @@ Split deliberately:
   most of the season, with their sum. Note which big-ticket item can wait for a sale.
 - Separate the *workhorse* from the *nice thing* explicitly, and let the workhorses be cheap.
 
+**Baby and kid gear (strollers, wagons, car seats, carriers): match the tier the family already owns.**
+If they own a top-of-line piece (for example an UPPAbaby Vista), recommend the equivalent tier, not the
+"best value" pick. Compare on the specs that decide daily use: **unladen weight** (who is pushing or
+lifting it), folded size against the car trunk, push versus pull, brakes, weather cover and canopy
+(often sold separately, so price them in), and per-seat weight limits. Canadian baby stores
+(littlecanadian.ca, snugglebugz.ca) run on Shopify: `/products/<handle>.js` gives price, variants and
+stock without a browser. See the Shopify recipe in references/retailer-recipes.md.
+
 ## 6. Store routing
 
 **Route by role, not by brand.** If the user names their stores, use those. If not, pick retailers
