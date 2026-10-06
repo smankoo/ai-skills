@@ -8,8 +8,12 @@ description: >
   clothes"), for occasion outfits with a hard date (graduation, wedding, picture day, Diwali), and
   for gift shopping ("we need a gift for X", birthday, milestone birthday, anniversary,
   housewarming, Christmas) — including finding several distinct gift directions and pricing each.
-  Also use for a single person's capsule wardrobe. Acts as a designer and a thoughtful gift-giver,
-  not a logistics planner.
+  Also use for a single person's capsule wardrobe. LOAD THIS SKILL FOR *ANY* buying request, however
+  small or casual — "put together a shopping list", "I'm headed to <mall>, what should I get",
+  "I need gloves/boots/a coat", "add it to the list", "what should I buy", a single-item ask, a
+  price/where-to-buy question, or a quick ad-hoc list with a budget. There is no "too small to need
+  the skill" shopping task; the gates (fibre %, width, in-stock, live price) apply to one item as
+  much as to thirty. Acts as a designer and a thoughtful gift-giver, not a logistics planner.
 ---
 
 # Personal Shopper
@@ -36,6 +40,17 @@ from the person's own records (Pebbleway, if connected), from the request itself
 Any number or store below is an illustrative default, not a fact about whoever is running it —
 treat every one as overridable and check it against the actual user. Keep it this way when editing:
 this skill is shareable precisely because it's empty of any one household.
+
+**No shopping request is too small for this skill.** Load it before the first search, including for a
+single item ("I need gloves"), a casual "add it to the list", or a quick mall list. Skipping it loses the
+hard gates (fibre %, footwear width, live price, in-stock) and the retailer recipes — which is exactly how
+the 2026-10-04 Square One list went out unverified and had to be redone. If the ask is a buying ask, the
+skill loads; decide scope afterwards.
+
+**Report the FULL set, not a sample.** When the run surfaces a category of findings — clearance items,
+alternate colours, qualifying candidates — enumerate every one that passes the gates and say how many
+there are. Mentioning "two chinos on clearance" when nine qualified reads as a shallow search and the
+user has to push back ("it's not just two, many more"). Count, then state the count.
 
 **In-person mall trips are this skill too.** "I'm headed to <mall>, make a list" is a wardrobe run with a store
 filter: confirm which retailers are actually in that mall (its directory pages; try `/store/<slug>` for each
