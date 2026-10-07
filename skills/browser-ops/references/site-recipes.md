@@ -26,6 +26,13 @@ Verified 2026-10-07. Used for Sumeet's own membership on 2026-10-06 and for addi
   Success shows "RESEND EMAIL" plus "Enter one time pass code", and the request is `orgvalidation.OrgSendValidationUrl.json` → 200.
 - The OTP goes to **smankoo@amazon.com**. The VPS can't read that inbox, so ask Sumeet for the code.
 - Step 2/7 is the GoodLife login. Use the 1Password GoodLife item (Gmail username).
+- **Login form (step 2/7)**: inputs `login` + `passwordParameter`. Same React trick: native setter, then __reactEventHandlers onChange, then the form's onSubmit.
+- **Adding a family member (verified 2026-10-07, Priyanka):** my-account → family.html → navigate to `membership.html?curCard=empty_0`.
+  The club search ignores postal codes, so call the React onClick of the 'Select this Club' button in the Burlington Appleby Crossing card from the full list.
+  Plan cards: fire the `card-input` onChange. 'CONFIRM SELECTION' = the form's onSubmit. The personal training page radios are uncontrolled: set `input[value=NO_THANKS].checked=true`, then the form's onSubmit.
+  Personal-info form: 'Same as primary address' fills city and postal code but not the street, so type address1 and pick the autocomplete suggestion.
+  Each e-sign checkbox's onClick opens a T&C modal. Scroll `[class*=terms-conditions__modal__body]` to the end, then fire Accept's onClick. Both the primary and family signatures are needed, and checkout has one more.
+  Checkout: CONTINUE (onClick), sign, then COMPLETE (form onSubmit) → congratulations.html. The family member is billed on the primary's existing bank debit; no bank fields are asked for.
 - **Family members:** they can't self-register. The primary adds them in the "Family" step
   (family.html) after login. Max 2 family members on the Amazon plan.
 - **T&C modal:** scroll `[class*=terms-conditions__modal__body]` to the bottom in steps
