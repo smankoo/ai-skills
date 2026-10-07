@@ -79,6 +79,58 @@ def _fetch_thumb(url: str) -> bytes | None:
         return None
 
 
+def check_inline_images(msg, html: str) -> None:
+    """Refuse to send if any embedded thumbnail would render as a blank box.
+
+    Every cid: in the HTML needs a matching image part that is (a) inside the
+    multipart/related, (b) Content-Disposition: inline, and (c) a real JPEG/PNG of a
+    sane size, not a 1-2 KB placeholder. Added after the 2026-10-07 gym email showed
+    no images on iPhone (parts were 'attachment').
+    """
+    import re
+    cids = set(re.findall(r'src="cid:([^"]+)"', html))
+    parts = {}
+    for p in msg.walk():
+        if p.get_content_maintype() == "image":
+            parts[(p.get("Content-ID") or "").strip("<>")] = p
+    problems = []
+    for c in sorted(cids):
+        p = parts.get(c)
+        if p is None:
+            problems.append(f"{c}: no image part")
+            continue
+        if (p.get_content_disposition() or "") != "inline":
+            problems.append(f"{c}: disposition {p.get_content_disposition()!r}, needs 'inline'")
+        data = p.get_payload(decode=True) or b""
+        if len(data) < 2500 or not (data[:3] == b"\xff\xd8\xff" or data[:4] == b"\x89PNG"):
+            problems.append(f"{c}: not a real image ({len(data)} bytes)")
+    remote = re.findall(r'<img[^>]+src="(https?:[^"]+)"', html)
+    if remote:
+        print(f"  WARNING: {len(remote)} image(s) still remote-loaded (may not show on iPhone)")
+    if problems:
+        raise SystemExit("REFUSING TO SEND, broken thumbnails:\n  " + "\n  ".join(problems))
+    print(f"  image check OK: {len(cids)} inline thumbnails")
+    # Contact sheet of exactly what's embedded, so a human or vision model can confirm
+    # each photo matches its row (a variant can carry the wrong product's photo: a
+    # 2026-10-07 "men's jogger" listing showed women's shorts).
+    try:
+        import io
+        from PIL import Image
+        ims = []
+        for c in sorted(cids):
+            im = Image.open(io.BytesIO(parts[c].get_payload(decode=True))).convert("RGB")
+            im.thumbnail((160, 200))
+            ims.append(im)
+        cols = 6
+        sheet = Image.new("RGB", (160 * cols, 200 * ((len(ims) + cols - 1) // cols)), "white")
+        for n, im in enumerate(ims):
+            sheet.paste(im, ((n % cols) * 160, (n // cols) * 200))
+        sheet.save("/tmp/shopper_contact_sheet.jpg", quality=80)
+        print("  contact sheet: /tmp/shopper_contact_sheet.jpg (check every photo matches its item)")
+    except Exception as e:
+        print(f"  (contact sheet skipped: {e})")
+
+
 def inline_images(html: str) -> tuple[str, list[tuple[str, bytes]]]:
     """Embed every <img src="http..."> as a CID attachment (multipart/related).
 
@@ -139,8 +191,13 @@ def main() -> int:
     if images:
         html_part = msg.get_payload()[1]
         for cid, data in images:
+            # disposition MUST be inline: with filename= alone, Python marks the part
+            # "attachment", and iPhone Mail then shows blank boxes instead of the
+            # photos (broke the 2026-10-07 gym email).
             html_part.add_related(data, maintype="image", subtype="jpeg", cid=f"<{cid}>",
+                                  disposition="inline",
                                   filename=f"{cid.split('@')[0]}.jpg")
+    check_inline_images(msg, html)
 
     if args.dry_run:
         print(f"DRY RUN — would send {args.subject!r} from {sender} to {', '.join(args.to)}")
