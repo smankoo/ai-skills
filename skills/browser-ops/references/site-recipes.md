@@ -52,6 +52,15 @@ Verified 2026-10-07. Used for Sumeet's own membership on 2026-10-06 and for addi
   decoy `shiftTabField` inputs).
 - Pay-debt via `/me/debtAccount/.../pay` returns "Incompatible country" / 403 from the
   VPS. The "Pay balance" button queues an operation, and it then disappears from the UI.
+- **Region matters**: `auth.eu.ovhcloud.com` rejects the CA account with
+  `invalid_account_or_password`. Always sign in at
+  `https://auth.ca.ovhcloud.com/signin/?onsuccess=https%3A%2F%2Fmanager.ca.ovhcloud.com%2F`
+  (the URL stored on the 1Password item). `https://www.ovh.com/auth/` redirects to EU and fails.
+  If already authenticated the page shows a "Continue" button (`#continue-submit`) instead of a form.
+- Debt status is readable read-only from the manager page:
+  `fetch('/engine/apiv6/me/debtAccount/debt/<id>',{credentials:'include'})` plus
+  `.../operation` and `.../operation/<opId>` for per-attempt status. 2026-10-07: debt 4434837
+  showed `PAID` after op 11417022 went CANCELLED and a `CREDITCARD_AUTOMATIC` op settled.
 
 ## Costco.ca
 - signin.costco.com returns **429** to automation from the VPS, from a home exit node (Pi3),
