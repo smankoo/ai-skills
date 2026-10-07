@@ -24,7 +24,7 @@ Verified 2026-10-07. Used for Sumeet's own membership on 2026-10-06 and for addi
 - **"SEND ME AN EMAIL"**: a click does nothing. Call the parent form's React `onSubmit`
   (`form[__reactEventHandlers$*].onSubmit({preventDefault(){},persist(){},target:form,currentTarget:form})`).
   Success shows "RESEND EMAIL" plus "Enter one time pass code", and the request is `orgvalidation.OrgSendValidationUrl.json` → 200.
-- The OTP goes to **smankoo@amazon.com**. The VPS can't read that inbox, so ask Sumeet for the code.
+- The OTP goes to the primary member's **work email** (the corporate-domain address used for eligibility). The VPS can't read that inbox, so ask the user for the code.
 - Step 2/7 is the GoodLife login. Use the 1Password GoodLife item (Gmail username).
 - **Login form (step 2/7)**: inputs `login` + `passwordParameter`. Same React trick: native setter, then __reactEventHandlers onChange, then the form's onSubmit.
 - **Adding a family member (verified 2026-10-07, Priyanka):** my-account → family.html → navigate to `membership.html?curCard=empty_0`.
