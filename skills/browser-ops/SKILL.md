@@ -65,6 +65,8 @@ Fill via `fill_input(selector, value)` in the same browser_exec call the secret 
 - Profile persists cookies — good for staying "warm" on sites, but clear `~/.hermes/chrome-profile` if you need a fresh identity.
 - This does NOT beat "Press & Hold" interactive challenges reliably — see retail-bot-wall-bypass skill for deep-link workarounds and Mac delegation.
 
+- **Tab buildup → memory alerts (2026-10-06):** each task opens tabs and nobody closes them; 22 stale tabs pushed hermes-browser to 1.69G/2G (82%) — NOT a leak (0 OOM, PSI ~0). Fix: close idle tabs (`/json/close/<id>`). Hourly no_agent cron `aa4640020b5b` runs `~/.hermes/scripts/browser_tab_reaper.py` (closes tabs whose URL unchanged ≥6h, keeps ≥1, logs to `~/.hermes/logs/browser_tab_reaper.log`). Close your own tabs when a task ends.
+
 ## Verification checklist after any setup change
 
 1. `curl -s http://127.0.0.1:9222/json/version` → Chrome JSON, UA without "Headless".
