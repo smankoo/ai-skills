@@ -1,9 +1,13 @@
 ---
 name: browser-ops
-description: Human-grade web browsing from the VPS — bot walls, CAPTCHAs, logins, JS-heavy sites, bookings. Use whenever a browser task needs stealth, credentials, or CAPTCHA solving, or when deciding which machine (VPS vs Angus) should drive the browser.
+description: Human-grade web browsing (check references/site-recipes.md first) from the VPS — bot walls, CAPTCHAs, logins, JS-heavy sites, bookings. Use whenever a browser task needs stealth, credentials, or CAPTCHA solving, or when deciding which machine (VPS vs Angus) should drive the browser.
 ---
 
 # Browser Ops — human-grade browsing
+
+## Site recipes: check FIRST (Sumeet: "You should get better with experience, not worse")
+
+Before driving any logged-in or form-heavy site, open `references/site-recipes.md` and look for the site. It holds the exact working method for flows that were expensive to crack (GoodLife corporate combobox, Mangomint, OVH billing iframe/Adyen, Costco 429s, Canada Life). **When a site takes more than ~3 attempts to crack, write the working recipe there in the same session.** Re-deriving a solved flow from scratch is a failure mode Sumeet has called out.
 
 ## Architecture (verified 2026-09-13)
 
