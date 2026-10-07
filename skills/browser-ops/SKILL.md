@@ -5,6 +5,9 @@ description: Human-grade web browsing (check references/site-recipes.md first) f
 
 # Browser Ops — human-grade browsing
 
+
+**Before pushing to ai-skills:** run `bash ~/.hermes/scripts/ai_skills_ci_local.sh`. It replays the CI checks, including the personal-data scan: no email addresses, home paths or names in skills. On 2026-10-07 a GoodLife recipe with a work address turned main red.
+
 ## Site recipes: check FIRST (Sumeet: "You should get better with experience, not worse")
 
 Before driving any logged-in or form-heavy site, open `references/site-recipes.md` and look for the site. It holds the exact working method for flows that were expensive to crack (GoodLife corporate combobox, Mangomint, OVH billing iframe/Adyen, Costco 429s, Canada Life). **When a site takes more than ~3 attempts to crack, write the working recipe there in the same session.** Re-deriving a solved flow from scratch is a failure mode Sumeet has called out.
