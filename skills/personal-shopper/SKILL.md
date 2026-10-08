@@ -343,6 +343,12 @@ know, and you know theirs. That sentence is worth more than a sixth option.
 
 ## 8. Browse and verify — the part that actually takes the time
 
+**Start with the 2026-10-08 store sweep.** Near the top of `references/retailer-recipes.md`, the section
+"Store recon 2026-10-08" covers about 45 Canadian stores: grocery (PC Express/Fortinos, Metro, Voila/Farm Boy, Flipp
+flyers for cross-store prices), pharmacy (Shoppers via its open Loblaw API, Rexall), Amazon (`amazon_extract.py`),
+camelcamelcamel, Costco, Best Buy, Nike, New Balance, Under Armour (shoe widths) and Aritzia (Algolia). It also has
+the cross-site rules. Use the script it names before exploring a site from scratch.
+
 Use the browser MCP. See `references/retailer-recipes.md` for the working extraction
 snippets, category IDs, and every failure mode hit so far.
 

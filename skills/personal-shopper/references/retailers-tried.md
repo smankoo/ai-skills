@@ -98,6 +98,33 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Reigning Champ | CA | Shopify `/products.json` open (770 products, one handle per colour) | wip | note | 2026-10-07 |
 | Costco.ca (unsigned browsing) | CA | WORKS via iMac CDP windowed Chrome (port 9334, `~/.hermes/mac_cdp_fetch.py`), no sign-in needed: search `/CatalogSearch?keyword=<q>` → harvest `a[href*=".product."]` and walk up to the tile for name/price/rating/warehouse stock; PDP `h1` + body text gives `Item NNN | Model XXX`, price, delivery estimate, `og:image` (avif). Some PDPs time out on first load, so retry. Sign-in still 429 (separate issue) | partial | note | 2026-10-07 |
 | Walmart.ca GROCERY search | CA | iMac CDP Chrome: `scripts/walmart_grocery_search.py "q1" "q2"…` (copy to the iMac, run with a websocket-client venv; CDP 9334). Warms up on the homepage for 12s, then `location.assign` to `/en/search?q=` in the SAME tab and reads tile text (name, `$x current price`, `$/100g`, Rollback/Was). Produce search is literal: "plums" and "black plums" return dried or fake fruit, golden berries/physalis return decor, "clementines" returns mandarins. When a fresh item is missing, say so rather than substituting | done | yes | 2026-10-07 |
+| PC Express (Fortinos / RCSS / No Frills / Loblaws) | CA | `pcexpress_extract.py`: public BFF `api.pcexpress.ca` search + pickup-locations (x-apikey + Site-Banner), per-store stock/unit/sale | done | yes | 2026-10-08 |
+| Metro.ca | CA | VPS browser: POST `/stores/my-store/<id>` then `metro_search.js` tiles | done | yes | 2026-10-08 |
+| Voila (Sobeys) / Farm Boy online | CA | `voila_extract.py`: `api/webproductpagews/v6/product-pages/search` (full Chrome UA) | done | yes | 2026-10-08 |
+| Flipp flyers (all grocers) | CA | `flipp_extract.py deals`: backflipp flyers by postal → full flyer items | done | yes | 2026-10-08 |
+| FreshCo | CA | Flyer only via Flipp; site 403 | partial | yes | 2026-10-08 |
+| Instacart.ca | CA | `/store/<x>/s?k=` 403 from VPS; not cracked | wip | no | 2026-10-08 |
+| Desi Mandi / Thiara | CA | Not on Flipp; no online catalogue found yet | wip | no | 2026-10-08 |
+| Shoppers Drug Mart | CA | PDP: open BFF `prod-sdm-bff.api.loblaw.digital` (`sdm_extract.py`, VPS); search: iMac `sdm_search.js` (`__NEXT_DATA__` productTiles) | done | yes | 2026-10-08 |
+| Rexall (shop.rexall.ca) | CA | Instacart Storefront Pro; iMac same-origin GraphQL `rexall_extract.js` (zone-dependent prices) | done | yes | 2026-10-08 |
+| Pharmasave | CA | Per-franchise `/store<id>/` shops + schema.org; script UNTESTED | wip | yes | 2026-10-08 |
+| Amazon.ca (general) | CA | Signed-in VPS browser: `amazon_extract.py` + `amazon_search.js` / `amazon_pdp.js` (seller_class, unit, S&S, variants) | done | yes | 2026-10-08 |
+| camelcamelcamel.ca | CA | iMac `camel_extract.js` (low/high/avg + dates; current lags) | done | yes | 2026-10-08 |
+| Costco.ca search API | CA | `gdx-api.costco.com` search (fixed client-identifier); price keys not mapped yet | wip | yes | 2026-10-08 |
+| Nike CA | CA | `nike_extract.py` (VPS): `__NEXT_DATA__` width groups + `available_gtins` stock | done | yes | 2026-10-08 |
+| Under Armour CA | CA | VPS browser `ua_pdp.js`: ProductGroup `hasVariant[]` | done | yes | 2026-10-08 |
+| New Balance CA | CA | iMac `nb_pdp.js`: ProductGroup; width in SKU (2E/4E) | done | yes | 2026-10-08 |
+| adidas CA | CA | iMac `adidas_pdp.js`: same-origin `/api/products/<id>` + availability | done | yes | 2026-10-08 |
+| Aritzia | CA | UNBLOCKED: public Algolia index from VPS (price/sizes/fabric/store stock); PDP via iMac | done | yes | 2026-10-08 |
+| Levi's CA | CA | iMac renders PDP (ProductGroup + size tiles + composition); OOS marker unknown | partial | yes | 2026-10-08 |
+| Reigning Champ | CA | `ca.reigningchamp.com` Shopify CAD; `web_extract` of `.js` (VPS curl 429); no fibre % | partial | yes | 2026-10-08 |
+| Best Buy CA | CA | `bestbuy_extract.py` (VPS): `/api/v2/json` search/product + offers + availability (`locations=942`) | done | yes | 2026-10-08 |
+| Home Depot CA | CA | productsvc store API over HTTP/1.1 (store 7021); main search 403 | partial | yes | 2026-10-08 |
+| Gap CA / Old Navy CA | CA | RE-VALIDATED: VPS browser now walled → iMac `gap_pdp.js` | done | yes | 2026-10-08 |
+| Crocs CA | CA | RE-VALIDATED: Next.js re-platform → `crocs_extract.py` v2 | done | yes | 2026-10-08 |
+| The Children's Place | CA | RE-VALIDATED: web_extract stub → VPS browser `childrensplace_pdp.js` | done | yes | 2026-10-08 |
+| ASICS CA | CA | RE-VALIDATED: image host fix; width = separate style; iMac `asics_sizes.js` per-size (last patch unrun) | done | yes | 2026-10-08 |
+| RW&CO / L.L.Bean / Staples / IKEA / Costco grid | CA | RE-VALIDATED 2026-10-08, scripts unchanged (IKEA: name suffix + null image) | done | yes | 2026-10-08 |
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
 ## Candidate queue (not yet tried — good picks for future runs)

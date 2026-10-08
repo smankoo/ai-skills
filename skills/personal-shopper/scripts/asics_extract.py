@@ -24,6 +24,8 @@ OUTPUT (JSON to stdout)
   {name, subtitle, price, regular_price, on_sale, availability, in_stock,
    style_no, style_url_id, rating, review_count, image, url}
 
+FIX 2026-10-08: hero image host is now preview5.assetsadobe.com (images.asics.com still serves the
+same path) -> regex accepts both. Per-size/width stock: see asics_sizes.js (iMac CDP).
 Verified 2026-08-25 on two live products:
   novablast-5-1011b974-004  -> $149.99 (reg $190.00, on_sale) In stock
   gt-2000-15-1011c235-001   -> $180.00 (no sale) In stock
@@ -91,11 +93,11 @@ def parse(md: str) -> dict:
         out["review_count"] = int(m.group(1))
 
     # --- Main product image (the images.asics.com $product$ render) ---
-    m = re.search(r"(https://images\.asics\.com/is/image/asics/[^)\"\s]+?\$product\$[^)\"\s]*)", md)
+    m = re.search(r"(https://(?:images\.asics\.com|preview\d*\.assetsadobe\.com)/is/image/asics/[^)\"\s]+?\$product\$[^)\"\s]*)", md)
     if m:
         out["image"] = m.group(1)
     else:
-        m = re.search(r"(https://images\.asics\.com/is/image/asics/[^)\"\s]+)", md)
+        m = re.search(r"(https://(?:images\.asics\.com|preview\d*\.assetsadobe\.com)/is/image/asics/[^)\"\s]+)", md)
         if m:
             out["image"] = m.group(1)
 

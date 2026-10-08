@@ -67,6 +67,71 @@ note turns out to be true of every site, promote it to the section below and del
    per retailer: **web_extract (JSON-LD + visible fields) → public/undocumented JSON API →
    Shopify JSON → CDP/browser interaction**. Record in the recipe which rung actually worked.
 
+## Store recon 2026-10-08: walls, APIs and fixes from a 6-worker sweep (read this first)
+
+A one-day sweep of ~45 stores. Every claim below was checked against a live product that day. Scripts are in `scripts/`. "iMac" means `browser-ops/scripts/mac_cdp_fetch.py <extractor.js> <url>...` run on the iMac, whose Chrome has CDP on 9334. Pace iMac loads ≥20 s apart.
+
+**Rules learned (true across many sites):**
+- **Sites walled from the VPS often have an open API behind them.** Load the page once on the iMac, list `performance.getEntriesByType('resource')`, or capture traffic with `browser-ops/scripts/cdp_netcap.py <url> <url_regex>`. Then call the API from the VPS. Examples: Shoppers (`*.api.loblaw.digital`), Aritzia (Algolia), Nike (`available_gtins`), Best Buy (`/api/v2/json`), Costco (`gdx-api`).
+- **Send a full desktop Chrome User-Agent.** Akamai stalls the default `Python-urllib` UA until it times out (Best Buy, Home Depot). Voila returns 403 to a short UA.
+- **Home Depot's Akamai resets HTTP/2.** Use `curl --http1.1`; urllib is already HTTP/1.1.
+- **A header that looks like a per-request UUID can be a fixed app key.** Costco's `client-identifier` is one: a random value gets 401.
+- **ProductGroup JSON-LD (`hasVariant[]`) often holds full per-size and per-colour stock.** Under Armour, New Balance, Levi's, Children's Place and Zara all have it. Parse it before clicking size buttons.
+- **"Done" scripts can fail silently.** On 2026-10-08, Crocs dropped sizes, Children's Place returned `sizes:[]`, ASICS returned `image:null`, and IKEA returned no image. After any extraction, check that required fields aren't empty before trusting the result.
+- **`429 local_rate_limited`** showed up on The Brick, Mastermind, Reigning Champ and RW&CO `/products.json`. It may come from our VPS egress. Shopify `.js` and `/search/suggest.json` usually stay open; `web_extract` of `/products/<h>.js` also works.
+- **Sponsored tiles lead the results** on Amazon, PC Express, Walmart and Voila, and are often off-topic. Every script here drops them by default.
+- **Gap Inc. (Gap, Old Navy, Banana Republic) now blocks the VPS browser itself**, not just curl ("Access Denied"). Use the iMac by default.
+
+### Grocery
+- **PC Express: Fortinos, Real Canadian Superstore, No Frills, Loblaws, Zehrs.** `pcexpress_extract.py` (VPS, stdlib). Endpoints: `POST api.pcexpress.ca/pcx-bff/api/v2/products/search`, plus `GET /v1/pickup-locations?bannerIds=<banner>` for store IDs. Needs headers `x-apikey` (the public web key, in the script) and `Site-Banner`. Fortinos Appleby Line is store `1495`, No Frills Appleby is `7951`. Returns unit price, was/sale price, deal end date and in/out of stock for that store. Verified: Nanak Paneer 341 g, $4.99, in stock.
+- **Metro.ca.** curl gets 403. VPS browser: `POST /stores/my-store/223` (Millcroft, Appleby Line) sets the store, then run `metro_search.js` on `/en/online-grocery/search?filter=<q>` to read `.default-product-tile`. Verified: Lactantia 2% 4 L, $4.99 (reg $7.49).
+- **Voila (Sobeys, also Farm Boy's online shop).** `voila_extract.py "<q>" [--brand "Farm Boy"]` (VPS). `GET voila.ca/api/webproductpagews/v6/product-pages/search?q=`, no store needed, **full Chrome UA required**. Product URL is `/products/<retailerProductId>/details` (fixed 2026-10-08; the UUID form returns 202 with an empty body).
+- **Farm Boy.** farmboy.ca shows no prices. Use Voila with `--brand "Farm Boy"`, or its weekly flyer on Flipp.
+- **Flipp flyers.** `flipp_extract.py deals "words" L7M0K5` scans every grocer's full weekly flyer in about 7 s: Walmart, RCSS, FreshCo, Food Basics, Metro, No Frills, Farm Boy and more (83 merchants for L7M). Source is `backflipp.wishabi.com/flipp/flyers?postal_code=` and then `/flyers/<id>`. Its `/items/search` caps at about 64 hits, with pharmacies crowding it, so scan full flyers instead. Gives flyer prices only, not stock or size. **Best tool for "where is X cheapest this week".**
+- **FreshCo.** Flyer only, via Flipp. freshco.com/flyer returns 403.
+- **Walmart grocery.** `walmart_grocery_search.py` (iMac, after a homepage warm-up). Fixed 2026-10-08: duplicate tiles, sponsored tiles taking every slot, and `/wapcrs/track` ad-redirect URLs. Adds unit price, was price and rollback.
+- **Instacart.ca.** `instacart.ca/store/<x>/s?k=` returns 403 from the VPS. Not cracked (wip).
+- **Desi Mandi / Thiara (Indian grocers).** Not on Flipp. No online catalogue found yet (wip).
+
+### Pharmacy / health
+- **Shoppers Drug Mart.** www and api.shoppersdrugmart.ca are Akamai 403 to the VPS, including the VPS browser. The BFF host `prod-sdm-bff.api.loblaw.digital/beauty/v2/shoppersdrugmart` is **open from the VPS**. `sdm_extract.py <EAN|BB_EAN|url>` returns price, `effectivePrice` (sale), stock level, size, promo end, a ship ETA for the postal code, and `nsf_in_text`. A 401 `invalid_client` means the key rotated: grep the site's `_app-*.js` for `NEXT_PUBLIC_BFF_API_KEY`. **Search has no GET API**: run `sdm_search.js` on the iMac against `www.shoppersdrugmart.ca/search?text=<q>`. It reads `__NEXT_DATA__` `productTiles[]` (the visible grid scrape finds nothing).
+- **Rexall.** `shop.rexall.ca` is an **Instacart Storefront Pro** site, Imperva-walled to the VPS. `rexall_extract.js` on the iMac does same-origin persisted-query GraphQL: `SearchResultsPlacements` → `Items` + `ItemPricesQuery`. ⚠️ The iMac's delivery zone defaults to a Toronto postal code, so prices are per zone. `www.rexall.ca/search` is a dead end, and `web_extract` renders a different default store's price.
+- **Pharmasave.** Each franchise has its own shop (`shop.pharmasave.com/store<id>/`); the national catalogue is empty. Burlington WinCare is `store9742`. The store finder JSON (`StoreLocatorLocations`, `has_online_shopping=1`) lists which stores sell online. Pages carry schema.org data. `pharmasave_extract.UNTESTED.py` was written but **never run**.
+- **Not done yet:** Well.ca (curl 200, so step 1 probably works), BioSteel (Shopify `products.json` returns 200), Popeyes (200), iHerb CA (Cloudflare 403), Sephora retry. For a certification check, see `nsfsport.com/certified-products/search-results.php?keyword=<brand>` (browser render) and `choice.wetestyoutrust.com/certified-products` (`web_extract`; group by brand headings).
+
+### Amazon / camelcamelcamel / Costco
+- **Amazon.ca.** Use the signed-in VPS browser (session `amzn`). `amazon_extract.py` is exec'd inside `browser_exec`; set `AMAZON_JS_DIR` because `__file__` points at the harness. It drives `amazon_search.js` (drops sponsored tiles: asin, title, price, strike price, unit price, rating, count, Prime, delivery) and `amazon_pdp.js`. The PDP extractor returns buy-box price, list price, savings, unit price, coupon, S&S price, Ships from/Sold by → `seller_class` (amazon / fba_3p / mfn_3p), `only_left`, delivery date, hi-res image, and the variant map (parent, child ASINs). `amazon_variants(parent, want={...})` loads the matching child pages. Validated on grocery, electronics, supplement, household and apparel products.
+  - **Failure modes:**
+    - `/dp/<child>` can load a different child ASIN; check `asin_mismatch`.
+    - The seller line comes in two layouts: "Shipper / Seller X", or a "Ships from"/"Sold by" pair.
+    - On search tiles the strike price is `.a-price[data-a-strike="true"]`; the first `.a-text-price` is the unit price.
+    - When there's no featured offer, GET `/gp/product/ajax/aodAjaxMain/?asin=` same-origin.
+    - Amazon's own "price history" link opens the Rufus AI assistant (dead end).
+    - Import-fee detection is untested.
+- **camelcamelcamel.** Cloudflare blocks it from the VPS, including `web_extract`. `camel_extract.js` on the iMac at `https://ca.camelcamelcamel.com/product/<ASIN>` returns the lowest, highest and average price with dates. Its "current" price lags 2–3 weeks, so take current from Amazon itself. If the Amazon row is empty, fall back to the 3rd-party-new row.
+- **Costco.ca (not signed in).** iMac `costco_grid.js` / `costco_pdp.js` still work (validated). Search API, found but wip: `POST gdx-api.costco.com/catalog/search/api/v1/search` with headers `client_id: CABC`, `locale: en-CA`, `searchResultProvider: GRS`, `client-identifier: 168287ea-1201-45f6-9b45-5bbea49f8ee7` (a fixed key) and `credentials:'omit'`. Price and stock are in `variantRollupValues` keys like `inventory(894_ON, price)`. `costco_search_api.js` still returns `price:null`; remapping it to those keys is the remaining fix. ⚠️ The iMac tab's location is set to Oakville / S Mississauga, not Burlington. **Never sign in** (HTTP 429).
+
+### Apparel and shoes
+- **Gap / Old Navy.** Moved to the iMac: `gap_pdp.js` handles category and product pages. Out-of-stock sizes still carry `fds_selector__label--unavailable`. `og:image` comes back empty.
+- **Crocs.** The site moved to Next.js: `/p/<slug>/<id>.html`, and the old `masterData` is gone. `crocs_extract.py` v2 reads JSON-LD plus the `self.__next_f` flight payload, giving per-size stock. Takes `--color`.
+- **Children's Place.** `web_extract` now returns a stub of about 700 characters. Use `childrensplace_pdp.js` in the VPS browser: JSON-LD ProductGroup plus `label.size-field` (`item-disabled-option` = out of stock).
+- **ASICS.** `asics_extract.py`: the image host is now `preview5.assetsadobe.com` (regex fixed). **Width = a separate style**: `<MODEL>` is D, `<MODEL> WIDE` is 2E, `<MODEL> EXTRA WIDE` is 4E. Per-size stock comes from Magento `jsonConfig` on the iMac via `asics_sizes.js`. ⚠️ The latest patch to that script was never re-run.
+- **RW&CO** and **L.L.Bean**: validated, scripts unchanged. RW&CO `/products.json` returns 429; find handles with `/search/suggest.json?q=&resources[type]=product`.
+- **Nike.** `nike_extract.py` (VPS stdlib) takes `search`, `wide men` or `pdp <url> --sizes 10.5,11 --width Wide`. It reads PDP `__NEXT_DATA__` `productGroups[]` (one group per width) and joins on gtin to `api.nike.com/deliver/available_gtins/v3`. Men's "Wide" running shoes are only 6 models. "Extra Wide" exists only on the Air Monarch IV.
+- **Under Armour.** curl gets HTTP 418. Use `ua_pdp.js` in the VPS browser: JSON-LD `hasVariant[]` plus `.bfx-list-price`/`.bfx-sale-price`. Each width is its own PDP ("Wide (4E)" in the name).
+- **New Balance.** Walled from the VPS. Use `nb_pdp.js` on the iMac. D, 2E and 4E sit in one PDP, and the width is in the SKU (`M880B15-2E-105`). Filter with `__NB_WIDTHS`. ⚠️ Re-run once after the last patch.
+- **adidas.** WAF on the VPS. Use `adidas_pdp.js` on the iMac: same-origin `/api/products/<ID>` and `/availability`. adidas has no width variants.
+- **Aritzia: no longer blocked.** Its public Algolia index works from the VPS: `POST search-0.aritzia.com/1/indexes/production_ecommerce_aritzia__Aritzia_CA__products__en_CA/query` with app id `SONLJM8OH6` and the public search key from the site JS. It returns price, `shippableSizes`, `storeAvailability`, `fabric`. Images and PDPs come via the iMac.
+- **Levi's CA.** Renders on the iMac: ProductGroup JSON-LD, `.size-tile-list-button`, `.price`, Composition & Care. How out-of-stock tiles are marked is still unknown.
+- **Reigning Champ.** The Canadian store is `ca.reigningchamp.com` (Shopify, CAD). VPS curl gets 429, so `web_extract` its `/products/<h>.js`. Descriptions don't give fibre percentages.
+- **Sport Chek / Decathlon scripts** still point at the OLD Mac (`100.116.71.40:9333`). Port them to the iMac before use. **Not validated:** Lululemon, Simons, Joe Fresh, Carter's, H&M, Uniqlo, SoftMoc.
+
+### Home and electronics
+- **Best Buy CA.** `bestbuy_extract.py search "<q>" [n]` / `product <sku>` (VPS stdlib, Chrome UA). Endpoints: `/api/v2/json/search`, `/api/v2/json/product/<sku>`, `/api/offers/v1/products/<sku>/offers`, and `/ecomm-api/availability/products?...&locations=942%7C930&postalCode=L7M0K5&skus=` (Burlington is 942, Oakville 930). **The pickup list comes back empty unless `locations=` is passed.**
+- **Home Depot CA.** Partial. `GET /api/productsvc/v1/products/<id>/store/7021?fields=BASIC_SPA&lang=en` over HTTP/1.1 with a Chrome UA returns price, store stock, online stock and aisle (store 7021 = Burlington, 3050 Davidson Ct). Main search is 403 even in-page; `/api/search/v1/search/sku` works.
+- **IKEA.** `ikea_extract.py` validated, but `name` now has a "- IKEA CA" suffix and `image` is null. Old 8-digit URLs redirect to series pages; use the `…-20522046/` form. The stock API `api.ingka.ikea.com/cia/availabilities/ru/ca?itemNos=` (needs `X-Client-Id`, `Accept: application/json;version=2` and `Origin`) gave 200 once, then a Cloudflare 403: flaky. The search API `sik.search.blue.cdtapps.com/ca/en/search-result-page?q=` works from the VPS.
+- **Staples:** validated, unchanged. **RONA:** now a Cloudflare challenge (not DataDome). **Wayfair:** px-captcha. **Michaels:** Akamai. **Etsy:** JS challenge. iMac retries for those four weren't checked. **Not reached:** Canadian Tire validation, Long & McQuade, Mastermind, Canada Computers.
+
 ## Uniqlo (CA) — public JSON API, the best natural-fibre source found so far
 
 Canada, mid-market. **This is the highest-leverage retailer for a natural-fibre rule** — deep

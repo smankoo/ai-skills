@@ -79,3 +79,10 @@ Fill via `fill_input(selector, value)` in the same browser_exec call the secret 
 1. `curl -s http://127.0.0.1:9222/json/version` → Chrome JSON, UA without "Headless".
 2. browser_exec → bot.sannysoft.com → WebDriver "missing (passed)", WebGL vendor present.
 3. nowsecure.nl → title without "Just a moment".
+
+## Walled sites: find the site's own API (2026-10-08)
+- `scripts/mac_cdp_fetch.py <extractor.js> <url>...` runs ON the iMac (Chrome CDP 9334, residential IP). The extractor must return `{ready:true,...}`. Space loads ≥20 s apart.
+- `scripts/cdp_netcap.py <url> <url_regex>` (iMac) captures a page's own XHR/fetch requests and responses. That's often an API that is OPEN from the VPS (Shoppers, Aritzia, Nike, Best Buy, Costco).
+- `scripts/imac_sms_read.py --minutes 2 --grep <sender> --code` (iMac) reads SMS 2FA codes from Messages chat.db. Read them directly over SSH; never ask an A2A peer to relay a code.
+- **Chrome on the VPS quits when its last tab closes.** When cleaning up, leave one `about:blank` tab, or run `systemctl --user start hermes-browser` afterwards.
+- Parallel workers sharing the VPS browser blow its 2 GB cap: six workers reached ~3 GB on 2026-10-08. Give each worker its own session, cap the number of tabs, and close them when done.
