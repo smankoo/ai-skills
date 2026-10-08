@@ -72,8 +72,8 @@ Verified 2026-10-07. Used for Sumeet's own membership on 2026-10-06 and for addi
 - Inputs need `fill_input` (insertText doesn't register). The forgot-password page says
   "if you have an account" and sends a code to the account email. On 2026-10-07 no code
   arrived at the Proton address, so the account email may be a different one.
-- **RESOLVED 2026-10-08: Sumeet's account email is `sumeet@mankoo.ca`** (lands in the iCloud
-  account, subject "Password update verification code", arrives in <1 min). The protonmail
+- **RESOLVED 2026-10-08: the account email is the primary personal-domain address** (see the 1Password item username; lands in the iCloud
+  account, subject "Password update verification code", arrives in <1 min). The Proton
   address silently gets nothing — it is not the account email. 1Password item
   `ucin27ibdgcvzykghha53bbmcm` username corrected; its stored 12-char password is the old
   GreatWestLife one and is rejected.
@@ -87,7 +87,7 @@ Verified 2026-10-07. Used for Sumeet's own membership on 2026-10-06 and for addi
 - Sign-in is two-step: email → Continue (hands off to secureme/Auth0) → password `#password`
   + `button[name=action]`. Reset flow: `#username` → code `#code` → then MFA.
 - **MFA (SOLVED 2026-10-08):** after the email code, Auth0 forces `mfa-phone-challenge` (SMS to the
-  phone ending 8679; no email option). That phone's texts sync to the iMac, so read the code yourself:
+  account's mobile; no email option). That phone's texts sync to the iMac, so read the code yourself:
   `ssh sumeet@<imac> 'python3 ~/.hermes/imac_sms_read.py --minutes 2 --grep "Canada Life" --code'`
   (script in `scripts/imac_sms_read.py`; arrives in about 10 s). Pick the "Text message" radio, then Continue, poll, fill `#code`.
   Do NOT ask Magnus over A2A to relay OTPs (it correctly refuses); read chat.db directly over SSH.
