@@ -72,3 +72,24 @@ Verified 2026-10-07. Used for Sumeet's own membership on 2026-10-06 and for addi
 - Inputs need `fill_input` (insertText doesn't register). The forgot-password page says
   "if you have an account" and sends a code to the account email. On 2026-10-07 no code
   arrived at the Proton address, so the account email may be a different one.
+- **RESOLVED 2026-10-08: Sumeet's account email is `sumeet@mankoo.ca`** (lands in the iCloud
+  account, subject "Password update verification code", arrives in <1 min). The protonmail
+  address silently gets nothing — it is not the account email. 1Password item
+  `ucin27ibdgcvzykghha53bbmcm` username corrected; its stored 12-char password is the old
+  GreatWestLife one and is rejected.
+- **The reset page echoes back whatever email you type** ("We've sent an email with your code
+  to: X") even for addresses with no account. Never treat that confirmation as proof the
+  account exists — only an actually-delivered email proves it.
+- Selector gotcha: the Salesforce/Visualforce sign-in input has colons in its id, so
+  `#climsMyLogin\:...` is an invalid CSS selector (and Python eats the backslashes). Use
+  attribute suffix selectors: `input[name$=":loginForm:username"]`,
+  `input[name$=":loginForm:continueButton"]`.
+- Sign-in is two-step: email → Continue (hands off to secureme/Auth0) → password `#password`
+  + `button[name=action]`. Reset flow: `#username` → code `#code` → then MFA.
+- **MFA blocker:** after the email code, Auth0 forces `mfa-phone-challenge` — SMS or voice to
+  the phone ending 8679, or biometric. "Try another method" offers only
+  "Fingerprint or face recognition" / "Phone". There is NO email MFA option, so a headless
+  agent cannot finish the reset without the phone. Needs Sumeet (or him asking Magnus
+  directly on Telegram) to read the SMS.
+- Live web chat exists on the sign-in page: `#amazon-connect-open-widget-button`
+  ("Start Chat") — the non-phone support route.
