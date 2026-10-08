@@ -86,10 +86,14 @@ Verified 2026-10-07. Used for Sumeet's own membership on 2026-10-06 and for addi
   `input[name$=":loginForm:continueButton"]`.
 - Sign-in is two-step: email → Continue (hands off to secureme/Auth0) → password `#password`
   + `button[name=action]`. Reset flow: `#username` → code `#code` → then MFA.
-- **MFA blocker:** after the email code, Auth0 forces `mfa-phone-challenge` — SMS or voice to
-  the phone ending 8679, or biometric. "Try another method" offers only
-  "Fingerprint or face recognition" / "Phone". There is NO email MFA option, so a headless
-  agent cannot finish the reset without the phone. Needs Sumeet (or him asking Magnus
-  directly on Telegram) to read the SMS.
+- **MFA (SOLVED 2026-10-08):** after the email code, Auth0 forces `mfa-phone-challenge` (SMS to the
+  phone ending 8679; no email option). That phone's texts sync to the iMac, so read the code yourself:
+  `ssh sumeet@<imac> 'python3 ~/.hermes/imac_sms_read.py --minutes 2 --grep "Canada Life" --code'`
+  (script in `scripts/imac_sms_read.py`; arrives in about 10 s). Pick the "Text message" radio, then Continue, poll, fill `#code`.
+  Do NOT ask Magnus over A2A to relay OTPs (it correctly refuses); read chat.db directly over SSH.
+  Sign-in also asks for an SMS code every time.
+- Coverage: /s/benefits/coverage-and-balances → Health → Health professionals → Massage therapist
+  (LWC shadow DOM: find elements by textContent through shadowRoots and click by coordinates; `.click()` on the h3 does nothing).
+  A "Select a person" combobox shows each family member's balance.
 - Live web chat exists on the sign-in page: `#amazon-connect-open-widget-button`
   ("Start Chat") — the non-phone support route.
