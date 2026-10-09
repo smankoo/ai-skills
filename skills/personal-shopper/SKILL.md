@@ -359,6 +359,15 @@ there but wrong, fix it; a stale recipe is worse than none, because it gets trus
 
 The essentials:
 
+- **Anything eaten or put on the body: read the ingredients AND verify the certification in the official registry
+  before recommending (2026-10-09).** Recommending a product on its "100% pure" title alone got a fair "how do we know
+  it's real?" pushback. Read the `Ingredients` row (`#important-information` / `#productOverview_feature_div`) and the
+  country of origin. A seal printed on the label proves nothing: look the maker up in the registry itself. **USDA Organic:**
+  organic.ams.usda.gov/integrity/Search, `#operation` = brand or legal name, then the `Search` button. Each result row gives
+  the certifier, the status (Certified, Suspended or Revoked) and the certified product scope. Check that the scope names this
+  product. Amazon brand names often differ from the operation name (e.g. Cliganic is "A to Z Beauty, LLC dba Cliganic").
+  Supplements: NSF Certified for Sport (nsfsport.com) or Informed Choice (choice.wetestyoutrust.com). In the reply, say
+  plainly which picks are registry-verified and which are label-only.
 - **Verify fabric/material composition against the live page, not the category grid.** When the
   user holds a material rule (e.g. a minimum natural-fibre percentage), the composition is a
   buyable-or-not fact just like size and stock — and it's almost never on the grid. Open the
