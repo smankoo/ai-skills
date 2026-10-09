@@ -40,11 +40,14 @@ Images: contents.mediadecathlon.com/.../picture.jpg?format=auto&f=650x0 — NOT
 """
 import json, sys, time, urllib.request, websocket
 
-CDP = "http://127.0.0.1:9333"
+import os
+# 2026-10-09: ported to the iMac persistent Chrome (CDP 9334, profile ~/.hermes/costco-profile).
+CDP = os.environ.get("CDP", "http://127.0.0.1:9334")
 
 def new_tab():
     req = urllib.request.Request(CDP + "/json/new?about:blank", method="PUT")
-    return json.load(urllib.request.urlopen(req))["webSocketDebuggerUrl"]
+    t = json.load(urllib.request.urlopen(req))
+    return t["webSocketDebuggerUrl"], t["id"]
 
 JS_EXPAND = r"""
 (() => {
@@ -103,7 +106,8 @@ EXTRACT = r"""
 """
 
 def run(url):
-    ws = websocket.create_connection(new_tab(), max_size=None)
+    wsurl, tid = new_tab()
+    ws = websocket.create_connection(wsurl, max_size=None, suppress_origin=True)
     mid = [0]
     def cmd(method, params=None):
         mid[0]+=1; i=mid[0]
@@ -118,11 +122,13 @@ def run(url):
     time.sleep(2.5)                      # accordions open
     r = cmd("Runtime.evaluate", {"expression":EXTRACT, "returnByValue":True})
     ws.close()
+    urllib.request.urlopen(CDP + "/json/close/" + tid, timeout=10)   # persistent profile: always close
     return r.get("result",{}).get("value")
 
 if __name__ == "__main__":
     res=[]
-    for u in sys.argv[1:]:
+    for i, u in enumerate(sys.argv[1:]):
+        if i: time.sleep(20)              # iMac pacing rule: >=20 s between loads
         try: res.append({"url":u, "data":run(u)})
         except Exception as e: res.append({"url":u,"error":str(e)})
     print(json.dumps(res, indent=2))

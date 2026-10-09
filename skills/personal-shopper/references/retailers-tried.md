@@ -125,6 +125,12 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | The Children's Place | CA | RE-VALIDATED: web_extract stub → VPS browser `childrensplace_pdp.js` | done | yes | 2026-10-08 |
 | ASICS CA | CA | RE-VALIDATED: image host fix; width = separate style; iMac `asics_sizes.js` per-size (last patch unrun) | done | yes | 2026-10-08 |
 | RW&CO / L.L.Bean / Staples / IKEA / Costco grid | CA | RE-VALIDATED 2026-10-08, scripts unchanged (IKEA: name suffix + null image) | done | yes | 2026-10-08 |
+| Costco.ca search API | CA | FIXED 2026-10-09: iMac `costco_search_api.js`; price/stock from `variantRollupValues` (`inventory(894_ON, price)`, `inventory(<wh>, attributes.availability)`); default warehouse 253 Burlington | done | yes | 2026-10-09 |
+| Sport Chek / Decathlon | CA | PORTED 2026-10-09 to iMac persistent Chrome (CDP 9334), tabs closed + 20 s pacing; both re-validated | done | yes | 2026-10-09 |
+| ASICS CA | CA | FIXED 2026-10-09: Magento `jsonConfig` gone; `asics_sizes.js` now reads `window.utag_data` product_colors/sizes/sizes_stock (matches size buttons) | done | yes | 2026-10-09 |
+| New Balance CA | CA | RE-VALIDATED 2026-10-09: `nb_pdp.js` (patched) per style+colour x D/2E/4E; iMac had a stale copy, re-scp before use | done | yes | 2026-10-09 |
+| lululemon CA | CA | NEW 2026-10-09: iMac `lululemon_extract.js` (search -> links; PDP -> per-colour size stock + per-colour, per-part fibre) | done | yes | 2026-10-09 |
+| Simons | CA | CHANGED 2026-10-09: deep PDPs load in the VPS browser; `simons_pdp.js` = JSON-LD + inline per-colour/size `stockLevel` counts + composition. curl still 403; /en/search bounces | done | yes | 2026-10-09 |
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
 ## Candidate queue (not yet tried — good picks for future runs)

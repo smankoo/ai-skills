@@ -29,7 +29,9 @@ Find candidates via web_search 'site:sportchek.ca <brand> <keyword>'.
 """
 import json, re, time, sys, urllib.request, websocket
 
-CDP = "http://127.0.0.1:9333"
+import os
+# 2026-10-09: ported to the iMac persistent Chrome (CDP 9334, profile ~/.hermes/costco-profile).
+CDP = os.environ.get("CDP", "http://127.0.0.1:9334")
 NATURAL = ("cotton", "wool", "linen", "silk", "cashmere", "lyocell", "tencel",
            "hemp", "merino", "lambswool", "mohair", "alpaca", "jute", "ramie")
 # viscose/rayon/modal are semi-synthetic -> counted synthetic per skill rule.
@@ -104,7 +106,7 @@ def parse_price(d):
 def cdp(url):
     req = urllib.request.Request(CDP + "/json/new?about:blank", method="PUT")
     tab = json.load(urllib.request.urlopen(req))
-    ws = websocket.create_connection(tab["webSocketDebuggerUrl"], max_size=None)
+    ws = websocket.create_connection(tab["webSocketDebuggerUrl"], max_size=None, suppress_origin=True)
     _id = [0]
     def cmd(m, p=None):
         _id[0] += 1
@@ -117,6 +119,7 @@ def cdp(url):
     cmd("Page.navigate", {"url": url}); time.sleep(14)
     r = cmd("Runtime.evaluate", {"expression": PAGE_JS, "returnByValue": True})
     ws.close()
+    urllib.request.urlopen(CDP + "/json/close/" + tab["id"], timeout=10)   # persistent profile: always close
     return json.loads(r["result"]["result"]["value"])
 
 def extract(url):
@@ -140,4 +143,8 @@ def extract(url):
     }
 
 if __name__ == "__main__":
-    print(json.dumps([extract(u) for u in sys.argv[1:]], indent=2))
+    out = []
+    for i, u in enumerate(sys.argv[1:]):
+        if i: time.sleep(20)              # iMac pacing rule: >=20 s between loads
+        out.append(extract(u))
+    print(json.dumps(out, indent=2))
