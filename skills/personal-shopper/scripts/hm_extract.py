@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """
+⚠️ 2026-10-10: web_extract is now Akamai-blocked on the FIRST request. Use scripts/hm_pdp.js on the iMac instead.
+
 H&M CA (www2.hm.com/en_ca) product extractor — parses the RENDERED-DOM
 markdown that `web_extract` returns for an H&M CA product page.
 Verified 2026-09-09.

@@ -21,7 +21,12 @@ DATA SOURCES on the rendered PDP:
      NOT in the JSON-LD.
   3. og:image / JSON-LD image — Demandware static image URL.
 
-HOW TO RUN (from the VPS, driving Chrome on the Mac over Tailscale):
+HOW TO RUN (updated 2026-10-10 -> iMac persistent Chrome, CDP 9334, no launch needed):
+  scp -q carters_extract.py sumeet@100.119.136.41:.hermes/
+  ssh sumeet@100.119.136.41 'cd ~/.hermes && costco-venv/bin/python carters_extract.py <pdp_url> [...]'
+  (tabs are closed after use; 20 s between URLs. Override with CDP=http://host:port.)
+
+LEGACY (old Mac 100.116.71.40, throwaway Chrome on 9333 — no longer the default):
   # 1. On the Mac, launch a throwaway debug Chrome (windowed, NOT headless):
   ssh sumeet@100.116.71.40 'export PATH=/opt/homebrew/bin:$PATH; \
     nohup "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
@@ -47,7 +52,8 @@ Output shape (one dict per URL):
 """
 import json, re, sys, time, urllib.request
 
-CDP = "http://localhost:9333"
+import os
+CDP = os.environ.get("CDP", "http://127.0.0.1:9334")  # iMac persistent Chrome (2026-10-10)
 NATURAL = ("cotton", "wool", "linen", "silk", "cashmere", "lyocell", "tencel",
            "hemp", "jute", "ramie", "alpaca", "merino", "mohair")
 
@@ -119,13 +125,20 @@ def natural_pct(comp):
 def extract(url):
     import websocket  # lazy: only needed for the live CDP path, not for the pure parsers
     tab = open_tab("about:blank")
-    ws = websocket.create_connection(tab["webSocketDebuggerUrl"], timeout=30)
+    ws = websocket.create_connection(tab["webSocketDebuggerUrl"], timeout=30, suppress_origin=True)
     ws.send(json.dumps({"id": 1, "method": "Page.enable"}))
     ws.send(json.dumps({"id": 2, "method": "Runtime.enable"}))
     ws.send(json.dumps({"id": 3, "method": "Page.navigate", "params": {"url": url}}))
     time.sleep(13)  # render + passive challenge auto-clear
     v = ev(ws, JS, 100) or {}
+    if not v.get("sizes"):  # slow render: one more try
+        time.sleep(8)
+        v = ev(ws, JS, 101) or {}
     ws.close()
+    try:
+        urllib.request.urlopen(CDP + "/json/close/" + tab["id"], timeout=10)
+    except Exception:
+        pass
     comp = parse_composition(v.get("desc"))
     sizes = v.get("sizes") or []
     return {
@@ -142,4 +155,9 @@ def extract(url):
     }
 
 if __name__ == "__main__":
-    print(json.dumps([extract(u) for u in sys.argv[1:]], indent=2))
+    out = []
+    for i, u in enumerate(sys.argv[1:]):
+        if i:
+            time.sleep(20)  # iMac pacing rule: >=20 s between page loads
+        out.append(extract(u))
+    print(json.dumps(out, indent=2))

@@ -131,6 +131,12 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | New Balance CA | CA | RE-VALIDATED 2026-10-09: `nb_pdp.js` (patched) per style+colour x D/2E/4E; iMac had a stale copy, re-scp before use | done | yes | 2026-10-09 |
 | lululemon CA | CA | NEW 2026-10-09: iMac `lululemon_extract.js` (search -> links; PDP -> per-colour size stock + per-colour, per-part fibre) | done | yes | 2026-10-09 |
 | Simons | CA | CHANGED 2026-10-09: deep PDPs load in the VPS browser; `simons_pdp.js` = JSON-LD + inline per-colour/size `stockLevel` counts + composition. curl still 403; /en/search bounces | done | yes | 2026-10-09 |
+| Uniqlo CA | CA | CHANGED 2026-10-10: plain VPS urllib + `x-fr-clientid`; detail moved to `/price-groups/00/details` + `/l2s?withStocks=true` (bare `/products/<id>` = 302); `uniqlo_extract.py` | done | yes | 2026-10-10 |
+| Joe Fresh | CA | SCRIPTED 2026-10-10: VPS urllib `__NEXT_DATA__`; search needs `?query=<q>:relevance`; `joefresh_extract.py` | done | yes | 2026-10-10 |
+| SoftMoc | CA | VALIDATED 2026-10-10: grid JSON + item-detail POST; new `softmoc_extract.py` | done | yes | 2026-10-10 |
+| Carter's / OshKosh CA | CA | PORTED 2026-10-10 to iMac CDP 9334 (`carters_extract.py`), JSON-LD per-size stock still works; VPS still walled | done | yes | 2026-10-10 |
+| Levi's CA | CA | CRACKED 2026-10-10: iMac `levi_pdp.js`; OOS tile = `.size-tile-list-button.unavailable` / `aria-disabled=true`; JSON-LD has no per-size data | done | yes | 2026-10-10 |
+| H&M CA | CA | CHANGED 2026-10-10: VPS walled at every rung (web_extract now blocked too); iMac `hm_pdp.js` = JSON-LD per colour×size stock + per-article composition/sale price | done | yes | 2026-10-10 |
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
 ## Candidate queue (not yet tried — good picks for future runs)
