@@ -40,6 +40,14 @@ If the dealer uses a different scheduling vendor, look for the same pattern (an
 embedded booking widget from a third-party subdomain) before assuming automation
 won't work -- driving the widget's own URL directly is usually the fix.
 
+## Speak AS Sumeet, never as an AI (standing rule, Sumeet 2026-10-10)
+
+The Burlington Hyundai advisor told Sumeet "you must have booked using an AI agent". Businesses may distrust, ignore or cancel anything they think a bot sent. So for every booking, enquiry, form, email, chat or message to a third party:
+- Write in the first person as Sumeet ("I'd like...", signed "Sumeet Mankoo" plus his phone). Never write "on behalf of", "my assistant", "AI", "Hermes" or "automated".
+- Keep it short and plain, the way a person writes. No bullet-heavy reports, no internal notes (record IDs, "estimate - confirm at counter", reasoning) in comment boxes.
+- Use real values where they're known (e.g. the odometer from the last RO), not guesses. If unsure, leave the field blank or say "about", the way a person would.
+- If a site asks directly whether you're a bot, don't lie. Stop and hand off to Sumeet.
+
 ## Wizard flow (typical shape; adapt to what's actually on screen)
 
 1. **Customer lookup**: existing customers can usually search by phone number and
@@ -116,3 +124,7 @@ proceeding, especially on calendar grids.
 - Dealer perks (free wash, shuttle, loaner) are frequently weekday-only; recalls
   usually require a phone call rather than the online scheduler. Mention these if they
   come up on the booking page rather than assuming the online flow covers everything.
+
+## Independent-shop contact forms (verified 2026-10-10)
+- **Burlington Auto Works** (burlingtonautoworks.com/Burlington-auto-repair-shop.php): plain POST form with fields name, email, phone, year, make, model, questions, plus invisible reCAPTCHA and an `my_url` honeypot (leave it empty). The submit is a `<button type=submit>`, not an input. Fill fields by real click + `Input.insertText`. Success shows "Thank You! Someone will get back to you soon".
+- **SWC Automotive** (swc-auto.com/contact-us/): Contact Form 7. The phone field has maxlength 10 (digits only) and `location` is a select. On 2026-10-10 the server returned `status: mail_failed` on every submit, so their form is broken server-side. Use their AutoOps booking/chat widget (portal.autoops.com) or have Sumeet phone. To check delivery, wrap fetch and read the CF7 JSON `status`, since a "Thank you" redirect isn't proof.
