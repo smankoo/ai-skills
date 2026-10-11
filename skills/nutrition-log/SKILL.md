@@ -68,6 +68,13 @@ Change them with `targets set` only when he asks, or when his weight changes by 
   micronutrients or fibre variety (Quest = added fibre plus sweeteners and sat fat); bakery
   puffs and samosas are mostly refined flour and fat; high protein with no veg hurts gut and heart health and leaves him hungry.
 
+## Realistic volume (Sumeet, 2026-10-11: "crazy volume for someone my size")
+- A plan he can eat beats a plan that ticks every box. One normal plate per meal: about 120 g meat or paneer, 1 katori sabzi or dal,
+  2 roti (or roti + a little rice), and at most one side. Don't stack salad + dal + dahi + rice + roti + fruit in one sitting.
+- Close the protein gap first, then veg. Accept small misses on carbs, kcal and fruit late in the day rather than forcing food.
+- Spread veg/fruit across the WHOLE day instead (fruit with morning chai, veg at lunch). Flag this in the morning, not at 7 PM.
+- When he's short late in the day, use dense options (a shake, whey in dahi) instead of extra plates.
+
 ## His food rules (hard)
 - **Never Greek yogurt** (hates it). Plain dahi (Astro 3%) with whey is fine.
 - Roti always goes with something **wet** (dal, sabzi with gravy, curry). Dry boiled eggs are a standalone snack only.
