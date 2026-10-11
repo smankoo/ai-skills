@@ -16,7 +16,11 @@ USAGE
   python3 pharmasave_extract.py stores [--city Burlington]       # which stores sell online
 
 OUTPUT JSON lines. PDP: name, price, old_price (if on sale), availability, sku/UPC, image, url.
-Verified 2026-10-08 (store9742: CeraVe Foaming Facial Cleanser 355ML $22.99, AVAILABLE).
+Verified RUN 2026-10-11: store9742 CeraVe Foaming Facial Cleanser 355ML $17.24 (was $22.99),
+"AVAILABLE Inventory may vary", UPC 3606000537569. `stores --city Burlington` -> store9742, store9680.
+NOTES: the site ignores pagesize (we cap to --n locally); search is a loose word match sorted by
+price ("vitamin d" returns vitamin C too), so filter names yourself; some image URLs contain
+spaces (stripped). Availability is a generic "Inventory may vary", not a real count.
 """
 import html
 import json
@@ -57,9 +61,11 @@ def search(q, store, n=20):
             "name": clean(a.group(2)),
             "price": money((re.search(r'class="price actual-price">([^<]+)', box) or [None, ""])[1]),
             "old_price": money((re.search(r'class="price old-price">([^<]+)', box) or [None, ""])[1]),
-            "image": (re.search(r'data-lazyloadsrc="([^"]+)"', box) or [None, None])[1],
+            "image": re.sub(r"\s+", "", (re.search(r'data-lazyloadsrc="([^"]+)"', box) or [None, ""])[1]) or None,
             "url": BASE + a.group(1),
         })
+        if len(out) >= n:
+            break
     return out
 
 
@@ -89,7 +95,7 @@ def pdp(url, store):
         "availability": clean(stock) or (ld.get("offers") or {}).get("availability"),
         "in_stock": "InStock" in json.dumps(ld.get("offers") or {}),
         "upc": upc,
-        "image": ld.get("image"),
+        "image": re.sub(r"\s+", "", ld.get("image") or "") or None,
         "store": store_name or store,
         "url": url,
     }

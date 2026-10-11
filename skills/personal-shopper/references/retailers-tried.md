@@ -103,11 +103,11 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Voila (Sobeys) / Farm Boy online | CA | `voila_extract.py`: `api/webproductpagews/v6/product-pages/search` (full Chrome UA) | done | yes | 2026-10-08 |
 | Flipp flyers (all grocers) | CA | `flipp_extract.py deals`: backflipp flyers by postal → full flyer items | done | yes | 2026-10-08 |
 | FreshCo | CA | Flyer only via Flipp; site 403 | partial | yes | 2026-10-08 |
-| Instacart.ca | CA | `/store/<x>/s?k=` 403 from VPS; not cracked | wip | no | 2026-10-08 |
+| Instacart.ca | CA | VPS 403; iMac loads store search without login but defaults to Oakville postal; no prices extracted yet | wip | no | 2026-10-11 |
 | Desi Mandi / Thiara | CA | Not on Flipp; no online catalogue found yet | wip | no | 2026-10-08 |
 | Shoppers Drug Mart | CA | PDP: open BFF `prod-sdm-bff.api.loblaw.digital` (`sdm_extract.py`, VPS); search: iMac `sdm_search.js` (`__NEXT_DATA__` productTiles) | done | yes | 2026-10-08 |
 | Rexall (shop.rexall.ca) | CA | Instacart Storefront Pro; iMac same-origin GraphQL `rexall_extract.js` (zone-dependent prices) | done | yes | 2026-10-08 |
-| Pharmasave | CA | Per-franchise `/store<id>/` shops + schema.org; script UNTESTED | wip | yes | 2026-10-08 |
+| Pharmasave | CA | Per-franchise `/store<id>/` shops + schema.org; `pharmasave_extract.py` tested (store9742) | done | yes | 2026-10-11 |
 | Amazon.ca (general) | CA | Signed-in VPS browser: `amazon_extract.py` + `amazon_search.js` / `amazon_pdp.js` (seller_class, unit, S&S, variants) | done | yes | 2026-10-08 |
 | camelcamelcamel.ca | CA | iMac `camel_extract.js` (low/high/avg + dates; current lags) | done | yes | 2026-10-08 |
 | Costco.ca search API | CA | `gdx-api.costco.com` search (fixed client-identifier); price keys not mapped yet | wip | yes | 2026-10-08 |
@@ -137,6 +137,12 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Carter's / OshKosh CA | CA | PORTED 2026-10-10 to iMac CDP 9334 (`carters_extract.py`), JSON-LD per-size stock still works; VPS still walled | done | yes | 2026-10-10 |
 | Levi's CA | CA | CRACKED 2026-10-10: iMac `levi_pdp.js`; OOS tile = `.size-tile-list-button.unavailable` / `aria-disabled=true`; JSON-LD has no per-size data | done | yes | 2026-10-10 |
 | H&M CA | CA | CHANGED 2026-10-10: VPS walled at every rung (web_extract now blocked too); iMac `hm_pdp.js` = JSON-LD per colour×size stock + per-article composition/sale price | done | yes | 2026-10-10 |
+| Well.ca | CA | `wellca_extract.py` plain urllib, ingredients on PDP | done | yes | 2026-10-11 |
+| BioSteel (biosteel.ca) | CA | Shopify suggest.json + products/<h>.js; 429 bursts; `biosteel_extract.py` | done | yes | 2026-10-11 |
+| Popeye's Supplements | CA | Algolia (Referer-locked key) + PDP price; `popeyes_extract.py` | done | yes | 2026-10-11 |
+| iHerb CA | CA | iMac `iherb_pdp.js` (VPS /pr/ stuck on Cloudflare) | done | yes | 2026-10-11 |
+| NSF Sport / Informed Choice | — | `cert_lookup.py` registry checker (brand-only NSF query; registry_down detection) | done | n/a | 2026-10-11 |
+| Sephora CA (iMac API) | CA | `sephora_pdp.js` same-origin catalog API: per-variant stock + INCI | done | yes | 2026-10-11 |
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
 ## Candidate queue (not yet tried — good picks for future runs)
