@@ -75,16 +75,27 @@ Change them with `targets set` only when he asks, or when his weight changes by 
 - Chronic hives: don't suggest new supplements casually. Supplements must be **NSF Certified for Sport** (labels are distrusted: use personal-shopper `cert_lookup.py`).
 - Don't infer stock from photos ("I have plenty").
 
-## Body data (weight etc.)
-- His weight is about **80–81 kg** (2026-10-11). Fitbod's 84 kg is stale. The latest value is kept in `body` + Pebbleway self (`weight_kg`).
-- **Apple Health is NOT reachable from the VPS or iMac directly.** HealthKit lives on the iPhone,
-  macOS has no Health store, and there is no export API. Options, in order of ease:
-  1. **Withings API.** He owns a Withings Body Smart scale (bought Sep 2026) that syncs to Apple Health.
-     A Withings developer app plus a one-time OAuth consent lets a cron pull weight and body-fat% into `body`.
-  2. **iOS Shortcut automation**, run daily on the iPhone: "Find Health Samples (weight/steps/active energy, last 1 d)" →
-     POST JSON over the tailnet to a VPS endpoint, or save to iCloud Drive, which Magnus can read.
-  3. The "Health Auto Export" app (paid) running a REST automation to the same endpoint.
-  Until one is set up, ask him or use the latest `body` value. Never guess.
+## Body data: Withings (LIVE since 2026-10-11)
+- His **Withings Body Smart** scale (Pebbleway appliance 821e5fd4) syncs into the `body` table automatically:
+  weight, fat %, fat mass, fat-free mass, muscle, bone, body water, visceral fat index, BMR (kcal) and heart rate.
+  `$N body latest` shows the newest values. Use THESE, not memory, for any weight/body-comp question. Look at the 7-day trend
+  rather than a single day, since daily swings of ±0.7 kg are normal (water, creatine, salt).
+- Sync: `scripts/withings_sync.py sync [--days N]` | `status` | `auth-url`. Cron **ba0504411ee2** runs at 09:30 and 21:30
+  (no_agent; script `~/.hermes/scripts/withings_sync_cron.sh`). It is silent on success, retries once, and alerts only on failure.
+- Auth: his Withings login is **Sign in with Apple**, so never try to log in as him. The API app is registered under a
+  SEPARATE dev account (a "+withingsdev" alias of his Proton address, see the 1Password item; emailed 8-digit login code, read via himalaya `-a proton`).
+  1Password: "Withings Developer App (Mankoo Household Health Sync)". Callback
+  `https://mcp.pebble.mankoo.ca/withings/callback` = Traefik `/opt/traefik/dynamic/withings-callback.yml` (PathPrefix
+  `/withings/`, priority 100, does not touch the MCP router) → systemd --user `withings-callback` (127.0.0.1:3410,
+  `~/.hermes/scripts/withings_callback.py`). It swaps the code for tokens instantly, because codes expire in ~30 s.
+- Tokens: `~/.hermes/secrets/withings_tokens.json` (0600). Access lasts 3 h. The refresh token **rotates on every refresh**
+  (the script writes it back) and lasts about 1 year. If refresh fails, send him a fresh `auth-url` link (one tap: Continue with Apple → Allow).
+- Pitfalls hit during setup:
+  - The dev-portal login code is 8 digits, not 6.
+  - The app secret appears ONCE; it was captured by hooking `navigator.clipboard.writeText` and clicking the page's Copy button, never printed.
+  - Before he finishes consent, `ls withings_tokens.json` / callback log may be empty. Withings can take a minute, so poll rather than declare failure.
+- **Apple Health itself is not reachable** (HealthKit is iPhone-only; no Mac/iCloud API). If he ever wants steps or active
+  energy, the route is an iOS Shortcut automation POSTing JSON to a VPS endpoint. Withings covers body composition.
 
 ## Data sources for the food table
 - Generic foods: Health Canada **Canadian Nutrient File** API. Nutrients come from `nutrientamount/?id=<code>&type=json`;
