@@ -79,7 +79,7 @@ Change them with `targets set` only when he asks, or when his weight changes by 
 - His **Withings Body Smart** scale (Pebbleway appliance 821e5fd4) syncs into the `body` table automatically:
   weight, fat %, fat mass, fat-free mass, muscle, bone, body water, visceral fat index, BMR (kcal) and heart rate.
   `$N body latest` shows the newest values. Use THESE, not memory, for any weight/body-comp question. Look at the 7-day trend
-  rather than a single day, since daily swings of ±0.7 kg are normal (water, creatine, salt).
+  rather than a single day. Daily swings of ±0.7–1 kg are normal. His usual cause is **food still in his system after a big dinner the night before** (he said so 2026-10-11 about an 81.8 reading). Water, salt and creatine also play a part. Don't call a single high reading a gain.
 - Sync: `scripts/withings_sync.py sync [--days N]` | `status` | `auth-url`. Cron **ba0504411ee2** runs at 09:30 and 21:30
   (no_agent; script `~/.hermes/scripts/withings_sync_cron.sh`). It is silent on success, retries once, and alerts only on failure.
 - Auth: his Withings login is **Sign in with Apple**, so never try to log in as him. The API app is registered under a
