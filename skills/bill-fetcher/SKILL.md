@@ -54,3 +54,9 @@ browser-ops rules.
   Surface "payment method expiring" banners in the report instead (e.g. Enercare showed a card expiring 11/2026).
 - One email per bill. If a download fails twice, report it in one line and leave it out of the ledger so it retries.
 - Never put account numbers or email addresses into this skill (PII CI).
+
+## Updating a biller's card on file (verified Enercare 2026-10-11)
+Sumeet has approved moving bills to the **Wealthsimple Visa ••5176** (1Password "Home Servers" › "Wealthsimple Credit Card"). It's a card swap, not a payment, so do it rather than reporting "card expiring". Read the card fields from `op item get … --reveal` inside the same call; never print them.
+- **Enercare:** go to `/billing/payments/autopay?account=<acct>&action=update`. Click the "Update payment method" card (a div with an onclick, reached through its text node's parent ×3). Choose "Credit card or debit card", click Next, tick the `#update-terms` checkbox, click Next. Then fill the **Zuora hosted page** iframe, which is cross-origin: `Target.attachToTarget` on the `na.zuora.com/apps/PublicHostedPageLite.do` target, then `Runtime.evaluate` with `session_id`.
+  - ⚠️ Setting `.value` + events leaves the fields "filled", but submit fails with **`{Error: BIL005014}` "check your internet connection"**. Zuora needs **real keystrokes**: `Input.dispatchKeyEvent` keyDown/keyUp per char with `session_id` for the number, CVV and name. Set the selects for month/year. Click Submit.
+  - Verify on reload: "Payment method: Visa ending in 5176". Then update the Pebbleway utility node (`payment_method` property plus a `paid_with` edge: patch_graph `add_edges` uses keys `from`/`to`/`rel_type`).
