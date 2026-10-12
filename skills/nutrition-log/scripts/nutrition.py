@@ -89,7 +89,8 @@ SEED_TARGETS = [
     ("sodium", 2300, "max", "mg", None),
     ("veg_servings", 5, "min", "srv", None),
     ("fruit_servings", 2, "min", "srv", None),
-    ("water_ml", 3000, "min", "ml", None),
+    # No water target (Sumeet 2026-10-12: "I obviously am not going to log each sip of water").
+    # `water` still logs if he volunteers an amount; it is shown but never scored or nagged.
 ]
 
 DISP_NAME = {"veg_servings": "veg", "fruit_servings": "fruit", "water_ml": "water"}
@@ -753,8 +754,8 @@ def cmd_summary(conn, args):
         f"F{fmt_g(totals['fat_g'])} (sat{fmt_g(totals['satfat_g'])})",
         f"fibre {fmt_g(totals['fibre_g'])}g | sugar {fmt_g(totals['sugar_g'])}g | "
         f"Na {fmt_val(totals['sodium_mg'], 'mg')}mg",
-        f"veg {fmt_g(totals['veg_servings'])} | fruit {fmt_g(totals['fruit_servings'])} | "
-        f"water {fmt_val(totals['water'], 'ml')}ml",
+        f"veg {fmt_g(totals['veg_servings'])} | fruit {fmt_g(totals['fruit_servings'])}"
+        + (f" | water {fmt_val(totals['water'], 'ml')}ml" if totals['water'] else ""),
         "vs targets: " + line("kcal") + "; " + line("protein"),
         "  " + line("fibre") + "; " + line("satfat") + "; " + line("sodium"),
     ]

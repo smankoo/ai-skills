@@ -40,7 +40,10 @@ Entries **snapshot** nutrients, so fixing a food row later does not rewrite past
 | sugar | ≤50 g | |
 | sodium | ≤2300 mg | restaurant food, pickle, papad, packaged snacks |
 | veg ≥5 / fruit ≥2 servings | | 1 veg serving ≈ 75 g (½ cup) cooked/raw; 1 fruit = 1 medium piece |
-| water | ≥3 L | creatine + high protein |
+
+**Water is NOT tracked** (Sumeet, 2026-10-12: "I've had water. I obviously am not going to log each sip of water i take").
+There is no water target. Never say "water not logged" or ask him to log water. `water N` still records an amount if he
+volunteers one. A short hydration nudge is fine only when it's relevant (creatine started, a hot day, a long session).
 Change them with `targets set` only when he asks, or when his weight changes by more than 3 kg. Record it in Pebbleway self (`nutrition_targets`).
 
 ## Workflow every time he mentions food

@@ -188,9 +188,8 @@ class NutritionTest(unittest.TestCase):
         self.assertEqual(bykey["kcal"]["state"], "below")
         # satfat max 25; low -> ok
         self.assertEqual(bykey["satfat"]["state"], "ok")
-        # water min 3000; have 1000 -> under
-        self.assertEqual(bykey["water_ml"]["state"], "under")
-        self.assertAlmostEqual(bykey["water_ml"]["total"], 1000.0)
+        # no water target: logging water must not create a scored status
+        self.assertNotIn("water_ml", bykey)
 
     def test_target_status_max_over(self):
         c = self.conn()
