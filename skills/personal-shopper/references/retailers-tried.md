@@ -104,7 +104,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Flipp flyers (all grocers) | CA | `flipp_extract.py deals`: backflipp flyers by postal → full flyer items | done | yes | 2026-10-08 |
 | FreshCo | CA | Flyer only via Flipp; site 403 | partial | yes | 2026-10-08 |
 | Instacart.ca | CA | VPS 403; iMac loads store search without login but defaults to Oakville postal; no prices extracted yet | wip | no | 2026-10-11 |
-| Desi Mandi / Thiara | CA | Not on Flipp; no online catalogue found yet | wip | no | 2026-10-08 |
+| Desi Mandi / Thiara | CA | No live catalogue: desimandi.ca has an expired cert and returns HTTP 500 on every path (web_extract shows only a stale cache); delivery apps list restaurant menu only; deals = weekly IG/FB images. Thiara = static brochure site, flyer PDF from 2024 | partial | note | 2026-10-12 |
 | Shoppers Drug Mart | CA | PDP: open BFF `prod-sdm-bff.api.loblaw.digital` (`sdm_extract.py`, VPS); search: iMac `sdm_search.js` (`__NEXT_DATA__` productTiles) | done | yes | 2026-10-08 |
 | Rexall (shop.rexall.ca) | CA | Instacart Storefront Pro; iMac same-origin GraphQL `rexall_extract.js` (zone-dependent prices) | done | yes | 2026-10-08 |
 | Pharmasave | CA | Per-franchise `/store<id>/` shops + schema.org; `pharmasave_extract.py` tested (store9742) | done | yes | 2026-10-11 |
