@@ -72,13 +72,14 @@ Change them with `targets set` only when he asks, or when his weight changes by 
 - A plan he can eat beats a plan that ticks every box. One normal plate per meal: about 120 g meat or paneer, 1 katori sabzi or dal,
   2 roti (or roti + a little rice), and at most one side. Don't stack salad + dal + dahi + rice + roti + fruit in one sitting.
 - Close the protein gap first, then veg. Accept small misses on carbs, kcal and fruit late in the day rather than forcing food.
-- Spread veg/fruit across the WHOLE day instead (fruit with morning chai, veg at lunch). Flag this in the morning, not at 7 PM.
+- Spread veg/fruit across the WHOLE day: fruit ON ITS OWN mid-morning (~11 AM), as a fruit chaat in the afternoon, or cut after lunch; veg via the lunch sabzi plus kachumber or kheera raita. Flag this in the morning, not at 7 PM.
 - When he's short late in the day, use dense options (a shake, whey in dahi) instead of extra plates.
 
 ## His food rules (hard)
 - **Never Greek yogurt** (hates it). Plain dahi (Astro 3%) with whey is fine.
 - Roti always goes with something **wet** (dal, sabzi with gravy, curry). Dry boiled eggs are a standalone snack only.
-- Chai: no second drink alongside. Paneer with chai is fine.
+- Chai goes with a SOLID savoury snack only (paneer cubes, roasted chana, an omelette, pakoras, a protein bar). No second drink and **NEVER fruit with chai** (2026-10-11).
+- Every suggestion must pass the test "would an Indian home actually eat this, at this time, in this pairing?" Read wiki `concepts/indian-home-meal-rules.md` before suggesting meals.
 - Chronic hives: don't suggest new supplements casually. Supplements must be **NSF Certified for Sport** (labels are distrusted: use personal-shopper `cert_lookup.py`).
 - Don't infer stock from photos ("I have plenty").
 
