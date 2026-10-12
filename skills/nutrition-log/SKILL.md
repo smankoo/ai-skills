@@ -115,6 +115,13 @@ Change them with `targets set` only when he asks, or when his weight changes by 
 - Products: the label first, then Open Food Facts. Household dish estimates are in wiki `concepts/household-dish-protein.md`.
 
 ## Pitfalls
+- **Home cooking ≠ CNF generic rows** (recalibrated 2026-10-12 after he asked "Why are we over. I followed the exact plan"):
+  CNF `roti` (7250) and `paratha` (7251) assume added fat (3.3 g and 5.8 g sat per 100 g), which overstated his day by about 10 g sat fat.
+  The DB now holds **home** values: phulka 35 g with no fat (P3.2, F0.6, sat0.1, Na21 per roti); paratha 80 g cooked in 1 tsp canola
+  (P7.3, F6.4, sat0.6). Ghee is logged separately (`ghee` tsp). `seed_foods.json` still carries the CNF numbers, so re-apply after a reseed.
+- **Plan against EVERY target before suggesting it**, not just protein. Simulate in a scratch DB copy
+  (`cp nutrition.db /tmp/sim.db; NUTRITION_DB=/tmp/sim.db … log …; day today`). If a target can't be met, say so up front with a swap.
+  Never present a known overage as a minor "tradeoff".
 - Raw vs cooked weight: CNF meat rows are **cooked, meat only**. If he says "200 g chicken" he means cooked
   pieces on his plate. Bone-in drumsticks are about 70% edible meat.
 - `egg` is per large egg (50 g); `egg_omelette` row includes cooking fat (higher sodium).
