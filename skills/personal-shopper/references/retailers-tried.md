@@ -119,7 +119,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Levi's CA | CA | iMac renders PDP (ProductGroup + size tiles + composition); OOS marker unknown | partial | yes | 2026-10-08 |
 | Reigning Champ | CA | `ca.reigningchamp.com` Shopify CAD; `web_extract` of `.js` (VPS curl 429); no fibre % | partial | yes | 2026-10-08 |
 | Best Buy CA | CA | `bestbuy_extract.py` (VPS): `/api/v2/json` search/product + offers + availability (`locations=942`) | done | yes | 2026-10-08 |
-| Home Depot CA | CA | productsvc store API over HTTP/1.1 (store 7021); main search 403 | partial | yes | 2026-10-08 |
+| Home Depot CA | CA | Search: iMac `hd_search.js` (same-origin `/api/search/v1/search`; VPS 403 on all search). Store price/stock/aisle: VPS `homedepot_extract.py` (productsvc API, HTTP/1.1 + Chrome UA; 7021 Burlington) | done | yes | 2026-10-12 |
 | Gap CA / Old Navy CA | CA | RE-VALIDATED: VPS browser now walled → iMac `gap_pdp.js` | done | yes | 2026-10-08 |
 | Crocs CA | CA | RE-VALIDATED: Next.js re-platform → `crocs_extract.py` v2 | done | yes | 2026-10-08 |
 | The Children's Place | CA | RE-VALIDATED: web_extract stub → VPS browser `childrensplace_pdp.js` | done | yes | 2026-10-08 |
