@@ -16,7 +16,12 @@ The two money XHRs the PDP fires (same-origin, www.canadiantire.ca — verified 
 Join on sku `code`. <id> = tail of the PDP URL: .../<slug>-1422111p.html (ends in 'p', not
 Mark's 'f'). Bonus (not needed): content.syndigo.com/page/<uuid>/<id>.json = rich marketing copy.
 
-HOW TO RUN (on the Mac, per retail-bot-wall-bypass rung 3):
+HOW TO RUN (2026-10-12, iMac persistent Chrome on CDP 9334 -- preferred):
+  scp -q canadiantire_extract.py sumeet@<imac>:.hermes/
+  ssh <imac> 'cd ~/.hermes && costco-venv/bin/python canadiantire_extract.py "<pdp url>" ...'
+  (opens+closes its own tab, sleeps 20 s between URLs; env CDP= overrides the port)
+
+OLD HOW TO RUN (throwaway Chrome on :9333, per retail-bot-wall-bypass rung 3):
   # 1. launch windowed debug Chrome on :9333 with a throwaway profile (see that skill)
   # 2. python3 -m venv /tmp/scrape-venv && /tmp/scrape-venv/bin/pip install websocket-client
   # 3. base64-ship this file, then:
@@ -26,14 +31,19 @@ HOW TO RUN (on the Mac, per retail-bot-wall-bypass rung 3):
 
 Output per URL (JSON array on stdout):
   {url, id, name, brand, image, composition, natural_pct, currency, price, price_max, on_sale,
-   variants:[{sku, size, colour, price, original_price, on_sale, qty, in_stock, urgent_low}],
+   variants:[{sku, size, colour, price, original_price, on_sale, qty, in_stock, urgent_low,
+              dc_qty, store_qty, aisle, pickup_eta, ship_eta}], store_id,
    any_in_stock}
 Composition is usually empty (general merch, not apparel); fabric specs parse when present.
 """
-import json, re, sys, time, urllib.request
+import json, os, re, sys, time, urllib.request
 import websocket
 
-CDP = "http://127.0.0.1:9333"
+# 2026-10-12: ported to the iMac persistent Chrome (CDP 9334, profile ~/.hermes/costco-profile).
+CDP = os.environ.get("CDP", "http://127.0.0.1:9334")
+# Store for store_qty/aisle/pickup. 122 = Burlington Fairview (777 Guelph Line). Others: 143 Oakville.
+# CT_STORE= (empty) keeps whatever the browser profile has.
+STORE = os.environ.get("CT_STORE", "122")
 NATURAL = {"cotton","wool","linen","silk","cashmere","lyocell","tencel","hemp","merino",
            "ramie","jute","mohair","alpaca","angora"}
 
@@ -82,7 +92,10 @@ def parse(d):
         cur=(p.get("currentPrice") or {}).get("value")
         orig=(p.get("originalPrice") or {}).get("value")
         avail=(p.get("fulfillment") or {}).get("availability") or {}
-        qty=((avail.get("Corporate") or {}).get("Quantity")) or ((avail.get("quantity")) if isinstance(avail.get("quantity"),(int,float)) else None)
+        ful=(p.get("fulfillment") or {})
+        dc_qty=(avail.get("Corporate") or {}).get("Quantity")
+        st_qty=avail.get("quantity") if isinstance(avail.get("quantity"),(int,float)) else None
+        qty=dc_qty or st_qty
         variants.append({
             "sku": code,
             "size": opt(s.get("optionIds"), "SIZE_CD_"),
@@ -90,6 +103,10 @@ def parse(d):
             "price": cur, "original_price": orig,
             "on_sale": bool(p.get("isOnSale")),
             "qty": qty, "in_stock": (qty or 0) > 0,
+            "dc_qty": dc_qty, "store_qty": st_qty,
+            "aisle": p.get("storeShelfLocation"),
+            "pickup_eta": (ful.get("storePickUp") or {}).get("etaEarliest") if (ful.get("storePickUp") or {}).get("enabled") else None,
+            "ship_eta": (ful.get("shipToHome") or {}).get("etaEarliest") if (ful.get("shipToHome") or {}).get("enabled") else None,
             "urgent_low": bool(p.get("isUrgentLowStock")),
         })
         if cur: prices.append(cur)
@@ -104,6 +121,7 @@ def parse(d):
         "on_sale": any(v["on_sale"] for v in variants),
         "variants": variants,
         "any_in_stock": any(v["in_stock"] for v in variants),
+        "store_id": d.get("store_id"),   # the store the iMac profile is set to (store_qty/aisle refer to it)
     }
 
 def run(url, wait=18):
@@ -116,9 +134,12 @@ def run(url, wait=18):
         ws.send(json.dumps({"id":mid[0],"method":method,"params":params or {}}))
         return mid[0]
     send("Network.enable"); send("Page.enable")
+    if STORE:   # the PDP reads the store from localStorage 'preferred-store-id' (verified 2026-10-12)
+        send("Page.addScriptToEvaluateOnNewDocument", {"source":
+             "try{if(location.hostname.endsWith('canadiantire.ca')){localStorage.setItem('preferred-store-id','%s');}}catch(e){}" % STORE})
     time.sleep(0.4)
     send("Page.navigate", {"url": url})
-    hits=[]
+    hits=[]; store_id=[None]
     deadline=time.time()+wait
     while time.time()<deadline:
         try:
@@ -131,6 +152,8 @@ def run(url, wait=18):
                 hits.append(("family", m["params"]["requestId"]))
             elif "PriceAvailability" in u:
                 hits.append(("price", m["params"]["requestId"]))
+                ms=re.search(r"storeId=(\d+)", u)
+                if ms: store_id[0]=ms.group(1)
     combined={"url":url}
     for kind, rid in hits:
         bid=send("Network.getResponseBody", {"requestId": rid})
@@ -147,8 +170,11 @@ def run(url, wait=18):
             except Exception:
                 pass
     ws.close()
+    try: urllib.request.urlopen(f"{CDP}/json/close/{tab['id']}", timeout=10)   # persistent profile: always close
+    except Exception: pass
     m=re.search(r"-([0-9]+p)\.html", url, re.I)
     combined["id"]=m.group(1) if m else None
+    combined["store_id"]=store_id[0]
     return parse(combined)
 
 if __name__=="__main__":
@@ -156,4 +182,8 @@ if __name__=="__main__":
         "https://www.canadiantire.ca/en/pdp/thermos-stainless-steel-water-bottle-with-vacuum-insulation-assorted-colours-354-ml-1422111p.html",
         "https://www.canadiantire.ca/en/pdp/noma-outdoor-warm-white-led-battery-operated-string-lights-20-ft-0528033p.html",
     ]
-    print(json.dumps([run(u) for u in urls], indent=2))
+    out=[]
+    for i,u in enumerate(urls):
+        if i: time.sleep(20)   # iMac pacing: >=20 s between page loads
+        out.append(run(u))
+    print(json.dumps(out, indent=2))
