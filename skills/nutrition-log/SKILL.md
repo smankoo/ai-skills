@@ -7,7 +7,33 @@ description: >
   fibre, sugar, sodium, veg/fruit servings, water) and coaches him across the day against all targets.
 ---
 
-# Nutrition log (Sumeet's food + nutrient tracker)
+# Nutrition log (the household food + nutrient tracker)
+
+## HOUSEHOLD (v2, live since 2026-10-13): read this first
+- **One shared DB** `~/.hermes/data/nutrition.db` for **sumeet, priyanka, tegh, kirat** (`person list`). Hermes writes
+  locally. **Shankar** (iris) writes remotely through `scripts/nutrition_server.py` (systemd user unit
+  `household-nutrition-live`, 100.68.134.114:3420, iris-only via ufw + allowlist, token file
+  ~/.hermes/secrets/nutrition_tokens.json). Practice copy: `nutrition_practice.db` on :3421 (`-practice` unit).
+  Shankar's own skill lives on iris at `~priyanka/.hermes/skills/productivity/household-nutrition/SKILL.md`. A mirror is
+  in this repo as `SHANKAR_SKILL.md`; edit it here, then push to iris with the ssh + sudo -u priyanka cat recipe.
+- **Every write takes `--person`.** Default is sumeet locally. Add `--reported-by sumeet|priyanka`.
+- **Duplicates:** exit 3 = POSSIBLE DUPLICATE, nothing written. Ask, then `--force` only if it's a different serving.
+  Different known foods are never duplicates, so the ingredients of one dish log fine.
+- **Kids** (tegh, kirat): never talk calories. Targets are protein, iron, calcium, fibre, veg, fruit (+ Kirat milk ≤500
+  ml). Lunchboxes: `log ... --packed`, then after pickup `eaten <id> --fraction F | --all | --none`. **When Sumeet
+  sends a kid's lunchbox photo, log it `--packed`** so Shankar's 09:40 prompt to Priyanka stays quiet.
+- **Kirat's Synthroid:** weekdays before the 8:30 daycare drop-off (meta `med_window:kirat`). Logging milk or a
+  high-Ca/Fe item near it prints a NOTE (SickKids teaching, Feb 2025, ~/gdrive "Kirat's Birth/sickkids visit.txt").
+- **Drinks:** `ml`, `glass` (250 ml) and `cup` work. `gaps --person kirat --json` → status gaps / on_track /
+  insufficient_data.
+- **Never reseed with `init`** on the real DB: it would overwrite hand-calibrated foods (chai, roti, whey). Use
+  `seed_missing.py` to add new seed foods only.
+- **Shankar's prompts to Priyanka** are crons on iris, max 3/day, "skip today" honoured: Mon–Fri 09:40 lunchbox +
+  Synthroid; Mon–Fri 18:35 what came back; daily 20:00 dinner + milk + ≤1 nudge; Sun 19:30 summary.
+- **Pitfall:** a stale `NUTRITION_DB` env var from a test silently points the CLI at a scratch file. Run `unset
+  NUTRITION_DB` before real logging, and check `python3 -c "import nutrition;print(nutrition.db_path())"`.
+
+# (Sumeet-specific usage below)
 
 The single source of truth for what Sumeet ate is **`~/.hermes/data/nutrition.db`**. It is driven by
 `scripts/nutrition.py` (stdlib-only CLI, 25 unit tests). Everything goes in here: not only protein.
