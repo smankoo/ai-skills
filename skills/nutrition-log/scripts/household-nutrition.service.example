@@ -1,0 +1,39 @@
+# household-nutrition — systemd *user* unit for nutrition_server.py
+#
+# Install (as the user that owns ~/.hermes, e.g. deploy):
+#   mkdir -p ~/.config/systemd/user
+#   cp household-nutrition.service.example ~/.config/systemd/user/household-nutrition.service
+#   # edit the paths/env below to match your checkout, then:
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now household-nutrition.service
+#   loginctl enable-linger $USER   # keep it running without an active login
+#
+# Tokens file (mode 0600) maps bearer token -> agent name, e.g.:
+#   {"s3cr3t-shankar-token": "shankar"}
+# Bind on the tailnet IP (iris = 100.93.163.69) so the other machine can reach it,
+# and restrict to known source IPs with NUTRITION_ALLOW_IPS.
+
+[Unit]
+Description=Household nutrition HTTP server (nutrition_server.py)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# --- edit these for your machine ---
+WorkingDirectory=%h/.ai-skills/skills/nutrition-log/scripts
+ExecStart=/usr/bin/python3 %h/.ai-skills/skills/nutrition-log/scripts/nutrition_server.py
+Environment=NUTRITION_DB=%h/.hermes/data/nutrition.db
+Environment=NUTRITION_TOKENS=%h/.hermes/secrets/nutrition_tokens.json
+Environment=NUTRITION_BIND=100.93.163.69
+Environment=NUTRITION_PORT=3420
+# Comma-separated source-IP allowlist (leave empty to allow any tailnet peer):
+Environment=NUTRITION_ALLOW_IPS=
+Restart=on-failure
+RestartSec=3
+# Hardening (optional, safe defaults):
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

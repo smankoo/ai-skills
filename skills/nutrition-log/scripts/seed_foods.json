@@ -17,7 +17,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 125",
-  "notes": null
+  "notes": null,
+  "iron_mg": 1.3873,
+  "calcium_mg": 44.8159
  },
  {
   "key": "egg_omelette",
@@ -37,7 +39,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 133",
-  "notes": null
+  "notes": null,
+  "iron_mg": 1.113,
+  "calcium_mg": 71.643
  },
  {
   "key": "chicken_breast",
@@ -57,7 +61,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 842",
-  "notes": null
+  "notes": null,
+  "iron_mg": 1.04,
+  "calcium_mg": 15.0
  },
  {
   "key": "chicken_thigh",
@@ -77,7 +83,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 854",
-  "notes": null
+  "notes": null,
+  "iron_mg": 1.13,
+  "calcium_mg": 9.0
  },
  {
   "key": "chicken_drumstick",
@@ -97,7 +105,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 848",
-  "notes": null
+  "notes": null,
+  "iron_mg": 1.14,
+  "calcium_mg": 11.0
  },
  {
   "key": "salmon",
@@ -117,7 +127,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 3183",
-  "notes": null
+  "notes": null,
+  "iron_mg": 0.34,
+  "calcium_mg": 15.0
  },
  {
   "key": "lentils",
@@ -137,7 +149,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 3393",
-  "notes": null
+  "notes": null,
+  "iron_mg": 3.33,
+  "calcium_mg": 19.0
  },
  {
   "key": "chickpeas",
@@ -157,7 +171,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 3390",
-  "notes": null
+  "notes": null,
+  "iron_mg": 2.89,
+  "calcium_mg": 49.0
  },
  {
   "key": "kidney_beans",
@@ -177,7 +193,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 3382",
-  "notes": null
+  "notes": null,
+  "iron_mg": 2.94,
+  "calcium_mg": 28.0
  },
  {
   "key": "tofu",
@@ -197,7 +215,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 3404",
-  "notes": null
+  "notes": null,
+  "iron_mg": 1.61,
+  "calcium_mg": 201.0
  },
  {
   "key": "roti",
@@ -217,7 +237,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 7250",
-  "notes": null
+  "notes": null,
+  "iron_mg": 2.2,
+  "calcium_mg": 36.0
  },
  {
   "key": "paratha",
@@ -237,7 +259,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 7251",
-  "notes": null
+  "notes": null,
+  "iron_mg": 1.61,
+  "calcium_mg": 25.0
  },
  {
   "key": "naan",
@@ -257,7 +281,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 6606",
-  "notes": null
+  "notes": null,
+  "iron_mg": 3.25,
+  "calcium_mg": 84.0
  },
  {
   "key": "rice_white",
@@ -277,7 +303,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 4523",
-  "notes": null
+  "notes": null,
+  "iron_mg": 0.2,
+  "calcium_mg": 10.0
  },
  {
   "key": "potato",
@@ -297,7 +325,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 2506",
-  "notes": null
+  "notes": null,
+  "iron_mg": 0.848,
+  "calcium_mg": 8.7333
  },
  {
   "key": "yogurt_plain",
@@ -317,7 +347,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 6961",
-  "notes": null
+  "notes": null,
+  "iron_mg": 0.12,
+  "calcium_mg": 147.0
  },
  {
   "key": "milk_whole",
@@ -337,7 +369,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 113",
-  "notes": null
+  "notes": null,
+  "iron_mg": 0.03,
+  "calcium_mg": 113.0
  },
  {
   "key": "milk_2pct",
@@ -357,7 +391,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 61",
-  "notes": null
+  "notes": null,
+  "iron_mg": 0.02,
+  "calcium_mg": 120.0
  },
  {
   "key": "ricotta",
@@ -377,7 +413,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 43",
-  "notes": null
+  "notes": null,
+  "iron_mg": 0.38,
+  "calcium_mg": 207.0
  },
  {
   "key": "eggplant",
@@ -397,7 +435,9 @@
   "veg_servings": 1.33,
   "fruit_servings": 0,
   "source": "CNF 2089",
-  "notes": null
+  "notes": null,
+  "iron_mg": 0.25,
+  "calcium_mg": 6.0
  },
  {
   "key": "pepper_green",
@@ -417,7 +457,9 @@
   "veg_servings": 1.33,
   "fruit_servings": 0,
   "source": "CNF 2413",
-  "notes": null
+  "notes": null,
+  "iron_mg": 0.34,
+  "calcium_mg": 10.0
  },
  {
   "key": "carrot",
@@ -437,7 +479,9 @@
   "veg_servings": 1.33,
   "fruit_servings": 0,
   "source": "CNF 2380",
-  "notes": null
+  "notes": null,
+  "iron_mg": 0.3,
+  "calcium_mg": 33.0
  },
  {
   "key": "spinach",
@@ -457,7 +501,9 @@
   "veg_servings": 1.33,
   "fruit_servings": 0,
   "source": "CNF 2214",
-  "notes": null
+  "notes": null,
+  "iron_mg": 3.57,
+  "calcium_mg": 136.0
  },
  {
   "key": "tomato",
@@ -477,7 +523,9 @@
   "veg_servings": 1.33,
   "fruit_servings": 0,
   "source": "CNF 2460",
-  "notes": null
+  "notes": null,
+  "iron_mg": 0.27,
+  "calcium_mg": 10.0
  },
  {
   "key": "onion",
@@ -497,7 +545,9 @@
   "veg_servings": 1.33,
   "fruit_servings": 0,
   "source": "CNF 2401",
-  "notes": null
+  "notes": null,
+  "iron_mg": 0.21,
+  "calcium_mg": 23.0
  },
  {
   "key": "cucumber",
@@ -517,7 +567,9 @@
   "veg_servings": 1.33,
   "fruit_servings": 0,
   "source": "CNF 2363",
-  "notes": null
+  "notes": null,
+  "iron_mg": 0.28,
+  "calcium_mg": 16.0
  },
  {
   "key": "peas",
@@ -537,7 +589,9 @@
   "veg_servings": 1.33,
   "fruit_servings": 0,
   "source": "CNF 2412",
-  "notes": null
+  "notes": null,
+  "iron_mg": 1.52,
+  "calcium_mg": 24.0
  },
  {
   "key": "banana",
@@ -557,7 +611,9 @@
   "veg_servings": 0,
   "fruit_servings": 0.85,
   "source": "CNF 1704",
-  "notes": null
+  "notes": null,
+  "iron_mg": 0.26,
+  "calcium_mg": 5.0
  },
  {
   "key": "apple",
@@ -577,7 +633,9 @@
   "veg_servings": 0,
   "fruit_servings": 0.56,
   "source": "CNF 1696",
-  "notes": null
+  "notes": null,
+  "iron_mg": 0.12,
+  "calcium_mg": 6.0
  },
  {
   "key": "clementine",
@@ -597,7 +655,9 @@
   "veg_servings": 0,
   "fruit_servings": 0.67,
   "source": "CNF 1623",
-  "notes": null
+  "notes": null,
+  "iron_mg": 0.15,
+  "calcium_mg": 37.0
  },
  {
   "key": "orange",
@@ -617,7 +677,9 @@
   "veg_servings": 0,
   "fruit_servings": 0.71,
   "source": "CNF 1722",
-  "notes": null
+  "notes": null,
+  "iron_mg": 0.1,
+  "calcium_mg": 40.0
  },
  {
   "key": "cantaloupe",
@@ -637,7 +699,9 @@
   "veg_servings": 0,
   "fruit_servings": 0.83,
   "source": "CNF 1721",
-  "notes": null
+  "notes": null,
+  "iron_mg": 0.21,
+  "calcium_mg": 9.0
  },
  {
   "key": "almonds",
@@ -657,7 +721,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 2534",
-  "notes": null
+  "notes": null,
+  "iron_mg": 3.71,
+  "calcium_mg": 269.0
  },
  {
   "key": "peanut_butter",
@@ -677,7 +743,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 3414",
-  "notes": null
+  "notes": null,
+  "iron_mg": 1.74,
+  "calcium_mg": 49.0
  },
  {
   "key": "ghee",
@@ -697,7 +765,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 17",
-  "notes": null
+  "notes": null,
+  "iron_mg": 0.0,
+  "calcium_mg": 4.0
  },
  {
   "key": "oil_canola",
@@ -717,7 +787,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 451",
-  "notes": null
+  "notes": null,
+  "iron_mg": 0.0,
+  "calcium_mg": 0.0
  },
  {
   "key": "oats",
@@ -737,7 +809,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 1414",
-  "notes": null
+  "notes": null,
+  "iron_mg": 2.5716,
+  "calcium_mg": 58.5279
  },
  {
   "key": "samosa",
@@ -757,7 +831,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 6751",
-  "notes": null
+  "notes": null,
+  "iron_mg": 1.894,
+  "calcium_mg": 32.656
  },
  {
   "key": "papad",
@@ -777,7 +853,9 @@
   "veg_servings": 0,
   "fruit_servings": 0,
   "source": "CNF 5492",
-  "notes": null
+  "notes": null,
+  "iron_mg": 7.8,
+  "calcium_mg": 143.0
  },
  {
   "key": "premier_shake",
