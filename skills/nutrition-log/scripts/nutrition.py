@@ -51,7 +51,7 @@ FOOD_NUTRIENTS = [
 ]
 
 FOOD_COLS = [
-    "key", "name", "aliases", "basis", "serving_g", "unit_name",
+    "key", "name", "aliases", "basis", "serving_g", "unit_name", "density_g_ml",
     "kcal", "protein_g", "carbs_g", "fat_g", "satfat_g", "fibre_g",
     "sugar_g", "sodium_mg", "iron_mg", "calcium_mg",
     "veg_servings", "fruit_servings",
@@ -92,6 +92,10 @@ CHILD_NUTRIENT_FIELDS = [
     "protein_g", "iron_mg", "calcium_mg", "fibre_g",
     "veg_servings", "fruit_servings", "milk_ml",
 ]
+# Adult-only nutrient keys stripped from every child-facing JSON object.
+CHILD_HIDDEN_KEYS = {
+    "kcal", "carbs_g", "fat_g", "satfat_g", "sugar_g", "sodium_mg",
+}
 CHILD_TARGET_NAMES = {
     "protein", "iron", "calcium", "fibre",
     "veg_servings", "fruit_servings", "milk_ml",
@@ -293,6 +297,7 @@ CREATE TABLE IF NOT EXISTS foods(
   basis TEXT NOT NULL CHECK(basis IN ('100g','serving')),
   serving_g REAL,
   unit_name TEXT,
+  density_g_ml REAL,
   kcal REAL, protein_g REAL, carbs_g REAL, fat_g REAL, satfat_g REAL,
   fibre_g REAL, sugar_g REAL, sodium_mg REAL, iron_mg REAL, calcium_mg REAL,
   veg_servings REAL DEFAULT 0, fruit_servings REAL DEFAULT 0,
@@ -391,9 +396,9 @@ def _migrate(conn):
         if col not in ecols:
             conn.execute(f"ALTER TABLE entries ADD COLUMN {col} {decl}")
 
-    # foods: add mineral columns if missing
+    # foods: add mineral + density columns if missing
     fcols = _table_cols(conn, "foods")
-    for col in ("iron_mg", "calcium_mg"):
+    for col in ("iron_mg", "calcium_mg", "density_g_ml"):
         if col not in fcols:
             conn.execute(f"ALTER TABLE foods ADD COLUMN {col} REAL")
 
@@ -541,8 +546,60 @@ def require_food(conn, key):
 # --------------------------------------------------------------------------- #
 # unit resolution + nutrient computation
 # --------------------------------------------------------------------------- #
+# Per-food extra unit words that map to the food's own unit_name. Rice is
+# scooped by the katori at home, same portion as its CNF 'cup' (160 g).
+ALIAS_UNITS = {
+    "rice_white": {"katori", "katoris"},
+}
+
+# Volume words -> canonical volume token (for drinks only).
+VOLUME_UNITS = {
+    "ml": "ml", "millilitre": "ml", "millilitres": "ml",
+    "milliliter": "ml", "milliliters": "ml",
+    "l": "l", "litre": "l", "litres": "l", "liter": "l", "liters": "l",
+    "glass": "glass", "glasses": "glass",
+    "cup": "cup", "cups": "cup",
+}
+# ml per one canonical volume token.
+VOLUME_ML = {"ml": 1.0, "l": 1000.0, "glass": 250.0, "cup": 250.0}
+
+# Fallback liquid detection when density_g_ml isn't set on the food.
+LIQUID_KEY_PREFIXES = ("milk", "chai", "juice", "lassi", "buttermilk",
+                       "coffee", "tea", "water")
+_DENSE_LIQUID_PREFIXES = ("milk", "lassi", "buttermilk", "chai")
+
+
+def _food_get(food, col):
+    """Column accessor tolerant of sqlite3.Row (no .get) and plain dicts."""
+    try:
+        keys = food.keys()
+    except AttributeError:
+        keys = ()
+    return food[col] if col in keys else None
+
+
+def food_density(food):
+    """Return (is_liquid, density_g_ml) for a food.
+
+    A food is liquid when density_g_ml is set, OR (fallback) its key matches a
+    known drink prefix / is canada_dry_zero. Fallback density is 1.03 for
+    milk/lassi/buttermilk/chai, else 1.0."""
+    d = _food_get(food, "density_g_ml")
+    if d is not None:
+        return True, d
+    key = (food["key"] or "").lower()
+    is_liquid = key == "canada_dry_zero" or any(
+        key.startswith(p) for p in LIQUID_KEY_PREFIXES)
+    if not is_liquid:
+        return False, None
+    if any(key.startswith(p) for p in _DENSE_LIQUID_PREFIXES):
+        return True, 1.03
+    return True, 1.0
+
+
 def norm_unit(food, raw):
-    """Return canonical token: 'g', 'serving', or the food's unit_name."""
+    """Return canonical token: 'g', 'serving', the food's unit_name, or — for
+    drinks — a volume token ('ml'/'l'/'glass'/'cup')."""
     if raw is None:
         if food["basis"] == "serving":
             return food["unit_name"] or "serving"
@@ -557,8 +614,19 @@ def norm_unit(food, raw):
     un = (food["unit_name"] or "").lower()
     if un and u in (un, un + "s"):
         return food["unit_name"]
+    if u in ALIAS_UNITS.get((food["key"] or "").lower(), ()):
+        return food["unit_name"]
     if u in ("unit", "units"):
         return food["unit_name"] or "serving"
+    if u in VOLUME_UNITS:
+        # 'cup'/'cups' matching the food's own unit_name was handled above.
+        if food_density(food)[0]:
+            return VOLUME_UNITS[u]
+        raise UserError(
+            f"bad unit {raw!r} for {food['key']}: it isn't a drink; "
+            f"use 'g', 'serving'/'x'"
+            + (f", or '{food['unit_name']}'" if food["unit_name"] else "")
+            + " (ml/glass/cup work for drinks like milk/chai/juice)")
     raise UserError(
         f"bad unit {raw!r} for {food['key']}: "
         f"use 'g', 'serving'/'x'"
@@ -571,6 +639,15 @@ def compute_snapshot(food, qty, token):
     basis = food["basis"]
     if token == "g":
         grams = qty
+        servings = (grams / serving_g) if serving_g else None
+    elif token in VOLUME_ML and token != (food["unit_name"] or "").lower():
+        # drink logged by a volume unit -> grams via density. 'cup' matching the
+        # food's own unit_name (e.g. chai, rice) is a serving count, not volume.
+        _, density = food_density(food)
+        if density is None:
+            raise UserError(
+                f"cannot convert {token} for {food['key']}: no density set")
+        grams = qty * VOLUME_ML[token] * density
         servings = (grams / serving_g) if serving_g else None
     else:  # count of servings / units
         servings = qty
@@ -617,6 +694,30 @@ def get_entry(conn, eid):
     return r
 
 
+def _given_person(args):
+    """The person the caller explicitly asked for via --person or
+    NUTRITION_PERSON, or None if neither was set (the implicit 'sumeet' default
+    is NOT treated as 'given')."""
+    p = getattr(args, "person", None) or os.environ.get("NUTRITION_PERSON")
+    return p.strip().lower() if p else None
+
+
+def require_entry_person_match(conn, args, entry):
+    """For id-pinned commands (eaten/rm/edit): the entry itself pins the person.
+    If the caller passed a --person that names someone else, refuse — don't
+    silently touch another person's entry. A valid --person is checked for
+    existence so a typo still errors."""
+    given = _given_person(args)
+    if given is None:
+        return
+    if get_person(conn, given) is None:
+        resolve_person(conn, args)  # raises the standard unknown-person error
+    if given != entry["person"]:
+        raise UserError(
+            f"entry #{entry['id']} belongs to {entry['person']}, not {given!r} "
+            f"(the entry id already pins the person; drop --person or fix it)")
+
+
 def entry_to_dict(r):
     return {k: r[k] for k in r.keys()}
 
@@ -637,7 +738,7 @@ def day_totals(conn, day, person="sumeet"):
     unknown = {f: 0 for f in FOOD_NUTRIENTS}
     milk_ml = 0.0
     rows = conn.execute(
-        "SELECT e.*, f.key AS food_key FROM entries e "
+        "SELECT e.*, f.key AS food_key, f.density_g_ml AS food_density FROM entries e "
         "LEFT JOIN foods f ON e.food_id=f.id WHERE e.day=? AND e.person=?",
         (day, person)).fetchall()
     for r in rows:
@@ -649,7 +750,10 @@ def day_totals(conn, day, person="sumeet"):
             else:
                 totals[f] += v * frac
         if is_milk_food(r["food_key"]) and r["grams"] is not None:
-            milk_ml += r["grams"] * frac
+            # grams -> ml via density when known (milk density ~1.03 > 1).
+            dens = r["food_density"]
+            ml = (r["grams"] / dens) if dens else r["grams"]
+            milk_ml += ml * frac
     totals["milk_ml"] = milk_ml
     water = conn.execute(
         "SELECT COALESCE(SUM(ml),0) FROM water WHERE day=? AND person=?",
@@ -803,8 +907,22 @@ MISS_STATES = {"under", "below", "over", "above"}
 # --------------------------------------------------------------------------- #
 # output helper
 # --------------------------------------------------------------------------- #
-def emit(args, human, obj):
+def strip_child_keys(obj):
+    """Recursively drop adult-only nutrient keys (kcal/carbs/fat/satfat/sugar/
+    sodium) from a child-facing object, in place-ish. Values stay in the DB;
+    this only shapes JSON output. _unknown sub-maps are pruned too."""
+    if isinstance(obj, dict):
+        return {k: strip_child_keys(v) for k, v in obj.items()
+                if k not in CHILD_HIDDEN_KEYS}
+    if isinstance(obj, list):
+        return [strip_child_keys(v) for v in obj]
+    return obj
+
+
+def emit(args, human, obj, child=False):
     if getattr(args, "json", False):
+        if child:
+            obj = strip_child_keys(obj)
         print(json.dumps(obj, default=str))
     else:
         print(human)
@@ -949,6 +1067,35 @@ def _logged_by(args):
     return getattr(args, "logged_by", None) or os.environ.get("NUTRITION_AGENT") or "hermes"
 
 
+def find_meal_conflict(conn, person, day, meal, dt, exclude_ids):
+    """A packed/eaten entry for the same person+day+meal within 3h that isn't
+    one of the dedup matches (exclude_ids). Returns the earliest such row or
+    None — used to warn 'is this the same lunchbox?' on a child's --packed."""
+    if not meal:
+        return None
+    rows = conn.execute(
+        "SELECT * FROM entries WHERE person=? AND day=? AND meal=? "
+        "AND status IN ('packed','eaten') ORDER BY eaten_at, id",
+        (person, day, meal)).fetchall()
+    for r in rows:
+        if r["id"] in exclude_ids:
+            continue
+        try:
+            rt = datetime.fromisoformat(r["eaten_at"])
+            diff = abs((dt - rt).total_seconds())
+        except (ValueError, TypeError):
+            continue
+        if diff <= DEDUP_WINDOW_S:
+            return r
+    return None
+
+
+def _meal_conflict_note(person, meal, r):
+    t = r["eaten_at"][11:16] if r["eaten_at"] else "--:--"
+    return (f"NOTE: {person} already has {meal} items packed at {t} "
+            f"(#{r['id']} {r['description']}). Is this the same lunchbox?")
+
+
 def cmd_log(conn, args):
     person = resolve_person(conn, args)
     food = require_food(conn, args.food)
@@ -967,6 +1114,11 @@ def cmd_log(conn, args):
         notes = ((notes + "; ") if notes else "") + "confirmed not a duplicate"
 
     status = "packed" if getattr(args, "packed", False) else "eaten"
+    # Warn (don't block) if a child's packed meal looks like a second lunchbox.
+    conflict = None
+    if status == "packed" and person["kind"] == "child":
+        conflict = find_meal_conflict(
+            conn, person["key"], day, args.meal, dt, {m["id"] for m in matches})
     row = {
         "person": person["key"], "eaten_at": dt.isoformat(), "day": day,
         "meal": args.meal, "food_id": food["id"], "description": desc,
@@ -978,7 +1130,8 @@ def cmd_log(conn, args):
     }
     row.update(snap)
     eid = insert_entry(conn, row)
-    _emit_logged(args, get_entry(conn, eid), conn, person)
+    note = _meal_conflict_note(person["key"], args.meal, conflict) if conflict else None
+    _emit_logged(args, get_entry(conn, eid), conn, person, note=note)
 
 
 def cmd_log_custom(conn, args):
@@ -1018,7 +1171,7 @@ def cmd_log_custom(conn, args):
     _emit_logged(args, get_entry(conn, eid), conn, person)
 
 
-def _emit_logged(args, r, conn, person):
+def _emit_logged(args, r, conn, person, note=None):
     totals = day_totals(conn, r["day"], person["key"])
     tag = f" [{r['status']}]" if r["status"] != "eaten" else ""
     if person["kind"] == "child":
@@ -1032,11 +1185,17 @@ def _emit_logged(args, r, conn, person):
                  f"P {fmt_g(r['protein_g'])}g, {fmt_val(r['kcal'], 'kcal')} kcal"
                  f"  [day: P {fmt_g(totals['protein_g'])}g / "
                  f"{fmt_val(totals['kcal'], 'kcal')} kcal]")
-    emit(args, human, entry_to_dict(r))
+    if note:
+        human += "\n" + note
+    obj = entry_to_dict(r)
+    if note:
+        obj["note"] = note
+    emit(args, human, obj, child=(person["kind"] == "child"))
 
 
 def cmd_edit(conn, args):
     r = get_entry(conn, args.id)
+    require_entry_person_match(conn, args, r)
     row = entry_to_dict(r)
     changed_qty = False
     if args.qty is not None:
@@ -1088,6 +1247,7 @@ def cmd_edit(conn, args):
 
 def cmd_eaten(conn, args):
     r = get_entry(conn, args.id)
+    require_entry_person_match(conn, args, r)
     if args.none:
         frac = 0.0
     elif args.all:
@@ -1119,7 +1279,8 @@ def cmd_eaten(conn, args):
 def cmd_rm(conn, args):
     removed = []
     for eid in args.ids:
-        get_entry(conn, eid)  # raises if missing
+        r = get_entry(conn, eid)  # raises if missing
+        require_entry_person_match(conn, args, r)
         conn.execute("DELETE FROM entries WHERE id=?", (eid,))
         removed.append(eid)
     conn.commit()
@@ -1191,7 +1352,8 @@ def cmd_day(conn, args):
         lines.append("Next best levers: " + ", ".join(levers))
     emit(args, "\n".join(lines),
          {"person": pkey, "kind": kind, "day": day, "entries": elist,
-          "totals": totals, "targets": statuses, "levers": levers})
+          "totals": totals, "targets": statuses, "levers": levers},
+         child=(kind == "child"))
 
 
 def cmd_summary(conn, args):
@@ -1228,7 +1390,8 @@ def cmd_summary(conn, args):
             lines.append("levers: " + ", ".join(levers))
         emit(args, "\n".join(lines),
              {"person": pkey, "kind": kind, "day": day, "totals": totals,
-              "targets": list(child_statuses.values()), "levers": levers})
+              "targets": list(child_statuses.values()), "levers": levers},
+             child=True)
         return
 
     levers = best_levers(list(statuses.values()))
@@ -1293,7 +1456,7 @@ def cmd_week(conn, args):
             f"{fmt_g(avg['vegfruit']):>7}{fmt_val(avg['milk_ml'],'ml'):>8}")
         emit(args, "\n".join(lines),
              {"person": pkey, "kind": kind, "end": end.isoformat(),
-              "days": rows, "averages": avg})
+              "days": rows, "averages": avg}, child=True)
         return
 
     fields = ["protein_g", "kcal", "fibre_g", "satfat_g"]
@@ -1470,6 +1633,7 @@ def cmd_people_day(conn, args):
                     "veg_servings": totals["veg_servings"],
                     "fruit_servings": totals["fruit_servings"],
                     "milk_ml": totals["milk_ml"]}
+            info = strip_child_keys(info)  # defensive: never leak adult keys
         else:
             line = (f"{pkey:<9} {n:>2} items  {fmt_val(totals['kcal'],'kcal')}kcal "
                     f"P{fmt_g(totals['protein_g'])}g fib{fmt_g(totals['fibre_g'])} "
@@ -1521,8 +1685,14 @@ def cmd_gaps(conn, args):
                     rec["missed_days"] += 1
         gaps = [v for v in miss.values() if v["missed_days"] >= 2]
         gaps.sort(key=lambda g: (-g["missed_days"], g["nutrient"]))
+        if logged_days < 2:
+            # Too thin to tell on-track from gaps; don't guess either way.
+            status, on_track = "insufficient_data", None
+        else:
+            status = "gaps" if gaps else "on_track"
+            on_track = not gaps
         results.append({"person": pkey, "logged_days": logged_days,
-                        "on_track": not gaps, "gaps": gaps})
+                        "status": status, "on_track": on_track, "gaps": gaps})
 
     if getattr(args, "json", False):
         print(json.dumps(
@@ -1531,7 +1701,11 @@ def cmd_gaps(conn, args):
     else:
         lines = []
         for r in results:
-            if not r["gaps"]:
+            if r["status"] == "insufficient_data":
+                d = r["logged_days"]
+                lines.append(f"{r['person']}: not enough data yet "
+                             f"({d} logged day{'' if d == 1 else 's'})")
+            elif not r["gaps"]:
                 lines.append(f"{r['person']}: on track ({r['logged_days']} logged days)")
             else:
                 g = "; ".join(

@@ -46,8 +46,10 @@ ALLOWED = {
     "log", "log-custom", "edit", "rm", "eaten", "day", "summary", "week",
     "gaps", "people-day", "food", "person", "targets", "body", "export",
 }
-# Subcommands that must carry an explicit --person.
-REQUIRE_PERSON = {"log", "log-custom", "edit", "rm", "eaten", "body", "water"}
+# Subcommands that must carry an explicit --person. `eaten` is NOT here: the
+# entry id already pins the person, and nutrition.py refuses a mismatched
+# --person. `rm`/`edit` still require --person remotely (and also guard it).
+REQUIRE_PERSON = {"log", "log-custom", "edit", "rm", "body", "water"}
 # Second-level allowlists.
 FOOD_SUB_OK = {"find", "show", "add", "edit"}          # NOT rm
 PERSON_SUB_OK = {"list"}                                # list only

@@ -699,12 +699,14 @@ class HouseholdTest(unittest.TestCase):
     def test_gaps_ignores_single_bad_day(self):
         today = nutrition.now_dt().date()
         d0 = today.isoformat()
-        # only one day of (bad) data -> not a repeated miss
+        # only one day of (bad) data -> not a repeated miss, and too thin to
+        # score: insufficient_data with on_track null (not a false "on track").
         self.cli(["log", "egg", "1", "egg", "--person", "tegh", "--at", f"{d0} 08:00"])
         rc, obj = _run_json(self.cli, ["gaps", "--days", "3", "--person", "tegh",
                                        "--json"])
         tegh = [p for p in obj["people"] if p["person"] == "tegh"][0]
-        self.assertTrue(tegh["on_track"])
+        self.assertEqual(tegh["status"], "insufficient_data")
+        self.assertIsNone(tegh["on_track"])
         self.assertEqual(tegh["gaps"], [])
 
     # ----- people-day ----- #
@@ -859,6 +861,328 @@ class ServerTest(unittest.TestCase):
                                 "--person", "priyanka", "--kind", "min", "--json"])
         self.assertEqual(code, 200)
         self.assertEqual(obj["exit"], 0)
+
+    # ----- eaten infers the person remotely (item 2) ----- #
+    def test_remote_eaten_without_person_ok(self):
+        c, o = self._post(["log", "paratha", "1", "--person", "tegh",
+                           "--packed", "--json"])
+        self.assertEqual(c, 200)
+        self.assertEqual(o["exit"], 0)
+        eid = json.loads(o["stdout"].strip().splitlines()[-1])["id"]
+        # no --person on eaten: server no longer requires it, CLI infers tegh
+        c2, o2 = self._post(["eaten", str(eid), "--fraction", "0.5"])
+        self.assertEqual(c2, 200)
+        self.assertEqual(o2["exit"], 0, o2.get("stderr"))
+        c3 = nutrition.connect()
+        row = c3.execute("SELECT status, eaten_fraction FROM entries WHERE id=?",
+                         (eid,)).fetchone()
+        c3.close()
+        self.assertEqual(row["status"], "partial")
+        self.assertAlmostEqual(row["eaten_fraction"], 0.5)
+
+    def test_remote_eaten_wrong_person_errors(self):
+        c, o = self._post(["log", "paratha", "1", "--person", "tegh",
+                           "--packed", "--json"])
+        eid = json.loads(o["stdout"].strip().splitlines()[-1])["id"]
+        # pass a --person that isn't the entry's owner -> nutrition.py errors
+        c2, o2 = self._post(["eaten", str(eid), "--all", "--person", "kirat"])
+        self.assertEqual(c2, 200)         # transport ok
+        self.assertEqual(o2["exit"], 1)   # but the command refused
+        self.assertIn("belongs to tegh", o2["stderr"])
+
+
+class V21Test(unittest.TestCase):
+    """v2.1 fixes: volume units, eaten person inference, gaps thresholds,
+    child JSON stripping, packed-meal conflict note, new foods."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.db = os.path.join(self.tmp, "nutrition.db")
+        os.environ["NUTRITION_DB"] = self.db
+        os.environ.pop("NUTRITION_PERSON", None)
+        os.environ.pop("NUTRITION_AGENT", None)
+        self.cli(["init"])
+
+    def tearDown(self):
+        for k in ("NUTRITION_DB", "NUTRITION_PERSON", "NUTRITION_AGENT"):
+            os.environ.pop(k, None)
+
+    def cli(self, argv):
+        return nutrition.main(argv)
+
+    def conn(self):
+        return nutrition.connect()
+
+    def today(self):
+        return nutrition.now_dt().date().isoformat()
+
+    # ----- 1. ml / glass / cup for drinks ----- #
+    def test_milk_by_ml(self):
+        # milk_2pct density 1.03: 200 ml -> 206 g -> factor 2.06
+        self.assertEqual(self.cli(["log", "milk_2pct", "200", "ml"]), 0)
+        c = self.conn()
+        r = c.execute("SELECT * FROM entries").fetchone()
+        c.close()
+        self.assertAlmostEqual(r["grams"], 206.0, places=3)
+        self.assertEqual(r["qty_unit"], "ml")
+        self.assertAlmostEqual(r["protein_g"], 3.3 * 2.06, places=3)
+
+    def test_milk_by_glass_and_litre(self):
+        # glass = 250 ml; 1 glass milk_whole (1.03) -> 257.5 g
+        self.assertEqual(self.cli(["log", "milk_whole", "1", "glass"]), 0)
+        # litre: 1 L -> 1000 ml -> 1030 g
+        self.assertEqual(self.cli(["log", "milk_whole", "1", "litre",
+                                   "--at", "18:00", "--force"]), 0)
+        c = self.conn()
+        rows = c.execute("SELECT grams, qty_unit FROM entries ORDER BY id").fetchall()
+        c.close()
+        self.assertAlmostEqual(rows[0]["grams"], 257.5, places=3)
+        self.assertEqual(rows[0]["qty_unit"], "glass")
+        self.assertAlmostEqual(rows[1]["grams"], 1030.0, places=3)
+
+    def test_chai_cup_uses_own_unit_not_volume(self):
+        # chai unit_name is 'cup' -> 'cup' resolves to its own serving unit (200 g),
+        # NOT the 250 ml volume conversion.
+        self.assertEqual(self.cli(["log", "chai", "1", "cup"]), 0)
+        c = self.conn()
+        r = c.execute("SELECT grams, qty_unit FROM entries").fetchone()
+        c.close()
+        self.assertAlmostEqual(r["grams"], 200.0, places=3)
+        self.assertEqual(r["qty_unit"], "cup")
+
+    def test_water_food_fallback_density_1(self):
+        # a food keyed 'water_bottle' has no density but matches the liquid
+        # prefix 'water' -> density 1.0
+        self.cli(["food", "add", "--key", "water_bottle", "--name", "Water",
+                  "--basis", "100g", "--protein", "0"])
+        self.assertEqual(self.cli(["log", "water_bottle", "500", "ml"]), 0)
+        c = self.conn()
+        r = c.execute(
+            "SELECT grams FROM entries WHERE description LIKE 'Water'").fetchone()
+        c.close()
+        self.assertAlmostEqual(r["grams"], 500.0, places=3)
+
+    def test_volume_unit_on_non_liquid_errors(self):
+        rc, out, err = _run_capture(self.cli, ["log", "chicken_breast", "200", "ml"])
+        self.assertEqual(rc, 1)
+        self.assertIn("bad unit", err)
+        self.assertIn("ml", err.lower())  # mentions ml works for drinks
+
+    def test_kirat_milk_ml_uses_density(self):
+        # Kirat's milk_ml total should be ml, not grams: 500 ml logged -> 500 ml
+        self.cli(["log", "milk_whole", "500", "ml", "--person", "kirat"])
+        c = self.conn()
+        t = nutrition.day_totals(c, self.today(), "kirat")
+        c.close()
+        self.assertAlmostEqual(t["milk_ml"], 500.0, places=2)
+        # grams stored are density-scaled (515 g), ml derived back to 500
+        c = self.conn()
+        g = c.execute("SELECT grams FROM entries").fetchone()[0]
+        c.close()
+        self.assertAlmostEqual(g, 515.0, places=2)
+
+    # ----- 2. eaten infers person; mismatch errors (local) ----- #
+    def test_eaten_infers_person_no_flag(self):
+        self.cli(["log", "paratha", "1", "--person", "tegh", "--packed"])
+        c = self.conn()
+        eid = c.execute("SELECT id FROM entries").fetchone()[0]
+        c.close()
+        self.assertEqual(self.cli(["eaten", str(eid), "--fraction", "0.5"]), 0)
+        c = self.conn()
+        row = c.execute("SELECT status FROM entries").fetchone()
+        c.close()
+        self.assertEqual(row["status"], "partial")
+
+    def test_eaten_wrong_person_errors(self):
+        self.cli(["log", "paratha", "1", "--person", "tegh", "--packed"])
+        c = self.conn()
+        eid = c.execute("SELECT id FROM entries").fetchone()[0]
+        c.close()
+        rc, out, err = _run_capture(
+            self.cli, ["eaten", str(eid), "--all", "--person", "kirat"])
+        self.assertEqual(rc, 1)
+        self.assertIn("belongs to tegh", err)
+
+    def test_rm_wrong_person_errors(self):
+        self.cli(["log", "paratha", "1", "--person", "tegh"])
+        c = self.conn()
+        eid = c.execute("SELECT id FROM entries").fetchone()[0]
+        c.close()
+        rc, out, err = _run_capture(
+            self.cli, ["rm", str(eid), "--person", "kirat"])
+        self.assertEqual(rc, 1)
+        self.assertIn("belongs to tegh", err)
+        c = self.conn()
+        n = c.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
+        c.close()
+        self.assertEqual(n, 1)  # not deleted
+
+    def test_edit_wrong_person_errors(self):
+        self.cli(["log", "paratha", "1", "--person", "tegh"])
+        c = self.conn()
+        eid = c.execute("SELECT id FROM entries").fetchone()[0]
+        c.close()
+        rc, out, err = _run_capture(
+            self.cli, ["edit", str(eid), "--meal", "lunch", "--person", "kirat"])
+        self.assertEqual(rc, 1)
+        self.assertIn("belongs to tegh", err)
+
+    def test_eaten_matching_person_ok(self):
+        self.cli(["log", "paratha", "1", "--person", "tegh", "--packed"])
+        c = self.conn()
+        eid = c.execute("SELECT id FROM entries").fetchone()[0]
+        c.close()
+        self.assertEqual(
+            self.cli(["eaten", str(eid), "--all", "--person", "tegh"]), 0)
+
+    # ----- 3. gaps insufficient_data ----- #
+    def test_gaps_insufficient_data(self):
+        today = nutrition.now_dt().date()
+        d0 = today.isoformat()
+        self.cli(["log", "egg", "1", "egg", "--person", "tegh", "--at", f"{d0} 08:00"])
+        rc, obj = _run_json(self.cli, ["gaps", "--days", "3", "--person", "tegh",
+                                       "--json"])
+        tegh = [p for p in obj["people"] if p["person"] == "tegh"][0]
+        self.assertEqual(tegh["status"], "insufficient_data")
+        self.assertIsNone(tegh["on_track"])
+
+    def test_gaps_insufficient_data_text(self):
+        today = nutrition.now_dt().date()
+        d0 = today.isoformat()
+        self.cli(["log", "egg", "1", "egg", "--person", "tegh", "--at", f"{d0} 08:00"])
+        rc, out, err = _run_capture(
+            self.cli, ["gaps", "--days", "3", "--person", "tegh"])
+        self.assertIn("not enough data yet", out)
+        self.assertIn("1 logged day", out)
+
+    def test_gaps_two_days_scores(self):
+        today = nutrition.now_dt().date()
+        d0 = today.isoformat()
+        d1 = (today - timedelta(days=1)).isoformat()
+        self.cli(["log", "egg", "1", "egg", "--person", "tegh", "--at", f"{d0} 08:00"])
+        self.cli(["log", "egg", "1", "egg", "--person", "tegh", "--at", f"{d1} 08:00"])
+        rc, obj = _run_json(self.cli, ["gaps", "--days", "3", "--person", "tegh",
+                                       "--json"])
+        tegh = [p for p in obj["people"] if p["person"] == "tegh"][0]
+        self.assertIn(tegh["status"], ("gaps", "on_track"))
+        self.assertIsNotNone(tegh["on_track"])
+
+    # ----- 4. child JSON strips adult nutrients ----- #
+    ADULT_KEYS = ("kcal", "carbs_g", "fat_g", "satfat_g", "sugar_g", "sodium_mg")
+
+    def _assert_no_adult_keys(self, raw):
+        for k in self.ADULT_KEYS:
+            self.assertNotIn(f'"{k}"', raw, f"{k} leaked into child JSON: {raw}")
+
+    def test_child_json_day_strips_adult(self):
+        self.cli(["log", "paratha", "1", "--person", "tegh"])
+        rc, out, err = _run_capture(
+            self.cli, ["day", "today", "--person", "tegh", "--json"])
+        self._assert_no_adult_keys(out)
+        obj = json.loads(out.strip().splitlines()[-1])
+        self.assertIn("protein_g", json.dumps(obj))  # kept nutrients present
+
+    def test_child_json_summary_week_peopleday_strips_adult(self):
+        self.cli(["log", "paratha", "1", "--person", "tegh"])
+        for cmd in (["summary", "--person", "tegh", "--json"],
+                    ["week", "--person", "tegh", "--json"],
+                    ["people-day", "today", "--json"]):
+            rc, out, err = _run_capture(self.cli, cmd)
+            self._assert_no_adult_keys(out)
+
+    def test_child_json_log_confirmation_strips_adult(self):
+        rc, out, err = _run_capture(
+            self.cli, ["log", "paratha", "1", "--person", "tegh", "--json"])
+        self._assert_no_adult_keys(out)
+        rc, out, err = _run_capture(
+            self.cli, ["log-custom", "--desc", "daycare snack", "--protein", "5",
+                       "--kcal", "120", "--person", "tegh", "--json"])
+        self._assert_no_adult_keys(out)
+
+    def test_adult_json_keeps_kcal(self):
+        self.cli(["log", "chicken_breast", "200", "g"])
+        rc, out, err = _run_capture(self.cli, ["day", "today", "--json"])
+        self.assertIn('"kcal"', out)
+
+    # ----- 5. same-meal packed conflict note ----- #
+    def test_packed_meal_conflict_note(self):
+        self.cli(["log", "aloo_paratha", "1", "--person", "tegh", "--packed",
+                  "--meal", "lunch", "--at", "12:00"])
+        # a DIFFERENT packed item, same meal, within 3h -> note, still writes
+        rc, out, err = _run_capture(
+            self.cli, ["log", "banana", "1", "--person", "tegh", "--packed",
+                       "--meal", "lunch", "--at", "12:30"])
+        self.assertEqual(rc, 0)
+        self.assertIn("NOTE:", out)
+        self.assertIn("same lunchbox", out)
+        c = self.conn()
+        n = c.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
+        c.close()
+        self.assertEqual(n, 2)  # written despite the note
+
+    def test_packed_meal_conflict_note_json(self):
+        self.cli(["log", "aloo_paratha", "1", "--person", "tegh", "--packed",
+                  "--meal", "lunch", "--at", "12:00"])
+        rc, obj = _run_json(
+            self.cli, ["log", "banana", "1", "--person", "tegh", "--packed",
+                       "--meal", "lunch", "--at", "12:30", "--json"])
+        self.assertEqual(rc, 0)
+        self.assertIn("note", obj)
+        self.assertIn("same lunchbox", obj["note"])
+
+    def test_packed_meal_no_conflict_different_meal(self):
+        self.cli(["log", "aloo_paratha", "1", "--person", "tegh", "--packed",
+                  "--meal", "lunch", "--at", "12:00"])
+        rc, out, err = _run_capture(
+            self.cli, ["log", "banana", "1", "--person", "tegh", "--packed",
+                       "--meal", "snack", "--at", "12:30"])
+        self.assertEqual(rc, 0)
+        self.assertNotIn("NOTE:", out)
+
+    def test_packed_meal_no_note_for_adult(self):
+        self.cli(["log", "chicken_breast", "100", "g", "--packed",
+                  "--meal", "lunch", "--at", "12:00"])
+        rc, out, err = _run_capture(
+            self.cli, ["log", "egg", "1", "egg", "--packed",
+                       "--meal", "lunch", "--at", "12:30"])
+        self.assertEqual(rc, 0)
+        self.assertNotIn("NOTE:", out)
+
+    # ----- 6. new foods ----- #
+    def test_aloo_paratha_present(self):
+        self.cli(["log", "aloo_paratha", "1", "--person", "tegh"])
+        c = self.conn()
+        r = c.execute(
+            "SELECT * FROM entries WHERE food_id=(SELECT id FROM foods WHERE key='aloo_paratha')"
+        ).fetchone()
+        f = c.execute("SELECT * FROM foods WHERE key='aloo_paratha'").fetchone()
+        c.close()
+        self.assertAlmostEqual(r["grams"], 110.0, places=3)
+        self.assertEqual(f["unit_name"], "paratha")
+        self.assertGreater(f["iron_mg"], 0)
+        self.assertGreater(f["calcium_mg"], 0)
+        # alias is searchable via food find
+        rc, obj = _run_json(self.cli, ["food", "find", "potato paratha", "--json"])
+        self.assertIn("aloo_paratha", [m["key"] for m in obj["matches"]])
+
+    def test_rajma_katori_present(self):
+        self.cli(["log", "rajma_katori", "1"])
+        c = self.conn()
+        f = c.execute("SELECT * FROM foods WHERE key='rajma_katori'").fetchone()
+        c.close()
+        self.assertAlmostEqual(f["serving_g"], 150.0, places=3)
+        self.assertAlmostEqual(f["veg_servings"], 0.5, places=3)
+        self.assertGreater(f["iron_mg"], 0)
+        self.assertGreater(f["calcium_mg"], 0)
+
+    def test_rice_white_katori_alias(self):
+        # katori == cup for rice_white (160 g)
+        self.assertEqual(self.cli(["log", "rice_white", "1", "katori"]), 0)
+        c = self.conn()
+        r = c.execute("SELECT grams, qty_unit FROM entries").fetchone()
+        c.close()
+        self.assertAlmostEqual(r["grams"], 160.0, places=3)
+        self.assertEqual(r["qty_unit"], "cup")
 
 
 if __name__ == "__main__":
