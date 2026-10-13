@@ -176,7 +176,84 @@ class UserError(Exception):
 # time + formatting helpers
 # --------------------------------------------------------------------------- #
 def now_dt():
+    # Tests (and only tests) may freeze "now" via NUTRITION_NOW=ISO so the
+    # future-time warning is deterministic. A naive value is read as local.
+    override = os.environ.get("NUTRITION_NOW")
+    if override:
+        try:
+            dt = datetime.fromisoformat(override)
+        except ValueError:
+            return datetime.now(TZ)
+        if dt.tzinfo is None and TZ is not None:
+            dt = dt.replace(tzinfo=TZ)
+        return dt
     return datetime.now(TZ)
+
+
+# A logged/edited time more than this far after "now" earns a "is it planned?"
+# note (still written). 30 min of slack so a meal logged a touch early is fine.
+FUTURE_WARN_S = 30 * 60
+
+
+def med_window_note(conn, person_key, dt, food=None, desc=""):
+    """Kirat takes levothyroxine (Synthroid) before daycare (Sumeet 2026-10-13: "before going to daycare (which is at
+    8:30am)"). SickKids teaching (Feb 2025): give it on its own, ideally no feeding 30 min before/after; keep high-calcium,
+    high-iron, soy and walnuts a couple of hours away. A person's `med_window` in people.notes-free meta:
+    meta key 'med_window:<person>' = 'HH:MM-HH:MM|weekdays|<label>'. Warn (never block) when a milk/high-Ca/Fe/soy/walnut
+    item is logged inside [start-30min, end+2h] on an active day."""
+    row = conn.execute("SELECT value FROM meta WHERE key=?", ("med_window:" + person_key,)).fetchone()
+    if not row or not row[0]:
+        return None
+    try:
+        span, days, label = (row[0].split("|") + ["", ""])[:3]
+        a, b = span.split("-")
+        start = dt.replace(hour=int(a[:2]), minute=int(a[3:5]), second=0, microsecond=0)
+        end = dt.replace(hour=int(b[:2]), minute=int(b[3:5]), second=0, microsecond=0)
+    except (ValueError, IndexError):
+        return None
+    if days == "weekdays" and dt.weekday() >= 5:
+        return None
+    key = (food["key"] if food is not None else "") or ""
+    text = (key + " " + (desc or "")).lower()
+    hit = (key.startswith("milk") or any(w in text for w in ("milk", "dahi", "yogurt", "yoghurt", "paneer", "cheese",
+           "soy", "tofu", "walnut", "iron", "calcium", "formula")))
+    if not hit and food is not None:
+        try:
+            ca = food["calcium_mg"] or 0
+            fe = food["iron_mg"] or 0
+        except (IndexError, KeyError):
+            ca = fe = 0
+        hit = ca >= 100 or fe >= 2.5
+    if not hit:
+        return None
+    if start - timedelta(minutes=30) <= dt <= end + timedelta(hours=2):
+        return (f"NOTE: {person_key}'s {label or 'medication'} is given {span} on {days or 'every day'}; "
+                f"this item ({dt.strftime('%H:%M')}) is close to it. SickKids: keep milk/high-calcium/iron food "
+                f"~30 min (ideally a couple of hours) away from the dose. Check the dose went in first.")
+    return None
+
+
+def future_note(dt):
+    """Return the 'later than now' note if dt is >30 min in the future, else None."""
+    n = now_dt()
+    try:
+        ahead = (dt - n).total_seconds()
+    except TypeError:
+        return None
+    if ahead > FUTURE_WARN_S:
+        return (f"NOTE: that time ({dt.strftime('%H:%M')}) is later than now "
+                f"({n.strftime('%H:%M')}). Logged as eaten; is it planned?")
+    return None
+
+
+def future_note_iso(iso):
+    """future_note for an ISO timestamp string (as stored on entries)."""
+    if not iso:
+        return None
+    try:
+        return future_note(datetime.fromisoformat(iso))
+    except ValueError:
+        return None
 
 
 def now_iso():
@@ -247,11 +324,19 @@ def fmt_qty(v):
     return f"{v:g}"
 
 
-def fmt_total(totals, field, unit):
-    """Format a total; if some entries lacked a value, show '>= X (n unknown)'."""
+def fmt_mg1(v):
+    """One-decimal mg, for a child's iron/calcium (e.g. 'Fe0.6')."""
+    if v is None:
+        return "-"
+    return f"{v:.1f}"
+
+
+def fmt_total(totals, field, unit, fmt=None):
+    """Format a total; if some entries lacked a value, show '>= X (n unknown)'.
+    Pass fmt=fmt_mg1 for a child's one-decimal iron/calcium."""
     v = totals.get(field)
     unknown = totals.get("_unknown", {}).get(field, 0)
-    s = fmt_val(v, unit)
+    s = fmt(v) if fmt else fmt_val(v, unit)
     if unknown:
         plural = "s" if unknown != 1 else ""
         return f">= {s} ({unknown} item{plural} unknown)"
@@ -797,6 +882,11 @@ def find_duplicates(conn, person, day, food_id, desc, dt):
         if diff > DEDUP_WINDOW_S:
             continue
         same_food = food_id is not None and r["food_id"] == food_id
+        # Two entries for DIFFERENT known foods are never duplicates, however alike their descriptions
+        # (e.g. the onion, tomato and oil of one "paneer-capsicum sabzi"). Description similarity only
+        # decides when at least one side is a custom entry (no food_id).
+        if food_id is not None and r["food_id"] is not None and not same_food:
+            continue
         if same_food or desc_similarity(desc, r["description"]) >= SIM_THRESHOLD:
             matches.append(r)
     return matches
@@ -840,8 +930,9 @@ def get_targets(conn, person="sumeet"):
         "SELECT * FROM targets WHERE person=?", (person,)).fetchall()}
 
 
-def eval_target(nut_def, total, targets):
-    """Return a status dict for one nutrient, or None if no target set."""
+def eval_target(nut_def, total, targets, child=False):
+    """Return a status dict for one nutrient, or None if no target set.
+    child=True phrases a min shortfall as 'X to go' (item 4), adult unchanged."""
     name, field, kind, unit = nut_def
     res = {"nutrient": name, "field": field, "kind": kind, "unit": unit,
            "total": total, "shortfall_pct": 0.0}
@@ -873,7 +964,9 @@ def eval_target(nut_def, total, targets):
                 res["status"] = "✅"
             else:
                 res["state"] = "under"
-                res["status"] = f"↓ need {fmt_val(tgt - total, unit)}{unit}"
+                gap = f"{fmt_val(tgt - total, unit)}{unit}"
+                res["status"] = (f"↓ {gap} to go" if child
+                                 else f"↓ need {gap}")
                 res["shortfall_pct"] = (tgt - total) / tgt if tgt else 0.0
         else:  # max
             if total > tgt:
@@ -885,11 +978,11 @@ def eval_target(nut_def, total, targets):
     return res
 
 
-def target_statuses(conn, totals, person="sumeet"):
+def target_statuses(conn, totals, person="sumeet", child=False):
     targets = get_targets(conn, person)
     out = []
     for nd in NUTRIENT_TARGETS:
-        st = eval_target(nd, totals[nd[1]], targets)
+        st = eval_target(nd, totals[nd[1]], targets, child=child)
         if st:
             out.append(st)
     return out
@@ -1130,8 +1223,17 @@ def cmd_log(conn, args):
     }
     row.update(snap)
     eid = insert_entry(conn, row)
-    note = _meal_conflict_note(person["key"], args.meal, conflict) if conflict else None
-    _emit_logged(args, get_entry(conn, eid), conn, person, note=note)
+    notes_out = []
+    if conflict:
+        notes_out.append(_meal_conflict_note(person["key"], args.meal, conflict))
+    fn = future_note(dt)
+    if fn:
+        notes_out.append(fn)
+    mn = med_window_note(conn, person["key"], dt, food, desc)
+    if mn:
+        notes_out.append(mn)
+    _emit_logged(args, get_entry(conn, eid), conn, person,
+                 note="\n".join(notes_out) if notes_out else None)
 
 
 def cmd_log_custom(conn, args):
@@ -1148,6 +1250,11 @@ def cmd_log_custom(conn, args):
         notes = ((notes + "; ") if notes else "") + "confirmed not a duplicate"
 
     status = "packed" if getattr(args, "packed", False) else "eaten"
+    # Same-meal packed-conflict warning, exactly like `log --packed` (item 1).
+    conflict = None
+    if status == "packed" and person["kind"] == "child":
+        conflict = find_meal_conflict(
+            conn, person["key"], day, args.meal, dt, {m["id"] for m in matches})
     row = {
         "person": person["key"], "eaten_at": dt.isoformat(), "day": day,
         "meal": args.meal, "food_id": None, "description": args.desc,
@@ -1168,7 +1275,17 @@ def cmd_log_custom(conn, args):
         if v is not None:
             row[col] = v
     eid = insert_entry(conn, row)
-    _emit_logged(args, get_entry(conn, eid), conn, person)
+    notes_out = []
+    if conflict:
+        notes_out.append(_meal_conflict_note(person["key"], args.meal, conflict))
+    fn = future_note(dt)
+    if fn:
+        notes_out.append(fn)
+    mn = med_window_note(conn, person["key"], dt, None, args.desc)
+    if mn:
+        notes_out.append(mn)
+    _emit_logged(args, get_entry(conn, eid), conn, person,
+                 note="\n".join(notes_out) if notes_out else None)
 
 
 def _emit_logged(args, r, conn, person, note=None):
@@ -1177,7 +1294,7 @@ def _emit_logged(args, r, conn, person, note=None):
     if person["kind"] == "child":
         human = (f"logged #{r['id']} ({person['key']}) {r['description']} "
                  f"{fmt_qty(r['qty'])} {r['qty_unit']}{tag} → "
-                 f"P {fmt_g(r['protein_g'])}g, iron {fmt_val(r['iron_mg'], 'mg')}mg"
+                 f"P {fmt_g(r['protein_g'])}g, iron {fmt_mg1(r['iron_mg'])}mg"
                  f"  [day: P {fmt_g(totals['protein_g'])}g]")
     else:
         human = (f"logged #{r['id']} ({person['key']}) {r['description']} "
@@ -1221,7 +1338,35 @@ def cmd_edit(conn, args):
         row["eaten_at"] = dt.isoformat()
         row["day"] = dt.date().isoformat()
 
-    if changed_qty and row["food_id"] is not None:
+    swapped_food = getattr(args, "food", None) is not None
+    if swapped_food:
+        # Swap the entry's food, recomputing the snapshot from the new food with
+        # the same qty/unit (or caller-supplied --qty/--unit). Keep id, time,
+        # person, status, fraction, logged_by.
+        new_food = require_food(conn, args.food)
+        old = (conn.execute("SELECT key FROM foods WHERE id=?",
+                            (r["food_id"],)).fetchone()
+               if r["food_id"] is not None else None)
+        old_key = old["key"] if old else "custom entry"
+        qty = args.qty if args.qty is not None else row["qty"]
+        unit_raw = args.unit if args.unit is not None else row["qty_unit"]
+        try:
+            token = norm_unit(new_food, unit_raw)
+            snap, grams, _ = compute_snapshot(new_food, qty, token)
+        except UserError:
+            if args.qty is None or args.unit is None:
+                raise UserError(
+                    f"unit {unit_raw!r} isn't valid for {new_food['key']}; "
+                    f"pass --qty and --unit too to change the food")
+            raise
+        row["food_id"] = new_food["id"]
+        row["qty"] = qty
+        row["qty_unit"] = token
+        row["grams"] = grams
+        row.update(snap)
+        row["notes"] = (((row["notes"] + "; ") if row["notes"] else "")
+                        + f"food changed from {old_key}")
+    elif changed_qty and row["food_id"] is not None:
         food = conn.execute("SELECT * FROM foods WHERE id=?",
                             (row["food_id"],)).fetchone()
         if food is None:
@@ -1241,8 +1386,14 @@ def cmd_edit(conn, args):
                  [row[c] for c in sets] + [args.id])
     conn.commit()
     r = get_entry(conn, args.id)
-    emit(args, f"updated entry #{args.id} → P {fmt_g(r['protein_g'])}g, "
-               f"{fmt_val(r['kcal'], 'kcal')} kcal", entry_to_dict(r))
+    human = (f"updated entry #{args.id} → P {fmt_g(r['protein_g'])}g, "
+             f"{fmt_val(r['kcal'], 'kcal')} kcal")
+    obj = entry_to_dict(r)
+    fn = future_note_iso(r["eaten_at"])
+    if fn:
+        human += "\n" + fn
+        obj["note"] = fn
+    emit(args, human, obj)
 
 
 def cmd_eaten(conn, args):
@@ -1272,8 +1423,13 @@ def cmd_eaten(conn, args):
         (frac, status, notes, now_iso(), args.id))
     conn.commit()
     r = get_entry(conn, args.id)
-    emit(args, f"entry #{args.id} → {status} (eaten_fraction={fmt_qty(frac)})",
-         entry_to_dict(r))
+    human = f"entry #{args.id} → {status} (eaten_fraction={fmt_qty(frac)})"
+    obj = entry_to_dict(r)
+    fn = future_note_iso(r["eaten_at"])
+    if fn:
+        human += "\n" + fn
+        obj["note"] = fn
+    emit(args, human, obj)
 
 
 def cmd_rm(conn, args):
@@ -1293,8 +1449,8 @@ def _entry_line(e, kind):
     t = e["eaten_at"][11:16] if e["eaten_at"] else "--:--"
     tag = f" [{e['status']}]" if e["status"] and e["status"] != "eaten" else ""
     if kind == "child":
-        nut = (f"P{fmt_g(e['protein_g'])} Fe{fmt_val(e['iron_mg'], 'mg')} "
-               f"Ca{fmt_val(e['calcium_mg'], 'mg')} Fib{fmt_g(e['fibre_g'])}")
+        nut = (f"P{fmt_g(e['protein_g'])} Fe{fmt_mg1(e['iron_mg'])} "
+               f"Ca{fmt_mg1(e['calcium_mg'])} Fib{fmt_g(e['fibre_g'])}")
     else:
         nut = (f"P{fmt_g(e['protein_g'])} {fmt_val(e['kcal'], 'kcal')}kcal "
                f"Fib{fmt_g(e['fibre_g'])}")
@@ -1304,8 +1460,8 @@ def _entry_line(e, kind):
 
 def _child_totals_line(totals):
     return (f"Totals: P {fmt_g(totals['protein_g'])}g, "
-            f"iron {fmt_total(totals, 'iron_mg', 'mg')}mg, "
-            f"calcium {fmt_total(totals, 'calcium_mg', 'mg')}mg, "
+            f"iron {fmt_total(totals, 'iron_mg', 'mg', fmt=fmt_mg1)}mg, "
+            f"calcium {fmt_total(totals, 'calcium_mg', 'mg', fmt=fmt_mg1)}mg, "
             f"fibre {fmt_g(totals['fibre_g'])}g, "
             f"veg {fmt_g(totals['veg_servings'])}, fruit {fmt_g(totals['fruit_servings'])}, "
             f"milk {fmt_val(totals['milk_ml'], 'ml')}ml")
@@ -1329,7 +1485,7 @@ def cmd_day(conn, args):
         "SELECT * FROM entries WHERE day=? AND person=? ORDER BY eaten_at, id",
         (day, pkey)).fetchall()
     totals = day_totals(conn, day, pkey)
-    statuses = target_statuses(conn, totals, pkey)
+    statuses = target_statuses(conn, totals, pkey, child=(kind == "child"))
     if kind == "child":
         statuses = [s for s in statuses if s["nutrient"] in CHILD_TARGET_NAMES]
     levers = best_levers(statuses)
@@ -1361,7 +1517,8 @@ def cmd_summary(conn, args):
     pkey, kind = person["key"], person["kind"]
     day = resolve_day(args.day)
     totals = day_totals(conn, day, pkey)
-    statuses = {s["nutrient"]: s for s in target_statuses(conn, totals, pkey)}
+    statuses = {s["nutrient"]: s
+                for s in target_statuses(conn, totals, pkey, child=(kind == "child"))}
 
     def line(nut):
         s = statuses.get(nut)
@@ -1376,8 +1533,8 @@ def cmd_summary(conn, args):
         lines = [
             f"{day} {pkey}  "
             f"P{fmt_g(totals['protein_g'])} "
-            f"Fe{fmt_total(totals, 'iron_mg', 'mg')} "
-            f"Ca{fmt_total(totals, 'calcium_mg', 'mg')}",
+            f"Fe{fmt_total(totals, 'iron_mg', 'mg', fmt=fmt_mg1)} "
+            f"Ca{fmt_total(totals, 'calcium_mg', 'mg', fmt=fmt_mg1)}",
             f"fibre {fmt_g(totals['fibre_g'])}g | veg {fmt_g(totals['veg_servings'])} | "
             f"fruit {fmt_g(totals['fruit_servings'])}"
             + (f" | milk {fmt_val(totals['milk_ml'], 'ml')}ml" if totals['milk_ml'] else ""),
@@ -1623,8 +1780,8 @@ def cmd_people_day(conn, args):
                          (day, pkey)).fetchone()[0]
         if kind == "child":
             line = (f"{pkey:<9} {n:>2} items  P{fmt_g(totals['protein_g'])}g "
-                    f"Fe{fmt_total(totals, 'iron_mg', 'mg')}mg "
-                    f"Ca{fmt_total(totals, 'calcium_mg', 'mg')}mg "
+                    f"Fe{fmt_total(totals, 'iron_mg', 'mg', fmt=fmt_mg1)}mg "
+                    f"Ca{fmt_total(totals, 'calcium_mg', 'mg', fmt=fmt_mg1)}mg "
                     f"fib{fmt_g(totals['fibre_g'])} v{fmt_g(totals['veg_servings'])} "
                     f"f{fmt_g(totals['fruit_servings'])}")
             info = {"person": pkey, "kind": kind, "entries": n,
@@ -1819,6 +1976,7 @@ def build_parser():
     # edit
     ep = sub.add_parser("edit", parents=[common], help="edit an entry")
     ep.add_argument("id", type=int)
+    ep.add_argument("--food", help="swap the entry's food (recomputes nutrients)")
     ep.add_argument("--qty", type=float)
     ep.add_argument("--unit")
     ep.add_argument("--meal")
