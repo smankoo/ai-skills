@@ -10,6 +10,14 @@ description: >
 # Nutrition log (the household food + nutrient tracker)
 
 ## HOUSEHOLD (v2, live since 2026-10-13): read this first
+- **The app is standalone now:** github.com/smankoo/household-nutrition (private), checked out at
+  `~/p/household-nutrition` with venv `.venv`. Its MCP server `household-nutrition-mcp.service` (user unit) runs on
+  100.68.134.114:3425/mcp. Per-agent tokens are in `~/.hermes/secrets/nutrition_mcp_tokens.json` (hermes, shankar);
+  the agent name becomes logged_by. **Use the MCP tools first** (`mcp_household_nutrition_*`: log_dish, find_food,
+  day, summary, people_today, week, gaps, targets, edit_entry, mark_eaten, remove_entry, add_food, log_custom). Fall
+  back to `nut` only if MCP is down. Code changes go in that repo (133 tests: `make test`), NOT in this skill's
+  `scripts/` copy, which is the legacy copy and still backs the 3420 HTTP fallback until the IaC switch lands.
+  Rebuild/IaC: the n8n-vps-iac hermes role `household_nutrition` tag, plus docs/household-nutrition.md there.
 - **Log with `nut`** (`~/.local/bin/nut` → `scripts/nut`). One command per dish, never hand-built nutrition.py
   calls or raw SQL (Sumeet, 2026-10-13: "Shouldn't you have some handy Tools/skill to update the db instead of rawdogging
   it every time?"):
