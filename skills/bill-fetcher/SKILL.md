@@ -37,8 +37,25 @@ download the bill PDF, file it, and email it back to him **as a reply on the sam
    --due --bill-date --saved-to "Google Drive › Bills & Receipts › <Category> › <Vendor>"`. It replies to the original notice
    (In-Reply-To/References from `himalaya message read --raw`) and attaches the PDF. Use `--dry-run` first on a
    new vendor.
-6. **Ledger**: append `{key, vendor, bill_date, amount, due, invoice, file, emailed, at}` to the ledger.
-   Then record it in Pebbleway (bill amount + due date on the vendor/account node).
+6. **Ledger**: append `{key, vendor, bill_date, amount, due, invoice, file, gdrive, emailed, at}` to the ledger.
+7. **Pebbleway (Sumeet, 2026-10-13: "pebbleway is such a natural home for bills… proper links and metadata").**
+   Every bill becomes ONE linked, attached Thing:
+   `python3 ~/.hermes/scripts/bill_to_pebbleway.py --vendor <V> --service-name "<service/utility node name>"
+   --pdf <file> --amount <a> --due <YYYY-MM-DD> --bill-date <YYYY-MM-DD> [--invoice] [--account-number]
+   [--period] --gdrive-path "<Drive path from step 4>" --email-key <ledger key>` (`--dry-run` first on a new vendor).
+   - It creates or UPDATES an `event` "<Vendor> bill: $<amt>, due <date>" with `event_type:due`, amount, dates,
+     invoice/account numbers, billing period, `gdrive_path` + `gdrive_url` (file id looked up automatically),
+     `email_key`, and `status:open`. It reuses an earlier "bill ready" event for the same vendor, due date and amount.
+   - Edges: `event_for` → the service/utility node; `paid_with` → that service's card (copied from the service's
+     own `paid_with` edge); `related_to` → the vendor `place` if one exists.
+   - Attaches the PDF (copied to `~/.hermes/bills/files/` first so the attachment never points at /tmp).
+   - Service node names in use: "Enercare (Hot Water / HVAC)", "Enbridge Gas (Burlington)", "Cogeco Internet
+     (Burlington)", "Burlington Hydro Electricity", "Phone Plans (Fido/Rogers)".
+   - Once paid (YNAB shows it), set `status:paid`, `paid_on`, and `event_type:custom` with `original_event_type:due`.
+     Otherwise the attention list keeps showing it as overdue (see the pebbleway skill).
+   - **Pitfall:** hop-1 `expand` on an event hides its `event_for` edge. Check edges with
+     `query_graph {kind:"induced", node_ids:[...]}`. `patch_graph` has NO dry-run flag, so a "test" add is a REAL
+     write (2026-10-13: three stray edges had to be deleted).
 
 ## Vendor recipes (verified dates)
 
