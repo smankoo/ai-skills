@@ -10,6 +10,16 @@ description: >
 # Nutrition log (the household food + nutrient tracker)
 
 ## HOUSEHOLD (v2, live since 2026-10-13): read this first
+- **Log with `nut`** (`~/.local/bin/nut` → `scripts/nut`). One command per dish, never hand-built nutrition.py
+  calls or raw SQL (Sumeet, 2026-10-13: "Shouldn't you have some handy Tools/skill to update the db instead of rawdogging
+  it every time?"):
+  - `nut eat <person> "<dish>" food:qty[:unit] ... [--at 15:30] [--meal snack] [--packed] [--by priyanka]`.
+    Ingredients of one dish don't count as duplicates of each other. The first item still runs the cross-parent check
+    (exit 3 = ask "are you sure?").
+  - `nut today` (everyone), `nut today kirat`, `nut find <text>` (food keys, no SQL), `nut fix <id> ...`, `nut rm <id>`.
+    Anything else is passed straight through to nutrition.py.
+  - It always drops a stale `NUTRITION_DB`. `--practice` uses the practice copy.
+  - Missing food? `nut food add --key ... --basis 100g ...` with label/CNF numbers.
 - **One shared DB** `~/.hermes/data/nutrition.db` for **sumeet, priyanka, tegh, kirat** (`person list`). Hermes writes
   locally. **Shankar** (iris) writes remotely through `scripts/nutrition_server.py` (systemd user unit
   `household-nutrition-live`, 100.68.134.114:3420, iris-only via ufw + allowlist, token file
