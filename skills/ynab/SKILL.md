@@ -191,6 +191,25 @@ sources.
 Look at categories with large positive balances (over-budgeted) and categories that
 consistently go negative (under-budgeted), suggest reallocations.
 
+### Account cash-flow forecast ("how much do I top up, and by when?")
+Use `scripts/account_forecast.py "<account substring>" --days 60 [--buffer 1000]` (reads
+`YNAB_TOKEN`/`YNAB_BUDGET_ID` from env). It starts from the **cleared** balance, detects
+recurring outflows from the account's own history, projects them forward, and prints the
+low point plus the top-up needed and the date it is needed by.
+- **Start from cleared, not working balance.** A transfer recorded on one side but never sent
+  sits as "uncleared" for weeks and inflates the working balance. The script prints the
+  uncleared amount so you can mention it; `--use-working` shows the optimistic case.
+- **Group recurring payments by exact amount, not payee.** Bank-feed payee names drift
+  ("Hyundai Motor Finance" became "Hyundai"; a returned payment re-drafts as "Draft 0229…").
+- **Bounces look like double payments.** An NSF return plus re-debit of the same amount a
+  week or two later must be counted once, or the cadence check rejects a real monthly bill.
+- **Recurring rules expire.** Drop a pattern whose last hit is older than ~1.6 cadences
+  (stopped insurance, moved bills); otherwise the forecast double-counts.
+- Bank dates shift to the next business day: quote dates as approximate and ask for a top-up a
+  few days before the first sub-buffer date.
+- Income is excluded by default (`--include-income` to add it): irregular transfers in are
+  what's being planned.
+
 For the full API endpoint reference with every field, parameter, and enum, read
 `references/api-reference.md`.
 
