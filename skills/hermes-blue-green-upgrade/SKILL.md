@@ -113,6 +113,13 @@ GOTCHA: a successful cutover overwrites `last_good` with green. Before a
 deliberate rollback, re-point `last_good` at blue or `rollback` will no-op.
 
 ## Pitfalls (all hit for real on 2026-08-13)
+- **Green venv MUST include the `[mcp]` extra** (2026-10-13). `pip install -e .`
+  alone omits the `mcp` SDK; `discover_mcp_tools()` then logs only a DEBUG
+  "MCP SDK not available" and returns [] -> every chat silently loses ALL MCP
+  tools (pebbleway, nutrition, agora, whatsapp) while the servers look healthy.
+  `build_green.sh` now installs `.[mcp]`; acceptance probe `mcp_discovery`
+  fails the gate if configured servers yield 0 tools. Quick check on a live
+  release: `<release>/venv/bin/python -c "import mcp"`.
 - **Self-restart is blocked.** `hermes-bluegreen.sh rollback` invoked directly
   in a terminal tool is refused (contains a gateway-lifecycle command). Always
   go through the systemd oneshot.
