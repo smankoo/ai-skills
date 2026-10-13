@@ -108,7 +108,7 @@ Change them with `targets set` only when he asks, or when his weight changes by 
 5. Corrections ("no, I had the shake after the whey") → `edit`/`rm` immediately and re-summarise.
 
 ## Guidance over the day (no extra pings unless he asks)
-- **Light-carb dinners (his preference, 2026-10-12).** Put rice and most roti at breakfast and lunch. Dinner is protein + sabzi/kachumber/salad
+- **Light-carb dinners (his preference, 2026-10-12).** Put rice and most roti at breakfast and lunch. Dinner is protein + sabzi + Costco salad kit
   + at most 1 roti (still with something wet). If he asks "carbs turn to fat at night?": no, total intake over days decides fat gain. Say so
   briefly, then honour the preference anyway. Exception: on evening-gym days, a few carbs at dinner help recovery.
 - **A light dinner can leave him hungry by midnight** (2026-10-12: 1.5 bowls of salted peanuts at 00:09). Pre-empt it: a bigger sabzi/salad bowl
@@ -129,7 +129,7 @@ Change them with `targets set` only when he asks, or when his weight changes by 
 - A plan he can eat beats a plan that ticks every box. One normal plate per meal: about 120 g meat or paneer, 1 katori sabzi or dal,
   2 roti (or roti + a little rice), and at most one side. Don't stack salad + dal + dahi + rice + roti + fruit in one sitting.
 - Close the protein gap first, then veg. Accept small misses on carbs, kcal and fruit late in the day rather than forcing food.
-- Spread veg/fruit across the WHOLE day: fruit ON ITS OWN mid-morning (~11 AM), as a fruit chaat in the afternoon, or cut after lunch; veg via the lunch sabzi plus kachumber or kheera raita. Flag this in the morning, not at 7 PM.
+- Spread veg/fruit across the WHOLE day: fruit ON ITS OWN mid-morning (~11 AM), as a fruit chaat in the afternoon, or cut after lunch; veg via the sabzi plus a bowl of Costco salad kit (never kachumber: the household doesn't make or eat it, Sumeet 2026-10-13). Log a kit as ~2 cups: 170 kcal P3 C12 F12 sat1.5 fib4 Na230 veg1.5 (2026-10-12 entry). Flag this in the morning, not at 7 PM.
 - When he's short late in the day, use dense options (a shake, whey in dahi) instead of extra plates.
 
 ## His food rules (hard)
