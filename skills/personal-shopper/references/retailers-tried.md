@@ -143,6 +143,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | iHerb CA | CA | iMac `iherb_pdp.js` (VPS /pr/ stuck on Cloudflare) | done | yes | 2026-10-11 |
 | NSF Sport / Informed Choice | — | `cert_lookup.py` registry checker (brand-only NSF query; registry_down detection) | done | n/a | 2026-10-11 |
 | Sephora CA (iMac API) | CA | `sephora_pdp.js` same-origin catalog API: per-variant stock + INCI | done | yes | 2026-10-11 |
+| RONA / Wayfair.ca / The Brick (iMac PDPs) | CA | iMac `mac_cdp_fetch.py`: `rona_pdp.js` (DOM price + store qty), `wayfair_pdp.js` (data-test-id price), `generic_pdp.js` (JSON-LD; The Brick). VPS walled (Cloudflare / PerimeterX / Shopify 429) | done | yes | 2026-10-13 |
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
 ## Candidate queue (not yet tried — good picks for future runs)
