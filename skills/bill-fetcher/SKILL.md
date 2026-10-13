@@ -1,6 +1,6 @@
 ---
 name: bill-fetcher
-description: "Use when a 'your bill is ready' email arrives without the PDF, or when adding a new biller. Logs in, downloads the bill PDF, files it in iCloud Drive › Bills, and emails it back as a threaded reply."
+description: "Use when a 'your bill is ready' email arrives without the PDF, or when adding a new biller. Logs in, downloads the bill PDF, files it in Google Drive › Bills & Receipts, and emails it back as a threaded reply."
 version: 1.0.0
 metadata:
   hermes:
@@ -24,12 +24,17 @@ download the bill PDF, file it, and email it back to him **as a reply on the sam
    `fill_input`. **Never print them.** SMS or email OTPs: read them yourself with `imac_sms_read.py --code` or
    himalaya. Never ask another agent to relay them.
 3. **Verify** the bytes start with `%PDF`. Extract amount, due date and bill date from page 1 (PyMuPDF `fitz`).
-4. **File** to iCloud Drive on the iMac. The VPS can't write there, and scp chokes on the space in the path,
-   so pipe the file instead:
-   `ssh sumeet@<imac> 'cat > "$HOME/Library/Mobile Documents/com~apple~CloudDocs/Bills/<Vendor>/<YYYY-MM-DD> <Vendor> <amount>.pdf"' < bill.pdf`
-   (`mkdir -p` the vendor folder first.)
+4. **File** to Google Drive. This is the PRIMARY home (Sumeet, 2026-10-13: "store them in the appropriate folder").
+   Use `0 PARA/2 Areas/Bills & Receipts/<Category>/<Vendor>/<YYYY-MM-DD>_<vendor-slug>_<amount>.pdf`,
+   which matches his existing files (e.g. `Utilities/Cogeco/2026-04-11_cogeco_67.79.pdf`). Categories in use:
+   `Utilities` (Enercare, Enbridge, Hydro, Cogeco, Rogers, Fido), `Banking` (cards). For a new category
+   (e.g. cloud/hosting: OVH, AWS, Cloudflare), propose the name to Sumeet once and reuse it after.
+   `python3 ~/.hermes/scripts/gdrive_write.py mkdir "<folder>"` (if new), then
+   `python3 ~/.hermes/scripts/gdrive_write.py upload bill.pdf "<folder>" --name "<file>"`, then `ls` to verify.
+   (That prefix was allow-listed in `~/.config/gdrive-write/allow.txt` on 2026-10-13.)
+   iCloud Drive › Bills (on the iMac) is legacy. Only Enercare 2026-10-08 is there, and it's been copied to Drive.
 5. **Email**: `~/.hermes/scripts/bill_send.py --account <acct> --orig-id <id> --pdf ... --vendor ... --amount
-   --due --bill-date --saved-to "iCloud Drive › Bills › <Vendor>"`. It replies to the original notice
+   --due --bill-date --saved-to "Google Drive › Bills & Receipts › <Category> › <Vendor>"`. It replies to the original notice
    (In-Reply-To/References from `himalaya message read --raw`) and attaches the PDF. Use `--dry-run` first on a
    new vendor.
 6. **Ledger**: append `{key, vendor, bill_date, amount, due, invoice, file, emailed, at}` to the ledger.
