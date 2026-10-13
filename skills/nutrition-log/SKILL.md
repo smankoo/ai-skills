@@ -62,6 +62,14 @@ Change them with `targets set` only when he asks, or when his weight changes by 
 5. Corrections ("no, I had the shake after the whey") → `edit`/`rm` immediately and re-summarise.
 
 ## Guidance over the day (no extra pings unless he asks)
+- **Light-carb dinners (his preference, 2026-10-12).** Put rice and most roti at breakfast and lunch. Dinner is protein + sabzi/kachumber/salad
+  + at most 1 roti (still with something wet). If he asks "carbs turn to fat at night?": no, total intake over days decides fat gain. Say so
+  briefly, then honour the preference anyway. Exception: on evening-gym days, a few carbs at dinner help recovery.
+- **A light dinner can leave him hungry by midnight** (2026-10-12: 1.5 bowls of salted peanuts at 00:09). Pre-empt it: a bigger sabzi/salad bowl
+  or a katori of dal at dinner, or plan a small late snack (about 25 g peanuts, makhana, cucumber with chaat masala). Food eaten after
+  midnight but before sleep counts toward the previous day (move the entry's `day`).
+- **Morning "what am I eating?"**: answer with today's planned breakfast, a 3-line recipe, and the macro payoff. Fit it to the day's logistics
+  (e.g. ready before an 8:20 school run). Then list the rest of the day in one compact list. No re-asking.
 - **Gym days:** about 25–40 g protein in the 2 h before or after training. Suggest the session time based on
   when he last ate (2–3 h after a meal is ideal).
 - **By ~3 PM** he should be at ≥50% protein and have had ≥1 veg serving. If not, steer lunch/snack.
@@ -115,6 +123,9 @@ Change them with `targets set` only when he asks, or when his weight changes by 
 - Products: the label first, then Open Food Facts. Household dish estimates are in wiki `concepts/household-dish-protein.md`.
 
 ## Pitfalls
+- **Sumeet takes chai and coffee WITHOUT sugar (2026-10-13).** The `chai` row was re-based to unsweetened (34 kcal,
+  sugar 3.3 g of milk lactose). `seed_foods.json` still has the 1-tsp-sugar version, so re-apply after a reseed. Never
+  assume sugar in his drinks; log Mummy's/Priyanka's chai the same way.
 - **Current whey = `on_isolate_scoop`** (Optimum Nutrition Gold Standard 100% Isolate, Rich Vanilla; official panel per 30 g scoop:
   100 kcal, P25, C1, sugar1, F0, sat0, Na80). Use it for "a scoop of whey" by default. `whey_scoop` (Revolution Nutrition, 28 g P) is the
   OLD tub. His dahi is `astro_original` (Astro Original 3.3%: 3.5 g sat fat per 100 g). Whey in water costs 0 sat fat; in dahi, about 4 g per 120 g.
