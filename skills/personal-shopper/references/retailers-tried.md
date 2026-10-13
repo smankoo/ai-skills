@@ -146,6 +146,8 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | RONA / Wayfair.ca / The Brick (iMac PDPs) | CA | iMac `mac_cdp_fetch.py`: `rona_pdp.js` (DOM price + store qty), `wayfair_pdp.js` (data-test-id price), `generic_pdp.js` (JSON-LD; The Brick). VPS walled (Cloudflare / PerimeterX / Shopify 429) | done | yes | 2026-10-13 |
 | Michaels Canada (iMac) | CA | `michaels_pdp.js`: JSON-LD ProductGroup + same-origin `/api/product/v2/sub-skus` (any `michaelsStoreId`; Burlington 4917/4939) for per-colour store + online qty. VPS Akamai 403 everywhere | done | yes | 2026-10-13 |
 | Etsy CA (iMac) | CA | `etsy_pdp.js`: listing JSON-LD (CAD price, qty left, ship-from) + search cards with ads dropped. VPS DataDome | done | yes | 2026-10-13 |
+| Mastermind Toys | CA | Shopify suggest.json + products/<h>.js, PDP JSON-LD fallback on 429; `mastermind_extract.py` (VPS) | done | yes | 2026-10-13 |
+| Canada Computers | CA | Plain urllib: search ItemList JSON-LD, PDP Product JSON-LD + server-rendered per-store qty (all stores); `canadacomputers_extract.py` (VPS) | done | yes | 2026-10-13 |
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
 ## Candidate queue (not yet tried — good picks for future runs)
