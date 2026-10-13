@@ -115,6 +115,9 @@ Change them with `targets set` only when he asks, or when his weight changes by 
 - Products: the label first, then Open Food Facts. Household dish estimates are in wiki `concepts/household-dish-protein.md`.
 
 ## Pitfalls
+- **Current whey = `on_isolate_scoop`** (Optimum Nutrition Gold Standard 100% Isolate, Rich Vanilla; official panel per 30 g scoop:
+  100 kcal, P25, C1, sugar1, F0, sat0, Na80). Use it for "a scoop of whey" by default. `whey_scoop` (Revolution Nutrition, 28 g P) is the
+  OLD tub. His dahi is `astro_original` (Astro Original 3.3%: 3.5 g sat fat per 100 g). Whey in water costs 0 sat fat; in dahi, about 4 g per 120 g.
 - **Home cooking ≠ CNF generic rows** (recalibrated 2026-10-12 after he asked "Why are we over. I followed the exact plan"):
   CNF `roti` (7250) and `paratha` (7251) assume added fat (3.3 g and 5.8 g sat per 100 g), which overstated his day by about 10 g sat fat.
   The DB now holds **home** values: phulka 35 g with no fat (P3.2, F0.6, sat0.1, Na21 per roti); paratha 80 g cooked in 1 tsp canola
