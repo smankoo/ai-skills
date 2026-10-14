@@ -149,6 +149,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Mastermind Toys | CA | Shopify suggest.json + products/<h>.js, PDP JSON-LD fallback on 429; `mastermind_extract.py` (VPS) | done | yes | 2026-10-13 |
 | Canada Computers | CA | Plain urllib: search ItemList JSON-LD, PDP Product JSON-LD + server-rendered per-store qty (all stores); `canadacomputers_extract.py` (VPS) | done | yes | 2026-10-13 |
 | Long & McQuade | CA | Plain urllib: search needs SearchGuard/SearchJs params; PDP JSON-LD; `/instore_stock/<sku>/` per-store table; `longmcquade_extract.py` (VPS) | done | yes | 2026-10-14 |
+| Visions Electronics | CA | Plain urllib: Algolia (key parsed from homepage `algoliaConfig`, expires ~24 h) + PDP JSON-LD + Magento REST `amstorepickup_msi/<id>/getLocationsByProduct` per-store qty; `visions_extract.py` (VPS) | done | yes | 2026-10-14 |
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
 ## Candidate queue (not yet tried — good picks for future runs)
