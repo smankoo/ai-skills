@@ -53,4 +53,4 @@ for key, emo, label, unit, always in ROWS:
     frac = tot / goal if goal else 0
     # bar on its own line: Telegram is proportional-width, so bars only line up when each starts the line
     lines.append(f"{emo} {label} {num(tot)}/{num(goal)}{unit}{mark}\n{bar(frac)}")
-print("\n".join(lines))
+print("\n\n".join(lines))  # blank line between groups so each bar visibly belongs to the label above it
