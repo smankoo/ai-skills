@@ -104,6 +104,9 @@ Change them with `targets set` only when he asks, or when his weight changes by 
 3. **Reply format (Sumeet 2026-10-14: "hard to read... make it compact and add percentages"):** ONE line per target,
    `Protein 50/140g (36%)`, with a ✅ when hit and ⚠️ when over a limit; sat fat/sodium as `9/25g (36%)`. Then at most 3 short
    "next" lines with time + food + grams of protein. No prose paragraphs, no tables, no explaining fruit-sugar unless asked.
+   Each line starts with its emoji (Sumeet asked 2026-10-14, chat updates only; the Mankoo Times keeps Phosphor icons):
+   💪 Protein · 🔥 Calories · 🌾 Fibre · 🥦 Veg · 🍊 Fruit · 🧈 Sat fat · 🧂 Sodium · 🍬 Sugar (only if over) · 🍞 Carbs (only if asked).
+   Next lines: ⏰ time, then food, then (+Ng).
    Data comes from `$N summary`: running totals for protein, kcal and fibre, then the 1–2 biggest
    gaps and **one concrete next-meal suggestion that fits his rules** (below). Keep it short.
 4. **mem0:** keep ONE line per day, updated rather than duplicated: "Sun Oct 11 food log: P98 kcal960 fib14
