@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compact chat card for a person's day: emoji + 10-cell bar + numbers (Sumeet's format, 2026-10-14).
+"""Compact chat card for a person's day: icon, group, numbers, then a 10-cell bar (Sumeet's format, 2026-10-14).
 
   nutcard.py [person] [YYYY-MM-DD|today|yesterday]
 
@@ -51,5 +51,5 @@ for key, emo, label, unit, always in ROWS:
     else:
         mark = " ✅" if tot >= goal else ""
     frac = tot / goal if goal else 0
-    lines.append(f"{emo} {bar(frac)} {label} {num(tot)}/{num(goal)}{unit}{mark}")
+    lines.append(f"{emo} {label} {num(tot)}/{num(goal)}{unit} {bar(frac)}{mark}")
 print("\n".join(lines))
