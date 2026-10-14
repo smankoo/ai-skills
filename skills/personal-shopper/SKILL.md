@@ -93,6 +93,15 @@ All three share: profile the person (§1–§2), browse and verify (§8), build 
 
 ## Run it end to end
 
+### Replenishment / "should I subscribe?" asks (consumables he reorders)
+Measure the real consumption rate from his ORDER HISTORY before recommending a cadence:
+- Amazon.ca: `/your-orders/search?search=<brand+words>` (paginate with `&startIndex=10`), then open each "View order details"
+  link to read the line quantity and unit price. Count units over the window, and include today's "almost out" as the latest data point.
+- Compare one-time vs Subscribe & Save on the live PDP: the `#desktop_buybox` text has both prices, the seller and the delivery date.
+  S&S is a % off the price at ship time, not a locked price. Say so, and say he can skip or cancel from the pre-ship email.
+- Recommend a cadence from the measured rate (e.g. 1 lb every ~21 days → 2 bags every 6 weeks, fewer boxes), first delivery ASAP if he's nearly
+  out. Give the per-delivery and yearly cost, the card and the address, and get an explicit yes before subscribing. Then record a Pebbleway subscription.
+
 The user typically hands over the task and walks away ("don't wait for me, make educated
 guesses"). Take that literally: make reasonable assumptions, note them in the output, and
 finish. Don't stall on ambiguity you can resolve yourself.
