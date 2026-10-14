@@ -51,5 +51,6 @@ for key, emo, label, unit, always in ROWS:
     else:
         mark = " ✅" if tot >= goal else ""
     frac = tot / goal if goal else 0
-    lines.append(f"{emo} {label} {num(tot)}/{num(goal)}{unit} {bar(frac)}{mark}")
+    # bar on its own line: Telegram is proportional-width, so bars only line up when each starts the line
+    lines.append(f"{emo} {label} {num(tot)}/{num(goal)}{unit}{mark}\n{bar(frac)}")
 print("\n".join(lines))
