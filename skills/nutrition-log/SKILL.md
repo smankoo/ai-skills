@@ -114,6 +114,10 @@ Change them with `targets set` only when he asks, or when his weight changes by 
 - **A light dinner can leave him hungry by midnight** (2026-10-12: 1.5 bowls of salted peanuts at 00:09). Pre-empt it: a bigger sabzi/salad bowl
   or a katori of dal at dinner, or plan a small late snack (about 25 g peanuts, makhana, cucumber with chaat masala). Food eaten after
   midnight but before sleep counts toward the previous day (move the entry's `day`).
+- **Filling light-carb dinner = protein >= 40 g + volume.** A dal-only dinner (6-10 g protein) is what ends in a late bowl of peanuts;
+  a meat/paneer/egg main + 1 katori dal + 2-3 cups salad kit (+ whey in dahi later) keeps him full. Combos, a planned-late-snack list and the
+  sourced "carbs at night" answer are in wiki `concepts/indian-home-meal-rules.md` (section "Filling light-carb dinners"). Check sat fat
+  when the main is chicken curry or paneer (skinless, light oil).
 - **Morning "what am I eating?"**: answer with today's planned breakfast, a 3-line recipe, and the macro payoff. Fit it to the day's logistics
   (e.g. ready before an 8:20 school run). Then list the rest of the day in one compact list. No re-asking.
 - **Gym days:** about 25–40 g protein in the 2 h before or after training. Suggest the session time based on
