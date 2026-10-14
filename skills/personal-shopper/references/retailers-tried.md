@@ -148,6 +148,7 @@ to pull product data (API / frontend / Shopify JSON / rendered PDP), records the
 | Etsy CA (iMac) | CA | `etsy_pdp.js`: listing JSON-LD (CAD price, qty left, ship-from) + search cards with ads dropped. VPS DataDome | done | yes | 2026-10-13 |
 | Mastermind Toys | CA | Shopify suggest.json + products/<h>.js, PDP JSON-LD fallback on 429; `mastermind_extract.py` (VPS) | done | yes | 2026-10-13 |
 | Canada Computers | CA | Plain urllib: search ItemList JSON-LD, PDP Product JSON-LD + server-rendered per-store qty (all stores); `canadacomputers_extract.py` (VPS) | done | yes | 2026-10-13 |
+| Long & McQuade | CA | Plain urllib: search needs SearchGuard/SearchJs params; PDP JSON-LD; `/instore_stock/<sku>/` per-store table; `longmcquade_extract.py` (VPS) | done | yes | 2026-10-14 |
 <!-- APPEND NEW ROWS ABOVE THIS LINE. Keep newest investigations discoverable. -->
 
 ## Candidate queue (not yet tried — good picks for future runs)
