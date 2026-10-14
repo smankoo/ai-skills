@@ -70,7 +70,7 @@ def sync(days=14):
     if r.get("status") != 0:
         sys.exit(f"getmeas failed: status {r.get('status')} {r.get('error')}")
     con = sqlite3.connect(DB)
-    con.execute("CREATE TABLE IF NOT EXISTS body(id INTEGER PRIMARY KEY, day TEXT, metric TEXT, value REAL, source TEXT, at TEXT, UNIQUE(day,metric,source))")
+    con.execute("CREATE TABLE IF NOT EXISTS body(id INTEGER PRIMARY KEY, person TEXT NOT NULL DEFAULT 'sumeet', day TEXT, metric TEXT, value REAL, source TEXT, at TEXT, UNIQUE(person,day,metric,source))")
     n, latest = 0, {}
     for g in sorted(r["body"].get("measuregrps", []), key=lambda g: g["date"]):
         dt = datetime.fromtimestamp(g["date"], TZ)
@@ -80,9 +80,10 @@ def sync(days=14):
                 continue
             v = round(m["value"] * 10 ** m["unit"], 2)
             # one value per day per metric: the latest weigh-in of the day wins
-            con.execute("INSERT INTO body(day,metric,value,source,at) VALUES(?,?,?,?,?) "
-                        "ON CONFLICT(day,metric,source) DO UPDATE SET value=excluded.value, at=excluded.at",
-                        (dt.date().isoformat(), k, v, "withings", dt.isoformat()))
+            # body is per-person since household v2 (2026-10-13): UNIQUE(person,day,metric,source)
+            con.execute("INSERT INTO body(person,day,metric,value,source,at) VALUES(?,?,?,?,?,?) "
+                        "ON CONFLICT(person,day,metric,source) DO UPDATE SET value=excluded.value, at=excluded.at",
+                        ("sumeet", dt.date().isoformat(), k, v, "withings", dt.isoformat()))
             latest[k] = (dt.date().isoformat(), v)
             n += 1
     con.commit()
