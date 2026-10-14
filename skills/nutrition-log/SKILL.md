@@ -107,6 +107,10 @@ Change them with `targets set` only when he asks, or when his weight changes by 
    Each line starts with its emoji (Sumeet asked 2026-10-14, chat updates only; the Mankoo Times keeps Phosphor icons):
    💪 Protein · 🔥 Calories · 🌾 Fibre · 🥦 Veg · 🍊 Fruit · 🧈 Sat fat · 🧂 Sodium · 🍬 Sugar (only if over) · 🍞 Carbs (only if asked).
    Next lines: ⏰ time, then food, then (+Ng).
+   **Use the bar card (2026-10-14: "make the percentages into little progress bars"):** run
+   `python3 ~/.hermes/skills/sumeet/nutrition-log/scripts/nutcard.py [person] [today|yesterday|YYYY-MM-DD]` and paste its
+   output verbatim (10 cells per row, ▓ filled/░ empty, ✅ goal hit, ⚠️ limit over). Never hand-draw bars. Sugar is left out
+   because the DB counts fruit/milk sugar, which his limit ignores.
    Data comes from `$N summary`: running totals for protein, kcal and fibre, then the 1–2 biggest
    gaps and **one concrete next-meal suggestion that fits his rules** (below). Keep it short.
 4. **mem0:** keep ONE line per day, updated rather than duplicated: "Sun Oct 11 food log: P98 kcal960 fib14
