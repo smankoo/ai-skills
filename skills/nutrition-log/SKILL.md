@@ -109,7 +109,7 @@ Change them with `targets set` only when he asks, or when his weight changes by 
    Next lines: ⏰ time, then food, then (+Ng).
    **Use the bar card (2026-10-14: "make the percentages into little progress bars"):** run
    `python3 ~/.hermes/skills/sumeet/nutrition-log/scripts/nutcard.py [person] [today|yesterday|YYYY-MM-DD]` and paste its
-   output verbatim. Each group is TWO lines: `💪 Protein 50/140g` then the bar `▓▓▓▓░░░░░░` on its own line, so bars align in Telegram's proportional font, with a BLANK LINE between groups so each bar clearly belongs to its label (Sumeet 2026-10-14) (10 cells per row, ▓ filled/░ empty, ✅ goal hit, ⚠️ limit over). Never hand-draw bars. Sugar is left out
+   output verbatim. It's ONE ``` code block (fixed-width, so the columns line up): `Protein   ████▌░░░░░   44%  62/140g`. Format chosen by Sumeet 2026-10-15 ("E looks great"): 10 cells, █ full / ▌ half / ░ empty, then %, then numbers, ✓ goal hit, ⚠ limit over. Never hand-draw bars. Sugar is left out
    because the DB counts fruit/milk sugar, which his limit ignores.
    Data comes from `$N summary`: running totals for protein, kcal and fibre, then the 1–2 biggest
    gaps and **one concrete next-meal suggestion that fits his rules** (below). Keep it short.
