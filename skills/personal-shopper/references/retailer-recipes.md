@@ -3853,3 +3853,13 @@ Verified 2026-09-11 on three live products:
 - `/search?q=<term>&view=json` isn't reliable; use `/products.json?limit=250&page=N` and filter titles instead.
 - The product description HTML usually lists **unladen weight** and per-seat limits. Parse it rather than trusting review sites.
 - Accessories (canopy, weather cover) are separate products. Search the brand name plus the accessory and add them to the comparison price.
+
+
+## Kids' footwear Shopify stores (verified 2026-10-14, pure urllib, no bot wall)
+- **converse.ca** (CA, CAD): Shopify. `/products.json?limit=250&page=N` (~590 products) → filter variants by `'10C' in title` + `available`. Variant titles look like `Navy / 10C (Infant & Toddler)`; little-kid line uses `10.5C (Little Kids)`. `.js` gives price CENTS CAD. Materials NOT in `body_html`; get "Canvas upper | Canvas lining | Vulcanized rubber outsole" from SoftMoc's `FeatureBenefits` for the same style code.
+- **pediped.com** (US, ships CA): Shopify. `/products.json` works; size titles `10-10.5 T / EU 27`. `.js?currency=CAD` returns CAD price (USD $55 → CAD $81). Upper material is NOT published anywhere on PDP/.js (only feature icons Vegan/Machine-Washable) → upper unverified; "Vegan" icon = synthetic.
+- **tsukihoshi.com** (US): Shopify; full spec (upper, outsole, "Non-marking outsole") in `body_html`. Currency USD only (`?currency=CAD` ignored, cart.js=USD); Canadian shipping unverified.
+- **robeez.com**: Shopify `/products.json` OK (429 if hammered — sleep 1.5s). In size 10 only slippers/jelly/EVA sandals remain; no school shoes.
+- **littlecanadian.ca**: Shopify `/search/suggest.json?q=` + `.js`; carries Stonz, See Kai Run, Native (CAD).
+- **SoftMoc toddlers grid**: `softmoc_extract.grid('/toddlers','gendershoeshop',{"FilterType":"F","Value":"bab"},400)` (CLI `grid` uses the wrong pageType for this page). Some item ids (e.g. `7v603-blk`, `7j235-black`) fail `item()` with a JSON error — skip.
+- **Blocked**: bobux.ca (403/anti-bot, bobux.com cert expired + Fastly unknown domain); seekairun.com is BigCommerce (`/products.json` 404); vans.com/en-ca per-size stock API 403 (price/material readable via web_extract only).
