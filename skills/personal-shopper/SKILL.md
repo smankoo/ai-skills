@@ -93,6 +93,20 @@ All three share: profile the person (§1–§2), browse and verify (§8), build 
 
 ## Run it end to end
 
+### Step 0, ALWAYS, before researching any purchase: "have we bought this before?"
+Sumeet, 2026-10-16, after twice having to point it out (a Halloween costume and a fridge filter): "This feels
+like common sense research any assistant would do… Why so reliant on pw? You could have checked Amazon shopping
+history." Most household buying goes through **Amazon.ca**, so its order history is the PRIMARY record of what we
+own and what fits. Pebbleway receipts are incomplete: the June 2026 fridge filter wasn't in Pebbleway or email at
+all. Before proposing anything to buy:
+1. Search Amazon.ca order history for the item, its brand, model number and generic words: `/your-orders/search?search=<words>`.
+   - Also use the Amazon data export (Pebbleway receipts imported from it), if available.
+   - On 2026-10-16 Amazon.ca put an "unauthorized AI agent violates Conditions of Use" notice in front of the
+     signed-in VPS Chrome. Don't click through it. Use the export or ask Sumeet; see `## Amazon access` below.
+2. Then Costco receipts, Pebbleway receipts/possessions, and email order confirmations.
+3. If there's a prior purchase, lead with it: what, when, price, fit and outcome. Default to rebuying it unless it
+   failed. Only then research alternatives, if they're worth anything.
+
 ### Replenishment / "should I subscribe?" asks (consumables he reorders)
 Measure the real consumption rate from his ORDER HISTORY before recommending a cadence:
 - Amazon.ca: `/your-orders/search?search=<brand+words>` (paginate with `&startIndex=10`), then open each "View order details"
@@ -610,3 +624,12 @@ anyone's sizes or budget.
 - `scripts/` — tested, repeatable extraction helpers. When a run works out how to pull a retailer's
   data reliably, save the working script here (named `<retailer>_extract.py` or `.js`) with a header
   comment on how to run it, so the next run reuses it instead of rediscovering it.
+
+## Amazon access
+- 2026-10-16: Amazon.ca put an interstitial in front of the signed-in VPS Chrome: "Continued access by an
+  unauthorized AI agent violates Amazon's Conditions of Use, to which our customers have agreed." It's Sumeet's
+  account and his agreement, so don't click "Continue" or work around it from another browser. Sumeet places
+  Amazon orders himself; give him the exact `/dp/<ASIN>` link plus the card to use.
+- For order-history lookups without browsing: Amazon "Request Your Data" → "Your Orders" export
+  (amazon.ca/hz/privacy-central/data-requests/preview.html). Sumeet requests it while signed in, and the CSV is
+  imported into Pebbleway receipts. Refresh it every few months.
