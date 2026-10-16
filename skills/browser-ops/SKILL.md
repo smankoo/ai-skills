@@ -90,6 +90,7 @@ The tells were: a datacenter IP, a Linux UA, jumping straight to checkout URLs, 
    - Amazon popovers (frequency picker) render inside `#a-popover-content-N`. The `[id^=...AccordionRow]` nodes have 0x0 boxes, so read the leaf-text boxes inside the open popover and click those coordinates.
 4. Amazon credentials: in 1Password, item "amazon.ca" (Personal vault, has TOTP). Tick "Don't require code on this browser". Skip the passkey nudge by navigating home.
 5. Never fight an explicit ToS warning on the VPS. Move to the iMac route on the first sign of it.
+6. **Order-history lookups:** `~/.hermes/tools-venv/bin/python scripts/amazon_order_search.py "kids shoes" "toddler shoes" --details` prints JSON lines `{date,title,asin,order_id,grand_total}`. It sets up the tunnel itself. Run it before any buying research (Sumeet: "common sense research any assistant would do").
 
 ## Verification checklist after any setup change
 
