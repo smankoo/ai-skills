@@ -127,7 +127,7 @@ Change them with `targets set` only when he asks, or when his weight changes by 
 - **Don't overshoot the other way (2026-10-14).** Tue 13 dinner (3 drumsticks ~225 g meat + dal + ~3 cups salad kit with dressing), plus whey in dahi at 20:34, came to ~100 g fat for the day, and he still felt full the next morning. Cap dinner at ~120-150 g meat (2 drumsticks), half the kit dressing, and no whey on top of a meat dinner. If he wakes up full, don't push a big breakfast: start light and let lunch carry the load.
 - **Front-load the day (Sumeet 2026-10-15: "I don't like eating that much so late. I'd prefer to eat that same total in a day but weighted to earlier").** Same daily targets, but put the protein and veg in the mid-afternoon (2:30-4:30: fruit, then a proper protein snack with chai) and keep dinner early (~6:30) and moderate. EXCEPTION, his standing ritual: **whey in dahi (1 scoop + ~120 g dahi) before bed, every night** ("I like my little ritual", 2026-10-15). Always plan it as the last line, and size the rest of the day around it. Plan no other late snacks.
 - **Filling light-carb dinner = protein >= 40 g + volume.** A dal-only dinner (6-10 g protein) is what ends in a late bowl of peanuts;
-  a meat/paneer/egg main + 1 katori dal + 2-3 cups salad kit (+ whey in dahi later) keeps him full. Combos, a planned-late-snack list and the
+  a meat/paneer/egg main + 1 katori (dal OR sabzi OR salad kit, just one) + whey in dahi later keeps him full. Combos, a planned-late-snack list and the
   sourced "carbs at night" answer are in wiki `concepts/indian-home-meal-rules.md` (section "Filling light-carb dinners"). Check sat fat
   when the main is chicken curry or paneer (skinless, light oil).
 - **Morning "what am I eating?"**: answer with today's planned breakfast, a 3-line recipe, and the macro payoff. Fit it to the day's logistics
@@ -144,6 +144,13 @@ Change them with `targets set` only when he asks, or when his weight changes by 
 ## Realistic volume (Sumeet, 2026-10-11: "crazy volume for someone my size")
 - A plan he can eat beats a plan that ticks every box. One normal plate per meal: about 120 g meat or paneer, 1 katori sabzi or dal,
   2 roti (or roti + a little rice), and at most one side. Don't stack salad + dal + dahi + rice + roti + fruit in one sitting.
+- **Dinner is smaller still (2026-10-15 19:35, "Are you insane? That's too much food for one person for one meal"):** 1 main
+  (omelette / ~120 g meat / ~100 g paneer) + 1 katori sabzi **OR** dal (never both) + 1 roti. A salad-kit bowl only if it replaces
+  the katori. That same night I'd proposed omelette + ghiya + dal + roti + 2 cups salad kit + an apple. Accept the protein miss.
+- **Plan only from what's actually in the kitchen.** Before any meal plan, scan today's chat (`sumeet_chat_today.py 30`) for
+  stock lines ("no X at home", "we're out of X", "Mummy made Y", "we have Y") and mem0 "kitchen stock". A morning plan goes stale
+  as the day goes on: 2026-10-15 he said at 13:15 "No baingan… We have ghiya", and at 19:22 I still planned aloo-baingan
+  ("No baingan i told you already. Why did you forget?").
 - Close the protein gap first, then veg. Accept small misses on carbs, kcal and fruit late in the day rather than forcing food.
 - Spread veg/fruit across the WHOLE day: fruit ON ITS OWN mid-morning (~11 AM), as a fruit chaat in the afternoon, or cut after lunch; veg via the sabzi plus a bowl of Costco salad kit (never kachumber: the household doesn't make or eat it, Sumeet 2026-10-13). Log a kit as ~2 cups: 170 kcal P3 C12 F12 sat1.5 fib4 Na230 veg1.5 (2026-10-12 entry). Flag this in the morning, not at 7 PM.
 - When he's short late in the day, use dense options (a shake, whey in dahi) instead of extra plates.

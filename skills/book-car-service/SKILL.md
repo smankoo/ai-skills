@@ -125,6 +125,17 @@ proceeding, especially on calendar grids.
   usually require a phone call rather than the online scheduler. Mention these if they
   come up on the booking page rather than assuming the online flow covers everything.
 
+- **Triage a dealer's "recommended" list against the owner's manual before passing it on (2026-10-10:
+  a 7-line ~$2.7k list on an 8-year-old car).** Pull the model's maintenance chapter (owner's-manual PDF;
+  `pdftotext` it, grep "Severe Usage"). Ontario driving (salt, cold, short trips) = the **severe** column.
+  Then sort each line: (a) confirmed failure or safety item (leak, measured pad/rotor wear): do it;
+  (b) due by the schedule: do it, but get an independent quote; (c) "inspect, replace when worn" items
+  (drive belt, cabin/air filters) and non-schedule extras (engine shampoo, fuel-system cleaning, "fluid
+  conditioning"): ask for evidence (photo, measurement) first. Ask for brake measurements in mm. Common
+  surprise: Hyundai's normal schedule says automatic fluid "no service required", but the severe schedule
+  replaces it every 60,000 mi (~96,000 km), so on an Ontario car past that it's legit, not an upsell.
+  Household verdicts and price benchmarks live in the wiki (`comparisons/elantra-repair-triage.md`).
+
 ## Independent-shop contact forms (verified 2026-10-10)
 - **Burlington Auto Works** (burlingtonautoworks.com/Burlington-auto-repair-shop.php): plain POST form with fields name, email, phone, year, make, model, questions, plus invisible reCAPTCHA and an `my_url` honeypot (leave it empty). The submit is a `<button type=submit>`, not an input. Fill fields by real click + `Input.insertText`. Success shows "Thank You! Someone will get back to you soon".
 - **SWC Automotive** (swc-auto.com/contact-us/): Contact Form 7. The phone field has maxlength 10 (digits only) and `location` is a select. On 2026-10-10 the server returned `status: mail_failed` on every submit, so their form is broken server-side. Use their AutoOps booking/chat widget (portal.autoops.com) or have Sumeet phone. To check delivery, wrap fetch and read the CF7 JSON `status`, since a "Thank you" redirect isn't proof.
