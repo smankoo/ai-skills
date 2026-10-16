@@ -135,6 +135,10 @@ deliberate rollback, re-point `last_good` at blue or `rollback` will no-op.
   - Inspect a live release's real env: `<release>/.hermes/bin/hermes --run-module site`, and
     `… pm status`. Adding an extra by hand: `<release>/.hermes/bin/hermes pm install --extra X` (and
     add it to required_runtime.conf so the next green carries it).
+- **Isolated plugin venvs inherit the host's Python env (2026-10-16).** crawl4ai's 3.11 venv imported 3.14
+  C-extensions through an inherited `PYTHONPATH` and failed every extract (silently rescued by keyless Exa).
+  The fix is in the plugin (clean `env=`); see hermes-web-search-backends `references/crawl4ai-extract-backend.md`.
+  After cutover: `grep "crawl4ai' failed" ~/.hermes/logs/agent.log`.
 - **v0.22+ rewrites its own gateway unit (2026-10-16).** After its first start it hardcodes
   `…/releases/<tag>/.hermes/bin/hermes` into `hermes-gateway.service`, bypassing `hermes-current`. A
   symlink-only rollback then restarts the SAME release and reports healthy. Cutover now snapshots the
