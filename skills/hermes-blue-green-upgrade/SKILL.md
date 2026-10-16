@@ -113,6 +113,16 @@ GOTCHA: a successful cutover overwrites `last_good` with green. Before a
 deliberate rollback, re-point `last_good` at blue or `rollback` will no-op.
 
 ## Pitfalls (all hit for real on 2026-08-13)
+- **Python version must match the release (2026-10-16, v0.22.2).** v0.22+ pins every core dep with a
+  `python_version >= '3.14'` marker, so a `python3 -m venv` (system 3.11) venv installs NONE of them;
+  `ruamel` is missing and core imports fail (the gate shows 4/10). `build_green.sh` now reads the
+  release's `scripts/install.sh` default (`_py="3.14"`) and builds with `uv venv --python 3.14 --seed`.
+- **Probes track refactors.** v0.21+ split `gateway/run.py` into `run_*.py` (the health marker
+  "Gateway running with" now lives in `run_startup.py`) and moved MCP helpers into
+  `tools/mcp_tool_config.py` and `tools/mcp_tool_discovery.py`. Both probes now handle old and new
+  layouts. Before blaming a release, validate a failing probe against blue.
+- **Disk:** each release is about 2.6 GB. Check `df` before staging; at 94% (2026-10-16), prune orphans
+  first.
 - **Green venv MUST include the `[mcp]` extra** (2026-10-13). `pip install -e .`
   alone omits the `mcp` SDK; `discover_mcp_tools()` then logs only a DEBUG
   "MCP SDK not available" and returns [] -> every chat silently loses ALL MCP
