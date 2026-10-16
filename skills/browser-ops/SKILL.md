@@ -81,6 +81,8 @@ The tells were: a datacenter IP, a Linux UA, jumping straight to checkout URLs, 
 1. Tunnel to the iMac's persistent windowed Chrome (home IP, macOS UA, profile `~/.hermes/costco-profile`):
    `ssh -fN -L 19334:127.0.0.1:9334 <imac>`
 2. Drive it with `scripts/human_cdp.py` (`Tab.new/attach`, `click_sel`, `click_text`, `type_sel`, `wheel`). It uses trusted Input events only, a curved mouse path with jitter, per-character timing, and wheel scrolling.
+   **Run it with `~/.hermes/tools-venv/bin/python`.** That's a dedicated venv with `websocket-client`, independent of Hermes releases. The v0.22.2 upgrade removed the old release venv that used to carry it, and the system `python3` has no `websocket`.
+   Worked end-to-end 2026-10-16: home → search box → result for the known ASIN → product → Buy Now → read checkout (address, card, total, delivery radio) → Place order. No warning.
    Navigate the way a person does: home page, then the search box, results, product, buy box. Don't deep-link into checkout.
 3. Quirks of this Mac Chrome (it's a background window):
    - `Input.dispatchKeyEvent` does NOT insert text or press Backspace. Type with per-char `Input.insertText` (the helper already does this).
