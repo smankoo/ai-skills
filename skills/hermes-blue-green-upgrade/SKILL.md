@@ -113,6 +113,11 @@ GOTCHA: a successful cutover overwrites `last_good` with green. Before a
 deliberate rollback, re-point `last_good` at blue or `rollback` will no-op.
 
 ## Pitfalls (all hit for real on 2026-08-13)
+- **Provider SDKs are optional extras (2026-10-16, v0.22.2).** The green venv lacked `boto3`, so every
+  cron worker's Bedrock call failed with "No module named 'botocore'" for about 75 min after cutover, until
+  lazy-install fetched it. Interactive chat looked fine. `build_green.sh` now installs `.[mcp,bedrock]`, and
+  the `provider_sdk` probe blocks cutover if a configured provider's SDK won't import. After any cutover,
+  grep the cron outputs for `No module named` within the first 15 min.
 - **Python version must match the release (2026-10-16, v0.22.2).** v0.22+ pins every core dep with a
   `python_version >= '3.14'` marker, so a `python3 -m venv` (system 3.11) venv installs NONE of them;
   `ruamel` is missing and core imports fail (the gate shows 4/10). `build_green.sh` now reads the
