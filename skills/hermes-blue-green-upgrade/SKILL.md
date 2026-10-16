@@ -53,6 +53,9 @@ anything is wrong. The old version is never mutated, so rollback is instant.
     hermes-bluegreen.sh         # orchestrator: status|stage|smoke|test|cutover|rollback
     build_green.sh              # clone <tag> + build venv
     upgrade_acceptance.py       # the offline test gate (pass=safe, fail=block)
+    required_runtime.conf       # EXTRAS/PINS/IMPORTS every release's REAL runtime must carry
+    runtime-<tag>               # generated: python shim over <tag>'s pm env (what the gate runs)
+    unit.<tag>                  # gateway unit snapshot per release, restored on rollback
     last_good                   # rollback target (path to the known-good release)
     orchestrator.log            # audit trail of every flip
 ~/.config/systemd/user/
@@ -96,9 +99,11 @@ it fails — but running `test` first gives a clean go/no-go before committing.
 
 ### 4. Cut over (external oneshot; first run should be ATTENDED)
 `systemctl --user start --no-block hermes-upgrade@<tag>.service`
-The oneshot: runs the acceptance gate → flips symlink→green → restarts gateway
-→ health-gates ~120s → on success pings "upgrade complete"; on failure
-auto-rolls-back to blue and pings "rolled back, you're safe".
+The oneshot: runs the acceptance gate → snapshots the unit → flips symlink→green
+→ restarts gateway → health-gates ~120s → **canary**: one real model call through
+green (`-z "What is 17 + 25?"`, must contain 42, 3 tries 30s apart) → on success
+rewrites the PATH shim and pings "upgrade complete"; on any failure restores the
+previous unit + symlink, auto-rolls-back and pings "rolled back, you're safe".
 The gateway blips ~15-30s; the agent's session is restored afterward. After the
 restart, VERIFY where you landed (read-only): `readlink hermes-current`,
 `… version`, and `tail bluegreen/orchestrator.log`. Do NOT re-run the restart.
@@ -113,15 +118,45 @@ GOTCHA: a successful cutover overwrites `last_good` with green. Before a
 deliberate rollback, re-point `last_good` at blue or `rollback` will no-op.
 
 ## Pitfalls (all hit for real on 2026-08-13)
-- **Provider SDKs are optional extras (2026-10-16, v0.22.2).** The green venv lacked `boto3`, so every
-  cron worker's Bedrock call failed with "No module named 'botocore'" for about 75 min after cutover, until
-  lazy-install fetched it. Interactive chat looked fine. `build_green.sh` now installs `.[mcp,bedrock]`, and
-  the `provider_sdk` probe blocks cutover if a configured provider's SDK won't import. After any cutover,
-  grep the cron outputs for `No module named` within the first 15 min.
-- **Python version must match the release (2026-10-16, v0.22.2).** v0.22+ pins every core dep with a
-  `python_version >= '3.14'` marker, so a `python3 -m venv` (system 3.11) venv installs NONE of them;
-  `ruamel` is missing and core imports fail (the gate shows 4/10). `build_green.sh` now reads the
-  release's `scripts/install.sh` default (`_py="3.14"`) and builds with `uv venv --python 3.14 --seed`.
+- **v0.22+ does not run `<release>/venv`. The gate used to test the wrong interpreter (2026-10-16).**
+  The gateway starts through `<release>/.hermes/bin/hermes`, a launcher that runs a **pm-managed env**
+  under `~/.hermes/installs/<id>/environments/<env>/venv`. That env is keyed to the checkout dir, so a
+  fresh green gets pm's defaults (`anthropic, telegram`) no matter what blue had. v0.22.2 passed the old
+  gate 10/10, because the gate tested `./venv`, while the live runtime had no `boto3`, `mcp`,
+  `faster_whisper` or `ollama`. **Every** Bedrock call (chat and cron) then died with
+  "No module named 'botocore'", and the gateway still looked healthy. Now:
+  - `bluegreen/required_runtime.conf` is the floor: EXTRAS (installed via `pm install --extra`), PINS
+    (uv-installed into the pm env, e.g. `ollama`), IMPORTS (checked only, e.g. `aiohttp`, because pm's anchor for
+    `messaging` is `telegram`). `build_green.sh` installs the floor plus every extra the LIVE release
+    carries (`hermes-current/.hermes/bin/hermes pm status` → `feature_list`).
+  - `upgrade_acceptance.py` resolves the real env (`<release>/.hermes/bin/hermes --run-module site`) and
+    runs every probe through `bluegreen/runtime-<tag>`, a shim over that env's python. `runtime_deps`
+    imports every required module there.
+  - Inspect a live release's real env: `<release>/.hermes/bin/hermes --run-module site`, and
+    `… pm status`. Adding an extra by hand: `<release>/.hermes/bin/hermes pm install --extra X` (and
+    add it to required_runtime.conf so the next green carries it).
+- **v0.22+ rewrites its own gateway unit (2026-10-16).** After its first start it hardcodes
+  `…/releases/<tag>/.hermes/bin/hermes` into `hermes-gateway.service`, bypassing `hermes-current`. A
+  symlink-only rollback then restarts the SAME release and reports healthy. Cutover now snapshots the
+  unit as `bluegreen/unit.<prev-tag>`, and every rollback restores it + `daemon-reload`.
+  (`unit.v2026.8.27` was reconstructed from `hermes-gateway.service.blue-backup` with paths pointing at
+  hermes-current.)
+- **A stale CLI on PATH drains the gateway (2026-10-16).** Running an older release's `hermes` SIGTERMs
+  the newer gateway ~30s later ("Gateway draining: service_draining"). `~/.local/bin/hermes` is now a
+  shim that always execs `hermes-current`'s CLI; cutover/rollback rewrite it.
+- **The dashboard follows `hermes-current` too (2026-10-16).** `hermes-dashboard.service` runs
+  `hermes-current/.hermes/bin/hermes dashboard … --skip-build` (template in `~/p/vps`
+  roles/hermes, authoritative). It serves `hermes_cli/web_dist`, which is not in git, so
+  `build_green.sh` now runs a full `npm install --include=dev` + `npm run build -w web` (the old
+  `--omit=dev` meant tsc failed on vitest types and no green ever had a UI). The `dashboard_dist`
+  probe blocks cutover without it. Cutover and rollback restart the dashboard. Each cutover also
+  snapshots the dashboard unit as `dashboard.<prev-tag>`. **`dashboard.v2026.8.27` serves from
+  `~/.hermes/hermes-agent`** (v2026.8.27 has no built UI), so `hermes-agent` is NOT an orphan
+  while v2026.8.27 is the rollback target. Don't prune it until a newer release becomes `last_good`.
+- **Ansible's `hermes-autoupdate.timer` is OFF (2026-10-16).** It upgraded `~/.hermes/hermes-agent`
+  in place daily and restarted the gateway. Two upgraders for one gateway. Disabled live and in
+  `~/p/vps` (`hermes_autoupdate_enabled: false`, `hermes` removed from memwatch's components). Do not
+  re-enable it; upgrades go through this skill.
 - **Probes track refactors.** v0.21+ split `gateway/run.py` into `run_*.py` (the health marker
   "Gateway running with" now lives in `run_startup.py`) and moved MCP helpers into
   `tools/mcp_tool_config.py` and `tools/mcp_tool_discovery.py`. Both probes now handle old and new
