@@ -85,6 +85,9 @@ for the session) for:
 
 ## Notes / gotchas
 
+- **Poll EVERY mail account you can read for the verification email, not just the sender's.** It goes to the Amazon
+  account's primary address, which can be a different provider from the one you sent from. Polling only the
+  sending account once left 5 books unverified until the user asked why.
 - **Addresses** come from the user's memory, not this skill. With himalaya, `--json envelope list` returns
   `{"envelopes": [...]}` with UTC `date` values.
 - **Never pipe MML (`<#part filename=...>`) into `himalaya message send`.** It sends the raw text, so the email is
