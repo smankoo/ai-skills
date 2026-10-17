@@ -1848,6 +1848,16 @@ sizes:[{size, price, quantity, in_stock}], any_in_stock}`.
 
 ## IKEA (CA) — rendered-DOM via web_extract (Cloudflare-walled to curl/JSON; NO JSON-LD)
 
+**Purchase history (verified 2026-10-17, iMac Chrome):**
+- The VPS gets a Cloudflare "Sorry, you have been blocked" on `/ca/en/purchases/`. Use `human_cdp.Tab` on the iMac.
+- Log in at `/ca/en/profile/login/`, then use the "Sign in with password" link (the default is an email OTP). Fields are `#login-form-username` / `#login-form-password`; submit with `form.requestSubmit(button)`.
+- The list comes from GraphQL `POST cssom-prod.ingka.com/purchase-history/graphql`, operation `FullHistory($skip,$take,$articleTake)`, with a Bearer token in the headers.
+- To capture it, install a fetch/XHR hook with `Page.addScriptToEvaluateOnNewDocument` BEFORE reload. Patching after load misses it, because the app keeps its own fetch reference.
+- Then replay the captured request in-page with `variables={take:80,skip:0,articleTake:60}`. That returns every order with its line items (name, description, qty) in one call; the UI pages 5 at a time.
+- **Search API** (`sik.search.blue.cdtapps.com/ca/en/search-result-page?q=&size=24&types=PRODUCT`): works from the VPS. It gives price, measure text, rating, `pipUrl` and `mainImageUrl`.
+- **PDP materials:** `web_extract` passes Cloudflare on some PDPs and is blocked on others. Fallback: iMac `Tab.navigate` + `innerText`.
+- **Images:** `www.ikea.com/ca/en/images/...` is ALSO walled to the VPS, so `send_email.py` can't embed them. Curl them on the iMac (home IP), scp them back, and set the cart `image` to the absolute local path. `send_email.py` inlines local paths since 2026-10-17.
+
 Canada, home/furniture/textiles/kitchenware — the "home" role, and a real natural-fibre
 textile source (GURLI/AINA cotton cushion covers, DVALA cotton bedding, VÅRELD, cotton
 throws). Confirmed in Sumeet's YNAB history (frequent). Domain **`ikea.com/ca/en`**

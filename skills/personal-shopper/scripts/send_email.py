@@ -66,8 +66,14 @@ def _fetch_thumb(url: str) -> bytes | None:
     if url.startswith("//"):
         url = "https:" + url
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": IMG_UA, "Accept": "image/*"})
-        raw = urllib.request.urlopen(req, timeout=25).read()
+        # Local files (file:///path or /abs/path): for CDNs that wall the VPS (IKEA),
+        # download the photos via the iMac first and point the cart's `image` at them.
+        local = url[7:] if url.startswith("file://") else (url if url.startswith("/") else None)
+        if local:
+            raw = open(local, "rb").read()
+        else:
+            req = urllib.request.Request(url, headers={"User-Agent": IMG_UA, "Accept": "image/*"})
+            raw = urllib.request.urlopen(req, timeout=25).read()
         im = Image.open(io.BytesIO(raw))
         im = im.convert("RGB")
         im.thumbnail((THUMB_PX, int(THUMB_PX * 4 / 3)))
@@ -142,7 +148,7 @@ def inline_images(html: str) -> tuple[str, list[tuple[str, bytes]]]:
     import re
     from concurrent.futures import ThreadPoolExecutor
 
-    urls = list(dict.fromkeys(re.findall(r'<img[^>]+src="(https?:[^"]+|//[^"]+)"', html)))
+    urls = list(dict.fromkeys(re.findall(r'<img[^>]+src="(https?:[^"]+|//[^"]+|file://[^"]+|/[^/"][^"]*)"', html)))
     with ThreadPoolExecutor(8) as ex:
         thumbs = dict(zip(urls, ex.map(_fetch_thumb, urls)))
     images: list[tuple[str, bytes]] = []

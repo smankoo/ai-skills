@@ -510,6 +510,8 @@ Let the guard rail do its job rather than pre-computing by hand: in the gift run
 hand-added and came out about $51 above the real sum, and the build failed loudly instead of sending
 a wrong number. Take the computed figure, sanity-check it, and use it.
 
+**Run `send_email.py` with `~/.hermes/tools-venv/bin/python`.** It needs Pillow to shrink and embed thumbnails. The system `python3` has none, and without it the script silently sends 0 inline images (2026-10-17). Local image paths (`/abs/path.jpg` or `file://`) are embedded too: use them for CDNs that block the VPS.
+
 `send_email.py` reads SMTP credentials **at runtime** from a TOML file (default
 `~/.config/owlpost/accounts.toml`, overridable with `--config`; account name via `--account`).
 **Never hardcode or print a password, and never commit one.** The script APPENDs to the Sent folder
