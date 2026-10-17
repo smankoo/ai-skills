@@ -3767,6 +3767,12 @@ Canadian footwear chain (Blundstone, Sorel, etc.). Not Shopify (`/ca/products.js
   → JSON: `Sizes`/`WebSizes` (UK↔women's mapping text) with parallel `SizeUnavailableCodes` (`''` = live,
   `SOLD_OUT`/`UNAVAILABLE`), `OnLinePrice` (`"$299.99 "`), `FeatureBenefits`, `Thumbnail_X` (`//www.softmoc.com/items/images/<id>_XXX.jpg`, curl-OK).
 - Walls hit the same day: Browns, Blundstone.ca, ca.ecco.com (429); Naturalizer.ca, Clarks.ca (Cloudflare); Sorel (403).
+- **Per-store stock (verified 2026-10-16):** the detail POST's `I_AvailableSizesByStoreWithQty_CAorUS` is `|<size>ab<storeId>qt<qty>|…`
+  (regex `\|([\d.]+)ab(\d+)qt(\d+)`). Store ids are on `/ca/locations.aspx` as `data-store-id` on each `.store-card`
+  (e.g. Burlington Mapleview = 33, Lime Ridge Hamilton = 38, Oakville Place = 75, Square One = 3). Online `SizeUnavailableCodes`
+  can say a size is available while the nearest store has none, so check both. Kids' grids use gender codes: toddlers `bab`,
+  boys `boy`, girls `gir` (with `filtersJson=[{"FilterType":"D","Value":"50"}]` for sneakers, `page=N`). Converse toddler sizes
+  stop at 10; 10.5 is the Little Kid/Junior line.
 
 - **Grid endpoint for a brand page (verified 2026-10-04):** the params above return 0 for brand/men's pages.
   For a vendor page use what the page itself requests: `queryString=/v/<brand>&pageType=brandshoeshop&filtersBaseJson=[{"FilterType":"V","Value":"<4-letter vendor code, e.g. blun>"}]`.

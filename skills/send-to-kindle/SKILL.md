@@ -85,6 +85,17 @@ for the session) for:
 
 ## Notes / gotchas
 
+- **Addresses** come from the user's memory, not this skill. With himalaya, `--json envelope list` returns
+  `{"envelopes": [...]}` with UTC `date` values.
+- **Never pipe MML (`<#part filename=...>`) into `himalaya message send`.** It sends the raw text, so the email is
+  about 680 bytes with no attachment and Amazon bounces it. Build the MIME yourself with Python
+  `email.message.EmailMessage().add_attachment(...)` and pipe the bytes into `himalaya message send -a <account>`.
+  Then check the Sent folder size (MB, not bytes) before waiting for verification.
+- **Free sources:** for children's and classic books use Project Gutenberg `https://www.gutenberg.org/ebooks/<id>.epub3.images`
+  (illustrated EPUB). Find ids through the gutenberg.org search page (gutendex.com was down). Copyrighted picture
+  books (e.g. Pout-Pout Fish) aren't on Gutenberg, and Kindle picture-book editions are usually Fire/app-only;
+  offer library holds or a purchase instead.
+
 - A browser isn't needed anywhere in this flow -- the verification link is a plain GET,
   so a direct HTTP fetch is sufficient and more reliable than driving a browser.
 - If Amazon replies "Your email to Kindle(s) did not include any attachments," the
