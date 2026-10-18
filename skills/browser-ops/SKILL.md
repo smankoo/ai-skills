@@ -5,6 +5,12 @@ description: Human-grade web browsing (check references/site-recipes.md first) f
 
 # Browser Ops — human-grade browsing
 
+> **Close every tab you opened before your final reply, always (Sumeet 2026-10-18: "close the tabs you open once you
+> are done, otherwise it creates a clutter").** Applies on every node and every Chrome (VPS :9222, iMac :9334, Mac).
+> Prefer reusing one tab over `new_tab`. At task end: `curl -s http://127.0.0.1:<port>/json/list`, then
+> `/json/close/<id>` for each tab you opened. Never close the LAST tab, because Chrome then exits: navigate it to
+> about:blank instead. The VPS idle-tab reaper is only a backstop, not the cleanup.
+
 > **iMac (Magnus) browser tool -> dedicated Chrome only.** With `BU_CDP_URL` unset, `browser_exec` (the browser-use
 > harness) auto-discovers the MAIN Chrome via `DevToolsActivePort`, and Chrome then shows "Allow remote debugging?" on
 > every connect. Chrome has no "always allow" option by design. Fix (2026-10-18): set
