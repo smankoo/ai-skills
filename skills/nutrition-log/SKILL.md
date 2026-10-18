@@ -42,6 +42,10 @@ description: >
 - **Kids** (tegh, kirat): never talk calories. Targets are protein, iron, calcium, fibre, veg, fruit (+ Kirat milk ≤500
   ml). Lunchboxes: `log ... --packed`, then after pickup `eaten <id> --fraction F | --all | --none`. **When Sumeet
   sends a kid's lunchbox photo, log it `--packed`** so Shankar's 09:40 prompt to Priyanka stays quiet.
+- **Kids: coach iron, not protein.** Their protein runs 2-3x the RDA; iron runs ~35-40% of it (log 2026-10-13..17).
+  Levers: thicker dal/rajma/chana, spinach in dal or paratha, eggs, chicken/keema, fortified cereal + a vitamin C food in
+  the same meal; water (not milk) with the iron meal; the toddler's milk total under 500 ml (CPS). Evidence and sources:
+  wiki `concepts/kids-nutrition-targets.md`. Iron gaps for a toddler are a doctor question, never a supplement suggestion.
 - **Kirat's Synthroid:** weekdays before the 8:30 daycare drop-off (meta `med_window:kirat`). Logging milk or a
   high-Ca/Fe item near it prints a NOTE (SickKids teaching, Feb 2025, ~/gdrive "Kirat's Birth/sickkids visit.txt").
 - **Drinks:** `ml`, `glass` (250 ml) and `cup` work. `gaps --person kirat --json` → status gaps / on_track /
