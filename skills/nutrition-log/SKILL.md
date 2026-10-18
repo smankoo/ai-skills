@@ -13,9 +13,11 @@ description: >
 - **The app is standalone now:** github.com/smankoo/household-nutrition (private), checked out at
   `~/p/household-nutrition` with venv `.venv`. Its MCP server `household-nutrition-mcp.service` (user unit) runs on
   100.68.134.114:3425/mcp. Per-agent tokens are in `~/.hermes/secrets/nutrition_mcp_tokens.json` (hermes, shankar);
-  the agent name becomes logged_by. **Use the MCP tools first** (`mcp_household_nutrition_*`: log_dish, find_food,
+  the agent name becomes logged_by. **Use the MCP tools first** (`mcp__household_nutrition__*`: log_dish, find_food,
   day, summary, people_today, week, gaps, targets, edit_entry, mark_eaten, remove_entry, add_food, log_custom). Fall
-  back to `nut` only if MCP is down. Code changes go in that repo (133 tests: `make test`), NOT in this skill's
+  back to `nut` only if MCP is down. **In chat these are deferred tools: load them with `tool_describe` and call them via
+  `tool_call`. They not being in the visible tool list is no reason to use `nut`** (Sumeet, 2026-10-18: "Why aren't you
+  able to use the mcp server for nutrition"). Code changes go in that repo (133 tests: `make test`), NOT in this skill's
   `scripts/` copy, which is now legacy (all three services run from the app repo's venv since 2026-10-13).
   Rebuild/IaC: the n8n-vps-iac hermes role, `--tags household_nutrition` (restore restic FIRST: the role refuses to
   start on a missing DB), plus docs/household-nutrition.md there. restic dumps a consistent copy to
