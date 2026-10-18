@@ -157,6 +157,10 @@ deliberate rollback, re-point `last_good` at blue or `rollback` will no-op.
   snapshots the dashboard unit as `dashboard.<prev-tag>`. **`dashboard.v2026.8.27` serves from
   `~/.hermes/hermes-agent`** (v2026.8.27 has no built UI), so `hermes-agent` is NOT an orphan
   while v2026.8.27 is the rollback target. Don't prune it until a newer release becomes `last_good`.
+- **`~/.hermes/hermes-agent` was retired on 2026-10-18** (with its pm install dir), freeing ~3.4 GB. Helper scripts that
+  used its venv (curiosity_*.py, awaiting_reply_idle.py) now run from `~/.hermes/scripts-venv`, which lives outside every
+  release tree; the `hermes-agent`/`hermes-acp` shims exec `hermes-current`. Before pruning any tree, grep units, shims,
+  shebangs and `~/.hermes/bin` for its path. A tree that looks orphaned can still be the interpreter for a cron script.
 - **Ansible's `hermes-autoupdate.timer` is OFF (2026-10-16).** It upgraded `~/.hermes/hermes-agent`
   in place daily and restarted the gateway. Two upgraders for one gateway. Disabled live and in
   `~/p/vps` (`hermes_autoupdate_enabled: false`, `hermes` removed from memwatch's components). Do not
