@@ -75,10 +75,17 @@ for the session) for:
    Use that direct `amazon.com` URL, not a `.ca` (or other regional) click-tracking
    wrapper link that may also appear in the HTML part.
 
-5. **Confirm it** by fetching the URL (a plain GET is enough -- no browser or login
-   needed). Success looks like: "Your document request has been successfully verified
-   and is now being processed." If it says expired/invalid, the 48h window lapsed or
-   the request was already consumed -- re-send from step 2.
+5. **Confirm it with `scripts/verify_link.py <url> --title "<book>" --by <who>`** (a plain GET,
+   no browser or login). Success looks like: "Your document request has been successfully
+   verified and is now being processed." The link is **single-use** and the reply is
+   **gzipped**: a bare `curl` without `--compressed` burns the link and prints binary noise,
+   so you never learn the result. The script decodes it and appends to a shared ledger
+   (`$KINDLE_VERIFY_LEDGER`, default `~/.local/state/send-to-kindle/verify.jsonl`); a second
+   caller gets the recorded result (`note: from ledger`) instead of re-opening the link.
+   **Pick ONE opener per send.** If a background mail job also auto-confirms these, both must
+   use the script, or the loser sees "That link isn't working" and reports a false failure.
+   "Isn't working" on a link nobody in the ledger opened = expired (48 h) or the user tapped
+   it -- check the Kindle library before re-sending from step 2.
 
 6. **Report**: book title, that it was sent and verified, and that it'll sync to the
    Kindle shortly.
