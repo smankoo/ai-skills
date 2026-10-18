@@ -5,6 +5,13 @@ description: Human-grade web browsing (check references/site-recipes.md first) f
 
 # Browser Ops — human-grade browsing
 
+> **iMac (Magnus) browser tool -> dedicated Chrome only.** With `BU_CDP_URL` unset, `browser_exec` (the browser-use
+> harness) auto-discovers the MAIN Chrome via `DevToolsActivePort`, and Chrome then shows "Allow remote debugging?" on
+> every connect. Chrome has no "always allow" option by design. Fix (2026-10-18): set
+> `BU_CDP_URL=http://127.0.0.1:9334` (the costco-profile automation Chrome) in iMac `~/.hermes/.env` AND in the
+> harness repo-root `.env` (`~/.local/share/uv/tools/browser-use/lib/python3.11/.env`). The daemon reads that file at
+> start, so it works without a gateway restart. Reinstalling the uv tool wipes it, so re-check after upgrades.
+
 
 **Before pushing to ai-skills:** run `bash ~/.hermes/scripts/ai_skills_ci_local.sh`. It replays the CI checks, including the personal-data scan: no email addresses, home paths or names in skills. On 2026-10-07 a GoodLife recipe with a work address turned main red.
 
