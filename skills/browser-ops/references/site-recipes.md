@@ -3,6 +3,24 @@
 Check this file BEFORE driving any site listed here. If a site isn't listed and the
 flow took more than about 3 attempts to crack, add it here in the same session.
 
+## Ontario car-dealer inventory (Toyota dealers, but these platforms are shared by all brands)
+Verified 2026-10-19 (Camry price comparison). Each dealer platform has its own fast path:
+- **sm360 / showroom360** (`/en/new-inventory`, e.g. Oakville and Georgetown Toyota): plain curl works.
+  Parse `window.__PRELOADED_STATE__` after replacing `:undefined` with `:null`. Filter with
+  `/en/new-inventory?modelId=<id>&limit=100`. Get the id from `initialData.filters.modelId`; slug URLs ignore the filter.
+  `paymentOptions.cashPurchase.priceBreakdown` itemizes MSRP, freight, A/C, dealer fee, OMVIC, tire and `totalAllInPrice`.
+  VIN ending `000000` means a factory-order placeholder, not a real car.
+- **eDealer V4** (`/inventory/new/`, e.g. Burlington, Milton, Attrell and Cambridge Toyota): Cloudflare-protected.
+  The VPS Chrome passes, but sometimes only after clicking the Turnstile box at about (293,337) after ~10-15 s.
+  The model filter is the `a[data-filter-id=modelId]` href. VDP lines come as `label\nvalue` pairs (VIN, Stock, Drivetrain).
+- **Convertus** (`/vehicles/new/`, Performance Auto Group sites): the inventory is
+  `/wp-content/plugins/convertus-vms/include/php/ajax-vehicles.php?endpoint=<urlencoded vms.prod.convertus.rocks/api/filtering/?cp=<vmsData.vmsID>&sc=new&pc=100&md=<model>>&action=vms_data`.
+  Curl works on non-CF sites. On CF sites, an XHR `fetch()` gets 403; a top-level `goto_url` to that URL works.
+- **D2C Media** (`/new/inventory/search.html`, e.g. Upper James, Red Hill and Parkway Toyota): the VPS gets connection-reset.
+  Curl over SSH from the iMac works. Model facet links `/new/inventory/Toyota-<Model>.html` list what's in stock.
+- Guelph Toyota returned Cloudflare "Attention Required" (a hard block) from both the VPS and iMac curl.
+- iMac port 9334 is now the open-browser-control bridge (node), not a CDP Chrome. Check `ps` for `--remote-debugging-port` before tunnelling.
+
 ## GoodLife corporate (corporate.goodlifefitness.com): Amazon Workperks
 Verified 2026-10-07. Used for Sumeet's own membership on 2026-10-06 and for adding Priyanka.
 
