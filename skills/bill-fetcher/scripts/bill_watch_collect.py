@@ -17,7 +17,7 @@ VENDORS = {
     "OVHcloud":         ("proton", r"ovhcloud", r"invoice (available|pending)", "OVH", "ready"),
     "AWS":              ("proton", r"invoicing@aws\.com", r"invoice available", None, "needs-1p-item"),
     "Enbridge Gas":     ("icloud", r"enbridgegas", r"ebill is ready", None, "needs-login"),
-    "Burlington Hydro": ("icloud", r"burlingtonhydro", r"bill is ready", None, "needs-login"),
+    "Burlington Hydro": ("icloud", r"burlingtonhydro", r"bill is ready", "Burlingtonhydro", "ready"),
     "Rogers":           ("proton", r"rogers\.com", r"bill is ready", None, "needs-login"),
     "Fido":             ("proton", r"fidomobile", r"bill is ready", None, "needs-login"),
     "Cloudflare":       ("icloud", r"cloudflare", r"invoice is available", None, "needs-login"),
