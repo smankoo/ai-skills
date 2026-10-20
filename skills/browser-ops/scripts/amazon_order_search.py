@@ -3,7 +3,7 @@
 
 Usage: ~/.hermes/tools-venv/bin/python amazon_order_search.py "kids shoes" ["sneakers" ...] [--details]
 Prints JSON lines: {query, date, title, asin, order_id}. With --details it also opens each order's details
-page and adds price/size text. Needs the tunnel: ssh -fN -L 19334:127.0.0.1:9334 sumeet@100.119.136.41
+page and adds price/size text. Needs the tunnel: ssh -fN -L 19334:127.0.0.1:9335 sumeet@100.119.136.41 (iMac Chrome moved to 9335 on 2026-10-20)
 
 Why: before ANY purchase research, check what we already bought (sizes, brands, what worked). Amazon flags the
 VPS Chrome as an AI agent, so this always runs through the iMac's Chrome with human-like input (human_cdp.Tab).
@@ -13,11 +13,14 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from human_cdp import Tab
 
 EP = "http://127.0.0.1:19334"
+# iMac Chrome CDP port. 9334 was taken by Sumeet's open-browser-control bridge-server on 2026-10-18;
+# Magnus relaunched the persistent Chrome on 9335.
+IMAC_PORT = os.environ.get("IMAC_CDP_PORT", "9335")
 
 
 def ensure_tunnel():
     if subprocess.run("ss -ltn | grep -q ':19334 '", shell=True).returncode != 0:
-        subprocess.run(["ssh", "-fN", "-o", "ExitOnForwardFailure=yes", "-L", "19334:127.0.0.1:9334",
+        subprocess.run(["ssh", "-fN", "-o", "ExitOnForwardFailure=yes", "-L", f"19334:127.0.0.1:{IMAC_PORT}",
                         "sumeet@100.119.136.41"], check=True, timeout=30)
         time.sleep(1)
 
@@ -57,6 +60,10 @@ def search(t, q):
     t.wait_load(); time.sleep(random.uniform(2, 3.5))
     if re.search(r"unauthorized AI agent", t.text(3000), re.I):
         raise SystemExit("AMAZON AI-AGENT NOTICE on the iMac too, stopping")
+    # Blind is not "no orders": a signed-out profile lands on /ap/signin and used to print nothing (2026-10-20).
+    if "/ap/signin" in (t.url() or "") or re.search(r"^Sign in", t.text(200).strip()):
+        raise SystemExit("SIGNED OUT of Amazon.ca in the iMac Chrome profile: sign in first (1Password item 'amazon.ca'); "
+                         "no results is NOT the same as no orders")
     t.wheel(500); t.pause(0.5, 1.2)
     return json.loads(t.js(EXTRACT) or "[]")
 

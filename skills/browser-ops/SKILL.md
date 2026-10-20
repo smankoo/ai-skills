@@ -92,7 +92,12 @@ Amazon.ca blocked the VPS Chrome mid-checkout with "Continued access by an unaut
 The tells were: a datacenter IP, a Linux UA, jumping straight to checkout URLs, and JS `.click()` events (`isTrusted=false`).
 **The fix, verified the same day: sign-in, cancel and Subscribe & Save all went through with no warning.**
 1. Tunnel to the iMac's persistent windowed Chrome (home IP, macOS UA, profile `~/.hermes/costco-profile`):
-   `ssh -fN -L 19334:127.0.0.1:9334 <imac>`
+   `ssh -fN -L 19334:127.0.0.1:9335 <imac>`.
+   **Port 9335 since 2026-10-20.** On 10-18, Sumeet's open-browser-control bridge-server (node, `--port 9334`) took 9334,
+   so `/json/version` returned "Upgrade Required". Don't stop the bridge. Magnus relaunched Chrome on 9335. If
+   `curl 127.0.0.1:19334/json/version` hangs, an `ssh`-launched Chrome is stuck on the keychain: ask Magnus (A2A) to
+   relaunch it in the GUI session. The Amazon session in that profile was signed out after the relaunch;
+   `amazon_order_search.py` now exits 1 on a sign-in page instead of printing nothing.
 2. Drive it with `scripts/human_cdp.py` (`Tab.new/attach`, `click_sel`, `click_text`, `type_sel`, `wheel`). It uses trusted Input events only, a curved mouse path with jitter, per-character timing, and wheel scrolling.
    **Run it with `~/.hermes/tools-venv/bin/python`.** That's a dedicated venv with `websocket-client`, independent of Hermes releases. The v0.22.2 upgrade removed the old release venv that used to carry it, and the system `python3` has no `websocket`.
    Worked end-to-end 2026-10-16: home → search box → result for the known ASIN → product → Buy Now → read checkout (address, card, total, delivery radio) → Place order. No warning.

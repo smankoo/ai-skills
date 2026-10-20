@@ -221,6 +221,11 @@ retailers, not to re-search the same two chains.
 
 **Adult footwear: width and look are both gates.** Check the photo as well as the specs: for an office slot, reject visible logos, branded sole text (e.g. "Goodyear" sidewalls), chunky sneaker or lug soles and contrast stitching. Use `vision_analyze` on the profile image before recommending. Width: If the user's records or memory say someone needs a wide (or narrow) width, check that the exact model is offered *and in stock* in that width and size on the live page before recommending it. Never assume a standard-width shoe will do. Many boot brands offer no wide width at all.
 
+**Rain boots and other rubber goods: material is a gate too.** If the household has a no-plastic rule, most cheap kids'
+rain boots fail it: they're PVC, or "synthetic rubber", which is still petroleum plastic. Keep only boots whose page says
+**natural rubber**, and give the % when it's partial (e.g. 45%). Say in the email that the cheap ones were excluded for
+this reason, so the gap reads as checked, not missed.
+
 **Never order shoes.** Foot length can't be inferred from height, a wrong size affects how a
 young child walks, and lasts vary by brand. Instead emit a measure-first instruction plus a
 cm→size table for the expected range:

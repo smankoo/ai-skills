@@ -3897,3 +3897,24 @@ Canada-facing premium stores. Tested for men's coats.
   - Theory: ld+json has the CAD price but no composition. Composition is in the accordion text ("Composition 99% virgin wool…"). For size stock, `a.swatch-size` gains the class `unselectable` when sold out.
 - **Todd Snyder:** Shopify. Curl gets 403 or a Cloudflare challenge, but VPS Chrome works. `/products/<handle>.js` gives variants and availability; prices are in cents and switch to CAD when the session is set to Canada. Read Materials and Fit from the PDP's innerText under "Size & Fit".
 - **Sunspel:** `/products.json` works with curl, but the en-ca locale returns 429.
+
+## Kids' rain boots: Jan & Jul, Kamik, Stonz, Hunter Canada (verified 2026-10-20)
+Canada. All four block the VPS IP for JSON (Shopify `products.json` returns an HTML wall). Run a **same-origin fetch from the
+iMac Chrome**: `~/.hermes/tools-venv/bin/python scripts/imac_same_origin_fetch.py <origin> <path> [...]` loads the origin in
+a tab, then `fetch()`es each path and prints `status\nbody`.
+- **Kamik** (kamik.com, Shopify): `/collections/kids-toddlers-rain-boots/products.json?limit=60`. Toddler sizes are `10T`, and the
+  options are Colour / Age Group / Size. The body rarely names the material; "STOMP PRINT" says *phthalate-free synthetic
+  rubber*. Treat Kamik as synthetic unless a page says "natural rubber".
+- **Stonz** (stonz.com, Shopify, Vancouver): `/collections/rain-boots/products.json`. Its options are Size first (`10`), then Colour. The body gives the
+  natural-rubber % (Original 45%, Urban 52%). Shipping takes 4–8 business days.
+- **Hunter Canada** (hunterboots.ca, Shopify): `/collections/kids/products.json?limit=100`. There is one product per colourway; options
+  are Size / Width (`10 / M`). "Little Kids First Classic" is natural rubber. Free shipping only on orders of $100 or more.
+- **Jan & Jul** (janandjul.com, **WooCommerce**, not Shopify): Store API
+  `/wp-json/wc/store/v1/products?search=rubber%20rain%20boots&per_page=20` lists the products. The `attributes` list
+  shows every size ever made, not stock. **Per-size stock:** for each `variations[]` entry whose attribute is
+  `10-little-kid`, fetch `/wp-json/wc/store/v1/products/<variation id>` and read `is_in_stock`. Prices are in cents
+  (`5399` = $53.99). The short description states "Natural Rubber".
+- **SportChek kids' rain boots** (`/en/cat/shoes/kids-shoes/rain-boots-DC2000587.html`): the in-stock grid is small (11 items in
+  Oct 2026) and mostly Grade/Pre-School (size 11+, sometimes 1–7). Toddler PDPs on clearance with `sizes: []` from
+  `sportchek_extract.py` are sold out, not cheap. From the VPS, run the extractor with `CDP=http://127.0.0.1:19334`
+  (through the iMac tunnel); Chrome rewrites the websocket URL to the tunnel port.
