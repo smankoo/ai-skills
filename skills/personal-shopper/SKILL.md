@@ -218,6 +218,12 @@ rejection with real compositions, **name the rejected items and their fibre cont
 (it proves the stores were checked, not skipped), and route to the specialist natural-fibre stores in
 `retailers-tried.md`. A repeated "no X found that meets the rule" gap across runs is a signal to widen
 retailers, not to re-search the same two chains.
+**Kids' rain jackets are the clearest case (2026-10-20).** Hatley, Columbia and The North Face are all 100% polyester with a PU
+coating. The route that passes a natural-fibre gate is **waxed cotton**: Gap's "Baby & Toddler Waxed Jacket" is 70% cotton /
+30% nylon with a cotton flannel lining, goes up to 6 YRS, and is exactly on a 70% bar. Barbour's boys' Bedale is 100% cotton but
+its sizes start at XS 4–5. Say plainly that waxed canvas is water-resistant, not sealed, and offer one waterproof synthetic
+alternative labelled as breaking the rule. Also check the site banner for a sitewide sale before quoting a price: Gap's
+Friends & Family 40% off only shows as an image banner, not as a price on the PDP.
 
 **Adult footwear: width and look are both gates.** Check the photo as well as the specs: for an office slot, reject visible logos, branded sole text (e.g. "Goodyear" sidewalls), chunky sneaker or lug soles and contrast stitching. Use `vision_analyze` on the profile image before recommending. Width: If the user's records or memory say someone needs a wide (or narrow) width, check that the exact model is offered *and in stock* in that width and size on the live page before recommending it. Never assume a standard-width shoe will do. Many boot brands offer no wide width at all.
 
