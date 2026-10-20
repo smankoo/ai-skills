@@ -522,6 +522,9 @@ Email conventions, all enforced by the shared shell in `assets/email-template.ht
 
 - One email per person or per occasion, **identical formatting** across all of them.
 - Hyperlink every item name to its product page; show the price beside it.
+- **Links must look tappable** (coloured button or underlined colour link, never body-coloured text) and every option
+  in ANY option/shortlist email (cars, services, gifts) gets a photo + a link to that exact listing. The email is a means
+  to go and buy; one without visible links was sent back on 2026-10-19 ("Still no links… Do better").
 - `×N` quantity badges where quantity > 1.
 - Per-section subtotals and a single prominent total.
 - **A thumbnail on every item** (`image` in the cart JSON). The user asked for these explicitly —
