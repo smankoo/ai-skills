@@ -135,3 +135,10 @@ Verified 2026-10-07. Used for Sumeet's own membership on 2026-10-06 and for addi
   - *Magnetis* (meadowvaletoyota.com/#evaluation, iframe trade.magnetis.ca): "I already know my VIN", then the colour buttons, mileage + province, contact details + the mandatory privacy box. After that come about 35 condition radios (ids like `14-1` = minor dents), then "Evaluate my vehicle". You get a point estimate plus a range.
 - **AutoTrader.ca ICO:** gives only a range, and only after mobile number + a combined mandatory consent. A firm offer needs a dealer appointment.
 - **Planet Motors:** no contact info is needed for the estimate. **Carnex:** name, phone and email are needed; the estimate shows instantly and is also emailed.
+
+## Google Forms (any public form, verified 2026-10-20)
+- Don't drive the UI. JS `.click()` and `click_at_xy` on `[role=checkbox]` are flaky, and typed text piled into one field.
+- Read the full structure (every page, entry ids, options, branching) from `FB_PUBLIC_LOAD_DATA_[1][1]`. For each item, `it[4][0][0]` is the entry id and `it[4][0][1]` the options. A radio option's `o[2]` is the section it jumps to (`-2` = next section). Section headers are type 8.
+- Submit with a same-origin `fetch(POST '/forms/d/e/<id>/formResponse')`, sending a URLSearchParams of `entry.<id>=value` (repeat the key for each checkbox) plus `fvv=1` and `pageHistory=0,1,2,4`. That's the list of section indexes actually visited; skip any a branch jumps past.
+- Success means the response HTML contains the form's confirmation text. Don't assign it to `innerHTML`: docs.google.com enforces TrustedHTML and throws, but only AFTER the POST has already landed, so a retry makes a duplicate. Regex the text instead.
+- One form per adult when the form says so. Childminding/"once per family" questions: answer them on one submission only.
