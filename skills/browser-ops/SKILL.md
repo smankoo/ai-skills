@@ -113,6 +113,16 @@ The tells were: a datacenter IP, a Linux UA, jumping straight to checkout URLs, 
 
 ## Real-Mac browser (macbrowse)
 
+**Mac prerequisites: ask for ALL of them in ONE message, before the first run** (Sumeet, 2026-10-21: "You should have told
+me everything you needed in one go", after three separate trips to the iMac):
+1. CuaDriver allowed under Accessibility AND Screen Recording.
+2. Lock Screen: "Turn display off when inactive" = Never.
+3. "Start Screen Saver when inactive" = Never. This can be set remotely: `defaults -currentHost write com.apple.screensaver idleTime -int 0`.
+4. Logged in and unlocked once. A locked Mac can't be unlocked remotely.
+Check what you can over ssh first (`ioreg -n Root -d1 | grep CGSSessionScreenIsLocked`, `pmset -g`, the screensaver idleTime,
+`cua-driver call health_report`), fix whatever is remotely fixable yourself, and ask only for the rest, all at once.
+
+
 Use this for any site that rejects CDP-driven browsers: telcos, banks, credit bureaus, Amazon. It drives
 the iMac's REAL Firefox (or `--app Safari|Chrome`) through the macOS accessibility API (cua-driver).
 There is no CDP and no debugging port, so the site sees a person on a home IP. This is the route that got
