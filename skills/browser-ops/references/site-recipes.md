@@ -142,3 +142,9 @@ Verified 2026-10-07. Used for Sumeet's own membership on 2026-10-06 and for addi
 - Submit with a same-origin `fetch(POST '/forms/d/e/<id>/formResponse')`, sending a URLSearchParams of `entry.<id>=value` (repeat the key for each checkbox) plus `fvv=1` and `pageHistory=0,1,2,4`. That's the list of section indexes actually visited; skip any a branch jumps past.
 - Success means the response HTML contains the form's confirmation text. Don't assign it to `innerHTML`: docs.google.com enforces TrustedHTML and throws, but only AFTER the POST has already landed, so a retry makes a duplicate. Regex the text instead.
 - One form per adult when the form says so. Childminding/"once per family" questions: answer them on one submission only.
+
+## AWS Certification account (cp.certmetrics.com/amazon), verified 2026-10-21
+- Login: `cp.certmetrics.com/amazon/en/login` redirects to Skill Builder; click `#AWSBuilderID-provider-button`. On signin.aws, `fill_input` is unreliable: click the field and use `Input.insertText`. Email, Continue, password, Continue. An email OTP then goes to the Builder ID address (1P "AWS Builder ID"): read it from himalaya `icloud` with subject "Verify your identity" and regex `>(\d{6})</div>`. If the page shows an old email, click "Change" first.
+- The session expires within about 30 min. Re-login works without the user.
+- Data: `/en/credentials/status` lists every cert (active/expiry dates). "VIEW MORE" opens `/credentials/status/<id>`. "DOWNLOAD CERTIFICATE" only works with a trusted `click_at_xy` (JS `.click()` does nothing). Set `Browser.setDownloadBehavior` first. The PDF text layer has the validation number and dates (`pdftotext -layout`).
+- Filed in Drive at `Important Documents/People/Sumeet/Education/` and in Pebbleway `document` nodes (document_type certification, validation_number, certmetrics_credential_id, PDF attached).
