@@ -111,6 +111,40 @@ The tells were: a datacenter IP, a Linux UA, jumping straight to checkout URLs, 
 5. Never fight an explicit ToS warning on the VPS. Move to the iMac route on the first sign of it.
 6. **Order-history lookups:** `~/.hermes/tools-venv/bin/python scripts/amazon_order_search.py "kids shoes" "toddler shoes" --details` prints JSON lines `{date,title,asin,order_id,grand_total}`. It sets up the tunnel itself. Run it before any buying research (Sumeet: "common sense research any assistant would do").
 
+## Real-Mac browser (macbrowse)
+
+Use this for any site that rejects CDP-driven browsers: telcos, banks, credit bureaus, Amazon. It drives
+the iMac's REAL Firefox (or `--app Safari|Chrome`) through the macOS accessibility API (cua-driver).
+There is no CDP and no debugging port, so the site sees a person on a home IP. This is the route that got
+past Fido's bot wall. It's a plain CLI (one ssh round trip per command), so cron jobs can use it.
+It needs the Mac unlocked: a locked screen exits 4 with "Mac screen locked or display asleep: unlock it".
+
+```bash
+M="$HOME/.hermes/tools-venv/bin/python scripts/macbrowse.py"   # --host imac|macbook|user@ip, --json
+$M open https://example.com            # new tab; prints title + url
+$M look [--query TEXT]                  # #idx role "label" ="value" (web page only, no browser chrome)
+$M text [--max 6000]                    # read the page without vision
+$M click '#12' | 'text:REGEX' | xy:X,Y  # exit 2 + closest labels when nothing matches
+$M type 'text:email' --secret 'ITEM:username'
+$M type 'text:password' --secret 'ITEM:password' --enter
+$M type 'text:code' --sms-code --sms-grep SENDER --enter
+$M key escape | cmd+s ; $M scroll down --amount 10
+$M shot                                 # PNG copied to ~/.hermes/cache/scratch/
+$M download 'text:download' --out ~/.hermes/data/<topic>/   # exit 3 on timeout
+$M windows ; $M selftest                # selftest: example.com -> iana.org, PASS/FAIL per step
+```
+
+Security rules:
+- `--secret ITEM:FIELD` is fetched from 1Password ("Home Servers") on the VPS. It reaches the Mac only
+  inside the stdin JSON and goes to cua-driver on stdin. Never pass a secret with `--text`, in argv, or
+  through a file or log. `type` prints only `typed N chars`.
+- `--sms-code` reads Messages on the Mac. The code never comes to the VPS. It waits up to 90 s for a code
+  newer than the last click (if under 10 min ago) or the command start.
+- Prefer `#N`/`text:` targets (AX actions work even under chat widgets and cookie banners) over `xy:`.
+- Close the tabs you opened (`$M key cmd+w` while your tab is the current one). Never quit apps.
+- Firefox builds its page AX tree lazily. The helper re-snapshots until the web area has content.
+  PDFs open in Firefox's viewer, so `download` the viewer's save button, not the link.
+
 ## Verification checklist after any setup change
 
 1. `curl -s http://127.0.0.1:9222/json/version` → Chrome JSON, UA without "Headless".
