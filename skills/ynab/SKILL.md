@@ -210,6 +210,22 @@ low point plus the top-up needed and the date it is needed by.
 - Income is excluded by default (`--include-income` to add it): irregular transfers in are
   what's being planned.
 
+### Rental property tax pack (CRA Form T776)
+Use `scripts/t776_summary.py --map <map.json> --year YYYY` (`selftest` runs offline). The map
+says which YNAB category (or payee regex) feeds which T776 line, the rental start date, the
+tenant payee regex for gross rents, and the owner's share. Keep the map outside the repo (it
+names people); see the docstring for the format.
+- **Only count from the date the property was available for rent.** Before that it was personal.
+- **Mortgage category = principal + interest.** Only interest is deductible (line 8710); the
+  script marks it and the figure must come from the lender's annual mortgage statement.
+- **Big one-off payments are usually capital** (equipment buyouts, replacements, improvements):
+  the script lists anything over $1,500 for the accountant instead of calling it a repair.
+- **Utilities (9220) only count if the lease makes the landlord pay them.** Read the lease
+  before treating a utility category as deductible.
+- **Co-owners each file their own T776** with their share; confirm the split with the accountant.
+- **CCA can't create or increase a rental loss**, and claiming CCA on a former principal
+  residence complicates the principal-residence exemption. Leave CCA to the accountant.
+
 For the full API endpoint reference with every field, parameter, and enum, read
 `references/api-reference.md`.
 
