@@ -37,8 +37,15 @@ download the bill PDF, file it, and email it back to him **as a reply on the sam
    --due --bill-date --saved-to "Google Drive › Bills & Receipts › <Category> › <Vendor>"`. It replies to the original notice
    (In-Reply-To/References from `himalaya message read --raw`) and attaches the PDF. Use `--dry-run` first on a
    new vendor.
-6. **Ledger**: append `{key, vendor, bill_date, amount, due, invoice, file, gdrive, emailed, at}` to the ledger.
-7. **Pebbleway (Sumeet, 2026-10-13: "pebbleway is such a natural home for bills… proper links and metadata").**
+6. **Standing forwards** (Sumeet, 2026-10-22: "every time we get a fido bill, send the summary page to that email"):
+   `python3 scripts/bill_forward_summary.py --vendor <V> --pdf <pdf> --bill-date <date> --amount <amt>` after every fetch.
+   Rules (recipient, pages, forbidden strings) live in `~/.config/bill-fetcher/forwards.json` (chmod 600, PII kept out of
+   this repo). Fido sends page 1 only, which has the totals, the payment line and HST, and only the account holder's name. Pages 3+
+   carry the other subscribers' names, numbers and usage. The script REFUSES if any forbidden string appears in the extracted pages,
+   is idempotent via `~/.hermes/bills/forwards.jsonl`, and no-ops for vendors without a rule. To add a vendor, add a rule and
+   run `--dry-run` first.
+7. **Ledger**: append `{key, vendor, bill_date, amount, due, invoice, file, gdrive, emailed, at}` to the ledger.
+8. **Pebbleway (Sumeet, 2026-10-13: "pebbleway is such a natural home for bills… proper links and metadata").**
    Every bill becomes ONE linked, attached Thing:
    `python3 ~/.hermes/scripts/bill_to_pebbleway.py --vendor <V> --service-name "<service/utility node name>"
    --pdf <file> --amount <a> --due <YYYY-MM-DD> --bill-date <YYYY-MM-DD> [--invoice] [--account-number]
