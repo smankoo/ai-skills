@@ -152,6 +152,9 @@ Security rules:
   newer than the last click (if under 10 min ago) or the command start.
 - Prefer `#N`/`text:` targets (AX actions work even under chat widgets and cookie banners) over `xy:`.
 - Close the tabs you opened (`$M key cmd+w` while your tab is the current one). Never quit apps.
+- **A stray Firefox "Library" (downloads) window steals key focus** after any download: foreground clicks and keys then go
+  to it, and nothing lands in the page. Close it first (`osascript -e 'tell application "System Events" to tell process "firefox" to click (first button of window "Library" whose subrole is "AXCloseButton")'`).
+  Target the page window by height (>600), not just >300.
 - Firefox builds its page AX tree lazily. The helper re-snapshots until the web area has content.
   PDFs open in Firefox's viewer, so `download` the viewer's save button, not the link.
 
