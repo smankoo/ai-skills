@@ -16,6 +16,7 @@ Commands (run `pbook.py <cmd> -h`):
   layout SLUG            typeset book.pdf (art + text, Andika type, red sound words, soft vignette edges)
   booklet SLUG           impose for saddle-stitch printing + verify every page lands on the right sheet
   sheets SLUG            contact sheets (art + laid-out pages) for visual QA
+  slop SLUG [N ...]      audit existing art for AI slop (impossible staging, unsafe poses, anatomy) — no regeneration
   cost                   OpenRouter credit used so far (compare before/after a run)
 """
 import argparse, base64, io, json, os, re, shutil, subprocess, sys, threading, time
@@ -38,6 +39,8 @@ DEFAULTS = {
     "local_judge_url": "http://100.119.136.41:11434",
     "local_judge_model": "gemma3:12b",
     "paid_judge_model": "google/gemini-2.5-flash",
+    "slop_judge_model": "google/gemini-2.5-pro",  # physical-plausibility pass; reasoning matters more than price here
+    "slop_confirm_model": "anthropic/claude-sonnet-5.5",  # different model family confirms each blocker
     "max_tries": 3,
     "workers": 3,
     "openrouter_key_ref": "op://Home Servers/qfdfv5gyv5gturvopv3qj5ndl4/credential",
@@ -160,6 +163,91 @@ def judge(rules, brief, img, anchors):
         except Exception as e:
             log(f"  paid judge error {str(e)[:80]}; retry in 30s"); time.sleep(30)
     return {"pass": False, "problems": ["judge unavailable"], "judge": "none"}
+
+
+SLOP_ASK = """You are checking a children's picture-book illustration for "AI slop": things a real illustrator would
+never draw and a parent would spot. The brief tells you what SHOULD be happening.
+
+STEP 1 - describe the physical staging literally, for every person and animal: what they are sitting on, standing on,
+leaning on or holding; where each foot, hand and bottom actually is; what supports their weight. For vehicles: where
+the seat, steering wheel, wheels and engine are, and who is where relative to them. Count arms, hands, legs, eyes and
+wheels. Note any object held without a hand, floating, merged into another, duplicated, or impossibly sized.
+
+STEP 2 - judge it against how this would really look and how the brief means it. Flag:
+- impossible or wrong staging (e.g. a child "at the steering wheel" perched on the hood or engine instead of on the
+  seat or an adult's lap; standing on nothing; sitting in mid-air; holding something with no hand on it)
+- unsafe poses a parent would object to (riding on a hood, hanging out of a moving vehicle, near a running engine)
+- wrong body parts or counts, fused or extra limbs/fingers/eyes/wheels, faces in odd places
+- scale nonsense (a child as tall as an adult, a lamb the size of a horse) and perspective that doesn't hold
+- the picture contradicting what the PAGE TEXT says happens (the text is read aloud next to it)
+Do NOT re-check brief compliance (who is present, which way someone faces, season, props, sizes asked for in the brief,
+expressions) — a separate reviewer does that. Only flag what is wrong in itself: impossible, unsafe, broken anatomy,
+painting artifacts (stray marks, smears, duplicated objects), or contradicting the page text.
+Ignore painting style and minor colour variation.
+
+Severity: "blocker" = physically impossible, unsafe, wrong anatomy/counts, or the picture contradicts what the page
+text says happens. "minor" = composition preferences, small brief details, colour/season, extra background props.
+
+Reply ONLY with JSON: {"staging": "<your step-1 description, 2-4 sentences>",
+"problems": [{"issue": "what is wrong, concretely", "fix": "instruction to the illustrator", "severity": "blocker"|"minor"}]}"""
+
+CONFIRM_ASK = """Another reviewer claims this children's-book illustration has the following problem:
+"{issue}"
+Look very carefully at the actual picture (count limbs and check who each hand belongs to; check exactly what each
+character sits or stands on). Is the claim TRUE as stated? And if true, is it real "slop" — physically impossible,
+unsafe, broken anatomy, a painting artifact, or contradicting the page text — that a parent reading the book would
+notice and find wrong? Story or composition preferences (direction someone faces, extra bystanders, season, tilt,
+pose choices) are NOT slop. Reply ONLY with JSON:
+{{"true": true|false, "slop": true|false, "evidence": "one sentence describing what you see"}}"""
+
+
+def _ask(model, text, img, px=1280):
+    content = [{"type": "text", "text": text}, {"type": "image_url", "image_url": {"url": data_url(img, px)}}]
+    for _ in range(4):
+        try:
+            r = requests.post("https://openrouter.ai/api/v1/chat/completions", timeout=300, headers={"Authorization": f"Bearer {or_key()}"},
+                              json={"model": model, "messages": [{"role": "user", "content": content}]})
+            return _parse(r.json()["choices"][0]["message"]["content"])
+        except Exception as e:
+            log(f"  {model} error {str(e)[:80]}; retry in 30s"); time.sleep(30)
+    return None
+
+
+def slop_check(img, brief):
+    """Independent physical-plausibility pass. Model A lists problems with severity; every BLOCKER is then
+    re-checked by a different model family (B) so one model's hallucination (e.g. "three arms") can't force a redo.
+    Returns {"pass", "problems": [fix strings of confirmed blockers], "minor": [...], "rejected": [...], "staging"}."""
+    c = cfg()
+    v = _ask(c["slop_judge_model"], SLOP_ASK + "\n\nBRIEF: " + brief, img)
+    if v is None:
+        return {"pass": False, "problems": ["slop judge unavailable"], "minor": [], "rejected": [], "staging": ""}
+    confirmed, minor, rejected = [], [], []
+    for pr in v.get("problems", []):
+        if isinstance(pr, str):
+            pr = {"issue": pr, "fix": pr, "severity": "blocker"}
+        if pr.get("severity") != "blocker":
+            minor.append(pr.get("fix") or pr.get("issue")); continue
+        cv = _ask(c["slop_confirm_model"], CONFIRM_ASK.format(issue=pr.get("issue")) + "\n\nBRIEF AND PAGE TEXT: " + brief, img)
+        (confirmed if cv and cv.get("true") and cv.get("slop") else rejected).append(
+            (pr.get("fix") or pr.get("issue")) + ("" if not cv else f"  [check: {cv.get('evidence', '')}]"))
+    return {"pass": not confirmed, "problems": confirmed, "minor": minor, "rejected": rejected, "staging": v.get("staging", "")}
+
+
+def cmd_slop(a):
+    """Audit existing art for slop (e.g. a finished book) without regenerating anything."""
+    st = story(a.slug); d = bdir(a.slug); out = {}
+    pages = [p for p in st["pages"] if "scene" in p and (not a.pages or p["n"] in a.pages)]
+    def one(p):
+        f = f"{d}/art/p{p['n']:02d}.png"
+        if os.path.exists(f):
+            v = slop_check(f, p["scene"] + (" TEXT ON THE PAGE: " + p["text"] if p.get("text") else ""))
+            out[p["n"]] = v
+            log(f"p{p['n']:02d} {'OK  ' if v.get('pass') else 'SLOP'} {v.get('problems') if not v.get('pass') else ''}"
+                + (f"  | rejected: {v['rejected']}" if v.get("rejected") else ""))
+    with ThreadPoolExecutor(4) as ex:
+        list(ex.map(one, pages))
+    jsave(f"{d}/slop.json", {str(k): out[k] for k in sorted(out)})
+    print(f"{sum(1 for v in out.values() if not v.get('pass'))} of {len(out)} pages flagged -> {d}/slop.json")
 
 
 # ---------------------------------------------------------------- cast & series
@@ -318,6 +406,10 @@ def cmd_art(a):
                 log(f"{name} t{t} generation failed: {e}"); continue
             v = judge(rules, p["scene"], out, refs)
             probs = [] if v.get("pass") else (v.get("problems") or ["unspecified"])
+            if not probs:  # brief is satisfied: now the independent slop pass (staging, physics, safety, anatomy)
+                sv = slop_check(out, p["scene"] + (" TEXT ON THE PAGE: " + p["text"] if p.get("text") else ""))
+                if not sv.get("pass"):
+                    probs = ["SLOP: " + x for x in (sv.get("problems") or ["implausible staging"])]
             log(f"{name} t{t} {model} ${cost:.3f} {v.get('judge')}: {'PASS' if not probs else 'FAIL ' + str(probs)[:200]}")
             if best is None or len(probs) < len(best[1]):
                 best = (out, probs, t)
@@ -565,12 +657,13 @@ def main():
     x = sp.add_parser("art"); x.add_argument("slug"); x.add_argument("pages", nargs="*", type=int); x.add_argument("--model")
     x = sp.add_parser("bake"); x.add_argument("slug"); x.add_argument("pages", nargs="+", type=int); x.add_argument("--models", required=True)
     x.add_argument("--size", default="1K")
+    x = sp.add_parser("slop"); x.add_argument("slug"); x.add_argument("pages", nargs="*", type=int)
     for c in ("layout", "booklet", "sheets"):
         sp.add_parser(c).add_argument("slug")
     sp.add_parser("cost")
     a = ap.parse_args()
     {"cast-add": cmd_cast_add, "series-add": cmd_series_add, "new": cmd_new, "art": cmd_art, "bake": cmd_bake,
-     "layout": cmd_layout, "booklet": cmd_booklet, "sheets": cmd_sheets, "cost": cmd_cost}[a.cmd](a)
+     "layout": cmd_layout, "booklet": cmd_booklet, "slop": cmd_slop, "sheets": cmd_sheets, "cost": cmd_cost}[a.cmd](a)
 
 
 if __name__ == "__main__":

@@ -54,6 +54,25 @@ outside the repo in `~/.hermes/data/kids-books/` — never copy photos or sheets
    that belongs there) → `sheets <slug>` → send the booklet PDF on Telegram (`MEDIA:` path; under 50 MB).
    Printing: double-sided, **flip on short edge**, fold the stack, staple twice on the fold.
 
+## Slop filter (built after Sumeet caught Tegh "at the steering wheel" perched on Mac's engine hood)
+
+The brief judge only checks that the listed things are present, so it passed a child sitting on a hot engine. Every
+page now also goes through `slop_check` (automatically inside `art`; `slop <slug>` audits finished art):
+1. **Describe, then judge** (`gemini-2.5-pro`): it must first write out the literal staging — what each character
+   sits/stands on, where hands and feet are, what touches what, counts of limbs/wheels — and only then list problems
+   with a severity. Describing first is what makes it notice a bottom on an engine hood.
+2. **Second opinion** (`claude-sonnet-5.5`, a different model family) re-checks every blocker against the picture
+   and must agree it is true AND real slop (impossible, unsafe, broken anatomy, artifact, contradicts the page
+   text). This removed hallucinations like "the boy has three arms" (the hand on his shoulder was Dad's) and brief
+   nitpicks. On book one the filter flagged exactly 3/27 pages, all real: p22 (hood), p16 (no gap in the wall the
+   text talks about), p28 (wagon not hitched to the tractor). ~2¢ per page.
+3. **Write scenes with explicit physics** so there's nothing to improvise: not "Tegh sits at Mac's steering wheel"
+   but "Tegh sits on Farmer Sumeet's lap ON THE TRACTOR SEAT, both behind the steering wheel, Tegh's hands on the
+   wheel, his boots resting on Dad's knees". Say who holds what, what each character sits/stands on, and that
+   vehicles are hitched.
+4. Your own visual QA still happens, at full resolution for any page with a vehicle, an adult holding a child, or
+   hands doing something — contact-sheet thumbnails are where the hood problem slipped past.
+
 ## Visual QA — what actually goes wrong (from the first book)
 
 Look at the art contact sheets yourself (vision) in groups of ~6 with the brief for each page. Recurring problems:
