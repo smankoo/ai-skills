@@ -522,10 +522,15 @@ def do_type(app, snap, kind, val, text, enter):
         tries = [dict(base, text=text, x=x, y=y), dict(base, text=text, x=x, y=y, delivery_mode="foreground")]
         for args in tries:
             r = cua("type_text", args)
-            if not ok(r):
-                continue
             time.sleep(0.4)
             now = field_len(app, e)
+            if not ok(r):
+                # Background key delivery can report type_text_incomplete (delivered_chars 0) even though
+                # every character landed (TikTok password field, 2026-10-23). Retrying then typed it twice.
+                if now is not None and before is not None and now != before:
+                    landed = True
+                    break
+                continue
             if now is None or before is None or now != before:
                 landed = True  # changed, or unverifiable (no value exposed): never risk typing twice
                 break
