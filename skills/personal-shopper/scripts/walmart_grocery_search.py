@@ -6,7 +6,8 @@ Run: scp it to the iMac ~/.hermes/, then  cd ~/.hermes && costco-venv/bin/python
 Validated + fixed 2026-10-08 (dedupe, skip ads, real /ip/ URLs, parsed price fields)."""
 import json, sys, time, urllib.request, urllib.parse
 import websocket
-CDP = "http://127.0.0.1:9334"
+import os
+CDP = os.environ.get("CDP", "http://127.0.0.1:9335")  # iMac Chrome moved 9334->9335 on 2026-10-20
 t = json.loads(urllib.request.urlopen(urllib.request.Request(CDP + "/json/new?about:blank", method="PUT"), timeout=10).read())
 ws = websocket.create_connection(t["webSocketDebuggerUrl"], timeout=60, suppress_origin=True)
 n = [0]
