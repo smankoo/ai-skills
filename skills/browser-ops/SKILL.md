@@ -25,6 +25,22 @@ description: Human-grade web browsing (check references/site-recipes.md first) f
 
 Before driving any logged-in or form-heavy site, open `references/site-recipes.md` and look for the site. It holds the exact working method for flows that were expensive to crack (GoodLife corporate combobox, Mangomint, OVH billing iframe/Adyen, Costco 429s, Canada Life). **When a site takes more than ~3 attempts to crack, write the working recipe there in the same session.** Re-deriving a solved flow from scratch is a failure mode Sumeet has called out.
 
+## One command per step: `cdpx` (2026-10-25)
+
+**Don't write `step1.py … step58.py` files to poke a tab** (one week: 82 `ac*.py` in the trade-in run, 58 `ig*.py` in the
+Instagram signup). Each step is one `cdpx` call against VPS Chrome or the iMac's real Chrome (auto ssh tunnel):
+
+```
+cdpx tabs                          # --ep vps (default) | imac (:9334 home IP) | imac2 (:9335 signed-in)  or CDPX_EP=imac
+cdpx open https://site/ ; cdpx text @last --grep 'price|total' ; cdpx fields @last
+cdpx click @last --idx 7 | --text '^Continue$' | --sel '#go'     # trusted human-like input (human_cdp)
+printf %s "$SECRET" | cdpx type @last --idx 9 - --enter          # secrets via stdin, never echoed; exit 4 if it didn't land
+cdpx select @last --idx 3 ON ; cdpx wait @last --text 'Thank you' ; cdpx js @last 'return [...document.links].length'
+cdpx shot @last out.png [--full] ; cdpx close @last              # exit codes: 2 no tab, 3 no endpoint, 5 wait timeout
+```
+`scripts/cdpx.py` (`~/.local/bin/cdpx`), `cdpx selftest` → PASS 18/18. For multi-step logic in one go, `cdpx js @last -f x.js`.
+Library use from Python is still `from human_cdp import Tab`.
+
 ## Architecture (verified 2026-09-13)
 
 The VPS runs a **dedicated automation Chrome** — real windowed Google Chrome under Xvfb (NOT headless), managed by systemd:
