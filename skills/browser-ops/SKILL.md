@@ -45,7 +45,7 @@ The VPS runs a **dedicated automation Chrome** — real windowed Google Chrome u
 
 ## Fast page decisions (jev skill)
 
-Before spending big-model turns reading a page, ask Jev (≈0.2s, ≈$0.00003): `jev.page_from(js, goal)` returns the page kind (content / login_wall / captcha / bot_block / cookie_or_modal / error / paywall) plus whether the goal is already answered, and `jev.links_from(js, goal)` ranks up to 200 visible links in one call. Branch on `kind` into the sections below. See the `jev` skill.
+**Default navigation loop (Sumeet, 2026-10-25: "use jev to navigate. It's super fast").** After every navigation or click, first ask Jev, before reading or screenshotting the page with the big model. Only fall back to reading the page when Jev's confidence is low (kind_conf < 0.6, or the top link p < 0.5), or when the step commits money or personal data. Before spending big-model turns reading a page, ask Jev (≈0.2s, ≈$0.00003): `jev.page_from(js, goal)` returns the page kind (content / login_wall / captcha / bot_block / cookie_or_modal / error / paywall) plus whether the goal is already answered, and `jev.links_from(js, goal)` ranks up to 200 visible links in one call. Branch on `kind` into the sections below. See the `jev` skill.
 
 ## CAPTCHA solving (vision, no paid API — Sumeet's explicit preference)
 
