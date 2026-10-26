@@ -112,6 +112,16 @@ Measure the real consumption rate from his ORDER HISTORY before recommending a c
   link to read the line quantity and unit price. Count units over the window, and include today's "almost out" as the latest data point.
 - Compare one-time vs Subscribe & Save on the live PDP: the `#desktop_buybox` text has both prices, the seller and the delivery date.
   S&S is a % off the price at ship time, not a locked price. Say so, and say he can skip or cancel from the pre-ship email.
+- **Price per unit at 3+ sellers before recommending ANY source** (not just Amazon): Costco, Amazon one-time vs S&S, his
+  usual grocer, and Walmart. From the VPS this takes about a minute: `pcexpress_extract.py search <banner> <store> "<item>"`
+  (gives unit price) plus `flipp_extract.py deals "<item>" <postal>` (this week's flyers, every grocer). Compare per 100 g /
+  per sheet, not per pack ("3=6 rolls" is marketing). Corrected twice: "Did you compare price with nearby stores like
+  Walmart?" and "Compare prices with alternatives". Don't assume the discount banner is cheaper: the same coffee beans
+  cost more at a discount grocer than at its premium sister store on one check.
+- **Groceries: recommend ONE store, not a split.** The user finds splitting a trip across stores annoying; pick the store
+  with most of the list at reasonable prices. Bulk/shelf-stable staples are the exception: a Costco run or S&S often
+  beats every grocer by 20–60% per unit, so name it separately. Keep dated results in the knowledge base's staples
+  comparison page so the next ask starts from them.
 - Recommend a cadence from the measured rate (e.g. 1 lb every ~21 days → 2 bags every 6 weeks, fewer boxes), first delivery ASAP if he's nearly
   out. Give the per-delivery and yearly cost, the card and the address, and get an explicit yes before subscribing. Then record a Pebbleway subscription.
 
