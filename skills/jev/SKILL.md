@@ -25,7 +25,15 @@ independently**, so batch them: 50 questions cost about the same wall time as 1.
 
 **Price / limits (Jev 1.13, verified 2026-09-29):** $0.042 per M input tokens, output is free.
 State budget is 32k tokens (state plus the longest question); 64k for state plus all questions.
-The provider documents 40 req/s. Input is text only, and English gives the best accuracy.
+The provider documents 40 req/s. English gives the best accuracy.
+
+**Images work (Jev 1.13 and 1.14).** On OpenRouter, make `state` an ARRAY that mixes text and
+`{"type":"image_url","image_url":{"url":"data:image/jpeg;base64,..."}}` parts (PNG/JPEG). On TypeSafe's own
+API, use the top-level `assets` map plus the `TypeSafe-Danger-Zone-Images: true` header. Jev 1.14 adds a `box`
+question that returns a bounding box (1.13 rejects box with a 400). TypeSafe calls images experimental: weaker than
+text, so split questions into the simplest yes/no parts and calibrate on labelled data. Verified 2026-10-27 on a
+Lamp & Kin page: it spotted a truck painted red instead of green (1.14 choice red 0.71) at about $0.00006 and 0.2 s per
+72-dpi page. Docs: docs.typesafe.ai/images, openrouter.ai/docs/guides/community/multimodal-decisions.
 
 ## Setup
 
@@ -96,7 +104,7 @@ best = jev.links_from(js, goal, top=5)  # [{"p", "candidate": {"text", "href", "
 - Canadian Tire 404 → `error` (conf 1.0). accounts.google.com → `login_wall` (0.98).
 
 ### What Jev does NOT replace in browsing
-It decides; it does not read pixels, fill forms, or plan multi-step flows. Keep the big model (or
+It decides (it can look at a screenshot); it does not fill forms or plan multi-step flows. Keep the big model (or
 the user) for anything that commits money, submits personal data, or is irreversible. Jev can
 only nominate the candidate for those steps; the final "do it" decision stays with the big model or the user.
 
