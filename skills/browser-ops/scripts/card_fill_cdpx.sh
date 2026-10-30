@@ -3,7 +3,8 @@
 # Usage: card_fill_cdpx.sh <tab-id> <card-sel> <expiry-sel> <cvv-sel> [expiry-format MMYY|MM/YY]
 set -uo pipefail
 T=$1; CS=$2; ES=$3; VS=$4; FMT=${5:-MM/YY}
-export OP_SERVICE_ACCOUNT_TOKEN=$(cat ~/.op_service_token)
+OP_SERVICE_ACCOUNT_TOKEN=$(cat ~/.op_service_token)
+export OP_SERVICE_ACCOUNT_TOKEN
 ITEM="Wealthsimple Credit Card"; V="Home Servers"
 J=$(op item get "$ITEM" --vault "$V" --format json --reveal)
 get() { printf %s "$J" | python3 -c "import json,sys;d=json.load(sys.stdin);print(next(f.get('value','') for f in d['fields'] if f.get('id')==sys.argv[1]),end='')" "$1"; }
