@@ -48,6 +48,13 @@ description: >
   Levers: thicker dal/rajma/chana, spinach in dal or paratha, eggs, chicken/keema, fortified cereal + a vitamin C food in
   the same meal; water (not milk) with the iron meal; the toddler's milk total under 500 ml (CPS). Evidence and sources:
   wiki `concepts/kids-nutrition-targets.md`. Iron gaps for a toddler are a doctor question, never a supplement suggestion.
+- **Kids' growth (weight/height sent in chat):** run `scripts/growth_percentiles.py point --sex boy --dob <DOB> --date
+  <D> --kg <kg> --cm <cm>` (WHO 0-5 y standards, which Canada uses) and answer in percentiles, not "healthy for his age".
+  For a trend, `series --csv` (date,kg,cm,note) flags heights that shrink or jump >1 SD between checks: those are
+  mismeasures (toddlers resist leg extension; standing reads ~0.7 cm less than lying), so never size clothes or worry
+  off one outlier. Prefer clinic readings over home ones. <3rd or >97th centile = doctor question. Log the point to
+  the child's Pebbleway chart in the `metric`/`value`/`unit` shape, one event per metric (pebbleway skill).
+  `selftest` checks it against WHO medians. Facts: wiki `concepts/kids-growth-tracking.md`.
 - **Kirat's Synthroid:** weekdays before the 8:30 daycare drop-off (meta `med_window:kirat`). Logging milk or a
   high-Ca/Fe item near it prints a NOTE (SickKids teaching, Feb 2025, ~/gdrive "Kirat's Birth/sickkids visit.txt").
 - **Drinks:** `ml`, `glass` (250 ml) and `cup` work. `gaps --person kirat --json` → status gaps / on_track /
