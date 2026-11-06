@@ -1,0 +1,4 @@
+interface:
+  display_name: "YouTube CarPlay Album"
+  short_description: "Chaptered YouTube to CarPlay MP3 album"
+  default_prompt: "Use $youtube-carplay-chapter-album to convert this YouTube URL into a chapter-split MP3 album with embedded artwork and metadata for CarPlay."

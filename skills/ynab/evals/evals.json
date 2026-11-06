@@ -1,0 +1,23 @@
+{
+  "skill_name": "ynab",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "I want to understand my spending habits. Can you break down where my money has been going over the last 3 months? My YNAB token is peTMQ-rKFhIpHB_mLl0oLFnvf_BG3sEDOoGeo4XlELc and budget ID is 09aeeb2f-203b-4341-840b-68e0251efae9",
+      "expected_output": "A clear breakdown of spending by category with totals and monthly averages, highlighting the biggest spending areas",
+      "files": []
+    },
+    {
+      "id": 1,
+      "prompt": "How much have I been spending on groceries recently? Show me the trend over the last 6 months. My YNAB info: token peTMQ-rKFhIpHB_mLl0oLFnvf_BG3sEDOoGeo4XlELc, budget 09aeeb2f-203b-4341-840b-68e0251efae9",
+      "expected_output": "Month-by-month grocery spending trend, with specific amounts and transaction counts per month",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Give me a full picture of my financial health - net worth, income vs expenses, and which budget categories are problematic. YNAB token: peTMQ-rKFhIpHB_mLl0oLFnvf_BG3sEDOoGeo4XlELc, budget: 09aeeb2f-203b-4341-840b-68e0251efae9",
+      "expected_output": "A comprehensive financial snapshot: net worth breakdown, income vs expenses by month, and identification of over/underspent categories",
+      "files": []
+    }
+  ]
+}
